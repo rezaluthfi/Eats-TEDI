@@ -1,0 +1,45 @@
+<!-- res/menu/drawer_menu.xml -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_dashboard"
+        android:title="Dashboard"
+        android:icon="@drawable/icon_home"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        android:textColor="@color/selector_menu_item_text_color" />
+    <item
+        android:id="@+id/nav_menu"
+        android:title="Menu"
+        android:icon="@drawable/icon_menu"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        />
+    <item
+        android:id="@+id/nav_history"
+        android:title="History"
+        android:icon="@drawable/icon_history"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        android:textColor="@color/selector_menu_item_text_color" />
+    <item
+        android:id="@+id/nav_recap"
+        android:title="Recap"
+        android:icon="@drawable/icon_recap"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        android:textColor="@color/selector_menu_item_text_color" />
+    <item
+        android:id="@+id/nav_log"
+        android:title="Log"
+        android:icon="@drawable/icon_log"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        android:textColor="@color/selector_menu_item_text_color" />
+    <item
+        android:id="@+id/nav_logout"
+        android:title="Logout"
+        android:icon="@drawable/icon_log_out"
+        android:checkable="true"
+        android:background="@drawable/bg_selector_menu_item"
+        android:textColor="@color/selector_menu_item_text_color" />
+</menu>
