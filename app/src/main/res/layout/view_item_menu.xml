@@ -22,13 +22,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:layout_marginTop="16dp" >
 
             <ImageView
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:src="@drawable/image_menu_dummy"
-                android:layout_gravity="center_vertical" />
+                android:src="@drawable/image_menu_dummy" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -60,7 +60,11 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/black" />
+
             </LinearLayout>
+
         </LinearLayout>
+
     </LinearLayout>
+
 </FrameLayout>

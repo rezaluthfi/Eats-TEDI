@@ -7,7 +7,10 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import com.example.eatstedi.databinding.ActivityMainBinding
 import com.example.eatstedi.fragment.DashboardFragment
+import com.example.eatstedi.fragment.HistoryFragment
+import com.example.eatstedi.fragment.LogFragment
 import com.example.eatstedi.fragment.MenuFragment
+import com.example.eatstedi.fragment.RecapFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,6 +51,18 @@ class MainActivity : AppCompatActivity() {
                     }
                     R.id.nav_menu -> {
                         val fragment = MenuFragment()
+                        openFragment(fragment)
+                    }
+                    R.id.nav_history -> {
+                        val fragment = HistoryFragment()
+                        openFragment(fragment)
+                    }
+                    R.id.nav_recap -> {
+                        val fragment = RecapFragment()
+                        openFragment(fragment)
+                    }
+                    R.id.nav_log -> {
+                        val fragment = LogFragment()
                         openFragment(fragment)
                     }
                 }

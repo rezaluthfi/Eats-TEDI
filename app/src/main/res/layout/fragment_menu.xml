@@ -139,7 +139,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:padding="16dp"
+            android:paddingVertical="16dp"
             tools:listitem="@layout/view_item_menu"
             app:layout_constraintTop_toBottomOf="@id/chip_group" />
 

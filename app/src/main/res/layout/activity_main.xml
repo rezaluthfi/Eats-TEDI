@@ -20,7 +20,8 @@
         app:menu="@menu/drawer_menu"
         app:headerLayout="@layout/navigation_header"
         app:itemTextColor="@color/white"
-        app:itemIconTint="@color/white"
+        app:itemBackground="@drawable/selector_menu_item"
+        app:itemIconTint="@drawable/selector_menu_item_icon"
         />
 
 </androidx.drawerlayout.widget.DrawerLayout>

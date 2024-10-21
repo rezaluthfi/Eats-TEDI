@@ -1,0 +1,7 @@
+<!-- res/color/selector_menu_item_icon_color.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Warna icon ketika item aktif -->
+    <item android:state_checked="true" android:color="@color/black"/>
+    <!-- Warna icon ketika item tidak aktif -->
+    <item android:color="@color/white"/>
+</selector>
