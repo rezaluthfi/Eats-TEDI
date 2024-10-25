@@ -41,6 +41,7 @@ android {
 
 dependencies {
 
+    implementation("com.github.evrencoskun:TableView:v0.8.9.4")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
