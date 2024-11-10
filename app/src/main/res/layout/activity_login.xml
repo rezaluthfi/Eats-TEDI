@@ -28,10 +28,25 @@
         android:layout_margin="120dp"
         android:orientation="horizontal" >
 
-        <ImageView
-            android:layout_width="380dp"
-            android:layout_height="380dp"
-            android:src="@drawable/illustration_login" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <ImageView
+                android:layout_width="380dp"
+                android:layout_height="380dp"
+                android:src="@drawable/illustration_login" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/bree_serif_regular"
+                android:text="Eats TEDI"
+                android:textColor="@color/primary"
+                android:textSize="48sp" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

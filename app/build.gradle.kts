@@ -41,6 +41,10 @@ android {
 
 dependencies {
 
+
+    //mpandroidchart
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    //tableview
     implementation("com.github.evrencoskun:TableView:v0.8.9.4")
 
     implementation(libs.androidx.core.ktx)
