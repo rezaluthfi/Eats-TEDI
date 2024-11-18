@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="24dp"
-    tools:context=".ProfileSupplierActivity">
+    tools:context=".ProfileEmployeeActivity">
 
     <ImageView
         android:id="@+id/iv_arrow_back"
@@ -30,7 +30,6 @@
             android:layout_width="800dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/bg_modal"
             android:padding="32dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -81,14 +80,45 @@
                     android:textColor="@color/black"
                     />
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/grey"
+                    android:layout_marginTop="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Supplier"
-                    android:textSize="24sp"
-                    android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:textColor="@color/grey"
-                    />
+                    android:layout_marginTop="16dp"
+                    android:gravity="end"
+                    android:layout_gravity="center_vertical"
+                    android:orientation="horizontal"  >
+
+                    <LinearLayout
+                        android:id="@+id/ll_delete"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_search"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal" >
+
+                        <ImageView
+                            android:layout_width="56dp"
+                            android:layout_height="40dp"
+                            android:layout_gravity="center_vertical"
+                            android:src="@drawable/icon_delete"
+                            android:padding="10dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Delete"
+                            android:textSize="16sp"
+                            android:textColor="@color/white"
+                            android:paddingEnd="10dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -121,7 +151,7 @@
                         android:layout_marginTop="8dp"
                         android:hint="Nama"
                         android:inputType="text"
-                        android:background="@drawable/bg_input"
+                        android:background="@drawable/bg_modal"
                         android:padding="16dp"
                         />
 
@@ -138,7 +168,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Email"
+                        android:text="No. Telepon"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
                         android:textColor="@color/black"
@@ -148,9 +178,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Email"
-                        android:inputType="textEmailAddress"
-                        android:background="@drawable/bg_input"
+                        android:hint="No. Telepon"
+                        android:inputType="number"
+                        android:background="@drawable/bg_modal"
                         android:padding="16dp"
                         />
 
@@ -187,73 +217,7 @@
                         android:layout_marginTop="8dp"
                         android:hint="Username"
                         android:inputType="text"
-                        android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="16dp"
-                    android:orientation="vertical"
-                    android:gravity="start" >
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="No. Telepon"
-                        android:textSize="24sp"
-                        android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
-
-                    <EditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Telepon"
-                        android:inputType="phone"
-                        android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp" >
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="16dp"
-                    android:orientation="vertical"
-                    android:gravity="start" >
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Status"
-                        android:textSize="24sp"
-                        android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
-
-                    <EditText
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Nama"
-                        android:inputType="text"
-                        android:background="@drawable/bg_input"
+                        android:background="@drawable/bg_modal"
                         android:padding="16dp"
                         />
 
@@ -280,9 +244,75 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Alamat"
+                        android:hint="Address"
+                        android:inputType="text"
+                        android:background="@drawable/bg_modal"
+                        android:padding="16dp"
+                        />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp" >
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black"
+                        />
+
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Email"
                         android:inputType="textEmailAddress"
-                        android:background="@drawable/bg_input"
+                        android:background="@drawable/bg_modal"
+                        android:padding="16dp"
+                        />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start" >
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Status"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black"
+                        />
+
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Status"
+                        android:inputType="textEmailAddress"
+                        android:background="@drawable/bg_modal"
                         android:padding="16dp"
                         />
 

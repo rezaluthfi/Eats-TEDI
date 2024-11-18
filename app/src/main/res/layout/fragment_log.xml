@@ -11,7 +11,8 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:layout_marginTop="32dp"
-        android:layout_marginStart="307dp"
+        android:padding="16dp"
+        android:paddingStart="307dp"
         app:layout_constraintTop_toTopOf="parent" >
 
         <LinearLayout
@@ -21,8 +22,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:orientation="horizontal"
-            android:padding="16dp" >
+            android:orientation="horizontal" >
 
             <TextView
                 android:layout_width="wrap_content"
@@ -65,13 +65,13 @@
 
         </LinearLayout>
 
-        <!-- Table Employee's History -->
-        <com.evrencoskun.tableview.TableView
-            android:id="@+id/tableView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="16dp"
-            app:layout_constraintTop_toBottomOf="@+id/ll_history_summary"/>
+       <androidx.recyclerview.widget.RecyclerView
+           android:id="@+id/rv_log_activity"
+           android:layout_width="match_parent"
+           android:layout_height="wrap_content"
+           android:background="@drawable/bg_container"
+           android:layout_marginTop="8dp"
+           tools:listitem="@layout/view_item_log_activity" />
 
     </LinearLayout>
 

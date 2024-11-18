@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="32dp"
-        android:layout_marginStart="307dp"
+        android:paddingStart="307dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -44,6 +44,7 @@
                 android:background="@drawable/bg_btn_primary" >
 
                 <Spinner
+                    android:id="@+id/sp_filter_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="10dp" />
@@ -57,6 +58,7 @@
                 android:orientation="horizontal" >
 
                 <Button
+                    android:id="@+id/btn_add_new_menu"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Add New Menu"
@@ -95,8 +97,8 @@
                 android:layout_height="wrap_content"
                 android:text="Foods"
                 android:textAlignment="center"
-                android:textColor="@color/white"
-                app:chipBackgroundColor="@color/red"
+                android:textColor="@color/black"
+                app:chipBackgroundColor="@color/white"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
                 app:chipStartPadding="10dp" />
@@ -107,8 +109,8 @@
                 android:layout_height="wrap_content"
                 android:text="Drinks"
                 android:textAlignment="center"
-                android:textColor="@color/white"
-                app:chipBackgroundColor="@color/red"
+                android:textColor="@color/black"
+                app:chipBackgroundColor="@color/white"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
                 app:chipStartPadding="10dp" />
@@ -119,8 +121,8 @@
                 android:layout_height="wrap_content"
                 android:text="Snacks"
                 android:textAlignment="center"
-                android:textColor="@color/white"
-                app:chipBackgroundColor="@color/red"
+                android:textColor="@color/black"
+                app:chipBackgroundColor="@color/white"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
                 app:chipStartPadding="10dp" />
@@ -129,176 +131,184 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_all_menu"
-            android:layout_width="600dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:paddingVertical="16dp"
-            tools:listitem="@layout/view_item_menu"
-            app:layout_constraintTop_toBottomOf="@id/chip_group" />
+            app:layout_constraintTop_toBottomOf="@id/chip_group"
+            tools:listitem="@layout/view_item_menu" />
 
     </LinearLayout>
 
     <!-- Order Menu yang bisa di-slide -->
-    <LinearLayout
-        android:id="@+id/ll_order_menu"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nested_scroll_view"
         android:layout_width="300dp"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         android:background="#FFFAE3"
         android:padding="16dp"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Konten dari Order Menu -->
-        <TextView
-            android:id="@+id/order_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Order Menu"
-            android:textSize="24sp"
-            android:layout_marginBottom="8dp"
-            android:fontFamily="@font/noto_sans_gujarati_bold"/>
-
-        <!-- Daftar menu pesanan -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_order_menu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="8dp"
-            />
-        <!-- tools:listitem="@layout/view_item_order_menu" -->
-
-        <!-- Item pesanan dan informasi lainnya -->
-        <!-- Total Payment -->
         <LinearLayout
+            android:id="@+id/ll_order_menu"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="bottom">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-            <!-- Garis Titik-Titik -->
-            <View
+            <!-- Konten dari Order Menu -->
+            <TextView
+                android:id="@+id/order_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Order Menu"
+                android:textSize="24sp"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/noto_sans_gujarati_bold"/>
+
+            <!-- Daftar menu pesanan -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_order_menu"
                 android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="@drawable/line_dotted"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="wrap_content"
+                android:maxHeight="400dp"
+                tools:listitem="@layout/view_item_order_menu"
+                />
 
+            <!-- Item pesanan dan informasi lainnya -->
+            <!-- Total Payment -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:gravity="bottom">
 
-                <TextView
-                    android:id="@+id/tv_total_payment_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Total Payment"
-                    android:textColor="@color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold"/>
+                <!-- Garis Titik-Titik -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:background="@drawable/line_dotted"
+                    android:layout_marginBottom="16dp"/>
 
-                <TextView
-                    android:id="@+id/tv_total_payment_amount"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="end"
-                    android:text="Rp20.000,00"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_total_payment_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total Payment"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/tv_total_payment_amount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="Rp20.000,00"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+
+                <!-- Garis Pembatas -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/black"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Payment Method Label -->
+                <TextView
+                    android:id="@+id/tv_payment_method"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Payment Method"
                     android:textColor="@color/black"
                     android:textSize="16sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"/>
+
+                <!-- Payment Method Options -->
+                <RadioGroup
+                    android:id="@+id/rg_payment_method"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <!-- Cash Option -->
+                    <RadioButton
+                        android:id="@+id/rb_cash"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Cash"
+                        app:buttonTint="@color/green"
+                        android:textColor="#000"
+                        android:checked="true"/>
+
+                    <!-- QRIS Option -->
+                    <RadioButton
+                        android:id="@+id/rb_qris"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="QRIS"
+                        app:buttonTint="@color/black"
+                        android:textColor="#000"
+                        android:layout_marginStart="16dp"/>
+                </RadioGroup>
+
+                <!-- Garis Pembatas -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/black"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- Input Payment Label -->
+                <TextView
+                    android:id="@+id/tv_input_payment"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Input Payment"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="8dp"/>
+
+                <!-- Input Payment EditText -->
+                <EditText
+                    android:id="@+id/et_input_payment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Nominal Pembayaran"
+                    android:inputType="numberDecimal"
+                    android:background="@drawable/bg_input"
+                    android:padding="8dp"
+                    android:textColor="@color/black"
+                    android:layout_marginTop="8dp"/>
+
+                <!-- Tombol Pay Now -->
+                <Button
+                    android:id="@+id/btn_pay_now"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="32dp"
+                    android:text="Pay now"
+                    android:background="@drawable/bg_btn_primary"
+                    app:backgroundTint="@null"
+                    android:textColor="@color/white"/>
             </LinearLayout>
-
-            <!-- Garis Pembatas -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/black"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"/>
-
-            <!-- Payment Method Label -->
-            <TextView
-                android:id="@+id/tv_payment_method"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Payment Method"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp"/>
-
-            <!-- Payment Method Options -->
-            <RadioGroup
-                android:id="@+id/rg_payment_method"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
-
-                <!-- Cash Option -->
-                <RadioButton
-                    android:id="@+id/rb_cash"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Cash"
-                    app:buttonTint="@color/green"
-                    android:textColor="#000"
-                    android:checked="true"/>
-
-                <!-- QRIS Option -->
-                <RadioButton
-                    android:id="@+id/rb_qris"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="QRIS"
-                    app:buttonTint="@color/black"
-                    android:textColor="#000"
-                    android:layout_marginStart="16dp"/>
-            </RadioGroup>
-
-            <!-- Garis Pembatas -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#000"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"/>
-
-            <!-- Input Payment Label -->
-            <TextView
-                android:id="@+id/tv_input_payment"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Input Payment"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginTop="8dp"/>
-
-            <!-- Input Payment EditText -->
-            <EditText
-                android:id="@+id/et_input_payment"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Nominal Pembayaran"
-                android:inputType="numberDecimal"
-                android:background="@drawable/bg_input"
-                android:padding="8dp"
-                android:textColor="@color/black"
-                android:layout_marginTop="8dp"/>
-
-            <!-- Tombol Pay Now -->
-            <Button
-                android:id="@+id/pay_now"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="32dp"
-                android:text="Pay now"
-                android:background="@drawable/bg_btn_primary"
-                app:backgroundTint="@null"
-                android:textColor="@color/white"/>
         </LinearLayout>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
 
 
     <!-- Tombol Panah untuk menyembunyikan/memunculkan Order Menu -->
@@ -309,7 +319,7 @@
         android:src="@drawable/icon_arrow_right"
         android:background="@drawable/bg_arrow_close_order_menu"
         android:paddingVertical="16dp"
-        app:layout_constraintEnd_toStartOf="@+id/ll_order_menu"
+        app:layout_constraintEnd_toStartOf="@+id/nested_scroll_view"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         />

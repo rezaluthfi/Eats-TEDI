@@ -1,5 +1,43 @@
 <resources>
     <string name="app_name">Eats TEDI</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!-- Data untuk dropdown shift -->
+    <string-array name="shift_array">
+        <item>Shift 1</item>
+        <item>Shift 2</item>
+        <item>Shift 3</item>
+        <item>Shift 4</item>
+    </string-array>
+
+    <!-- Data untuk dropdown hari -->
+    <string-array name="days_array">
+        <item>Senin</item>
+        <item>Selasa</item>
+        <item>Rabu</item>
+        <item>Kamis</item>
+        <item>Jumat</item>
+    </string-array>
+
+    <!-- Data untuk dropdown shift dengan jam -->
+    <string-array name="shift_array_with_hours">
+        <item>Shift 1 (07.00-09.00)</item>
+        <item>Shift 2 (09.00-12.00)</item>
+        <item>Shift 3 (12.00-14.00)</item>
+        <item>Shift 4 (14.00-16.00)</item>
+    </string-array>
+
+    <!-- Data untuk dropdown kategori menu -->
+    <string-array name="menu_category">
+        <item>Foods</item>
+        <item>Drinks</item>
+        <item>Snacks</item>
+    </string-array>
+
+    <!-- Data untuk dropdown filter nama supplier -->
+    <string-array name="supplier_name">
+        <item>Supplier 1</item>
+        <item>Supplier 2</item>
+        <item>Supplier 3</item>
+    </string-array>
 </resources>

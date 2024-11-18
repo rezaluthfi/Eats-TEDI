@@ -1,60 +1,85 @@
 package com.example.eatstedi.fragment
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TableRow
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.example.eatstedi.R
+import com.example.eatstedi.databinding.FragmentRecapBinding
+import com.example.eatstedi.model.Transaction
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [RecapFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class RecapFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private var _binding: FragmentRecapBinding? = null
+    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_recap, container, false)
+        _binding = FragmentRecapBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment RecapFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            RecapFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Data dummy untuk tabel rekap transaksi
+        val transactions = listOf(
+            Transaction("Alice", "Nasi Goreng", "Warung Makan", 15000, 2, 30000),
+            Transaction("Bob", "Ayam Bakar", "Dapoer Ayu", 20000, 1, 20000),
+            Transaction("Charlie", "Mie Ayam", "Bakso Pak Slamet", 18000, 3, 54000),
+            Transaction("Dave", "Sate Ayam", "Sate Cak Udin", 22000, 2, 44000)
+        )
+
+        // Membuat header tabel
+        val headerRow = TableRow(context)
+        headerRow.setPadding(8, 16, 8, 16)
+        headerRow.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary))
+
+        headerRow.addView(createTextView("Nama Employee", isHeader = true))
+        headerRow.addView(createTextView("Menu", isHeader = true))
+        headerRow.addView(createTextView("Supplier", isHeader = true))
+        headerRow.addView(createTextView("Harga", isHeader = true))
+        headerRow.addView(createTextView("Kuantitas", isHeader = true))
+        headerRow.addView(createTextView("Total Harga", isHeader = true))
+
+        binding.tableView.addView(headerRow)
+
+        // Menambah data dummy ke dalam tabel
+        for (transaction in transactions) {
+            val row = TableRow(context)
+            row.setPadding(8, 16, 8, 16)
+            row.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.white))
+
+            row.addView(createTextView(transaction.employeeName))
+            row.addView(createTextView(transaction.menu))
+            row.addView(createTextView(transaction.supplier))
+            row.addView(createTextView("Rp${transaction.price}"))
+            row.addView(createTextView(transaction.quantity.toString()))
+            row.addView(createTextView("Rp${transaction.totalPrice}"))
+
+            binding.tableView.addView(row)
+        }
+    }
+
+    private fun createTextView(text: String, isHeader: Boolean = false): TextView {
+        return TextView(context).apply {
+            this.text = text
+            textSize = if (isHeader) 18f else 16f
+            setPadding(8, 8, 8, 8)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+            setTypeface(null, if (isHeader) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

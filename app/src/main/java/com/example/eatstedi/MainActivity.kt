@@ -1,8 +1,13 @@
 package com.example.eatstedi
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import com.example.eatstedi.databinding.ActivityMainBinding
@@ -11,6 +16,7 @@ import com.example.eatstedi.fragment.HistoryFragment
 import com.example.eatstedi.fragment.LogFragment
 import com.example.eatstedi.fragment.MenuFragment
 import com.example.eatstedi.fragment.RecapFragment
+import com.example.eatstedi.login.LoginActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,11 +28,40 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(binding.root)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.contentFrame) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         with(binding) {
 
-            // Menjaga sidebar tetap terbuka secara default
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_OPEN)
+            // jika sidebar aktif, padding start pada contentFrame diatur menjadi 307dp
+//            drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+//                override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+//                    contentFrame.setPadding(307, 0, 0, 0)
+//                }
+//
+//                override fun onDrawerOpened(drawerView: View) {
+//                    contentFrame.setPadding(307, 0, 0, 0)
+//                }
+//
+//                override fun onDrawerClosed(drawerView: View) {
+//                    contentFrame.setPadding(0, 0, 0, 0)
+//                }
+//
+//                override fun onDrawerStateChanged(newState: Int) {
+//                    // Do nothing
+//                }
+//            })
+
+            // Mengatur sidebar agar selalu terbuka
+            //drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_OPEN)
+
+            // Mengatur sidebar agar terbuka di awal, jika tidak maka sidebar akan tertutup
+            drawerLayout.openDrawer(GravityCompat.START)
+
+
             // Mengatur overlay agar tidak menutupi konten
             drawerLayout.setScrimColor(resources.getColor(android.R.color.transparent, theme))
 
@@ -64,6 +99,12 @@ class MainActivity : AppCompatActivity() {
                     R.id.nav_log -> {
                         val fragment = LogFragment()
                         openFragment(fragment)
+                    }
+                    R.id.nav_logout -> {
+                        // pindah ke halaman login
+                        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                        startActivity(intent)
+                        finish()
                     }
                 }
                 true

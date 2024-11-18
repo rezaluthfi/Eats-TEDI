@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center" >
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_modal"
+        android:padding="32dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Apakah anda yakin ingin menghapus employee?"
+            android:textSize="24sp"
+            android:fontFamily="@font/noto_sans_gujarati_bold"
+            android:textColor="@color/black" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="72dp" >
+
+            <Button
+                android:layout_width="155dp"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:textSize="16sp"
+                android:textColor="@color/black"
+                android:background="@drawable/bg_btn_secondary"
+                app:backgroundTint="@null" />
+
+            <Button
+                android:layout_width="155dp"
+                android:layout_height="wrap_content"
+                android:text="Delete"
+                android:textSize="16sp"
+                android:textColor="@color/black"
+                android:layout_marginStart="24dp"
+                android:background="@drawable/bg_btn_secondary"
+                app:backgroundTint="@null" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
