@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dimensi untuk lebar EditText ketika terfokus -->
+    <dimen name="search_expanded_width">355dp</dimen>
+
+    <!-- Dimensi untuk lebar EditText dalam ukuran semula -->
+    <dimen name="search_collapsed_width">60dp</dimen>
+</resources>

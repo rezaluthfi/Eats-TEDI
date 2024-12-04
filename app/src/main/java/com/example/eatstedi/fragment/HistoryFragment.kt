@@ -26,6 +26,7 @@ class HistoryFragment : Fragment() {
     private var activeFilter: String = "Total"
     private var startDate: Date? = null
     private var endDate: Date? = null
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -40,22 +41,23 @@ class HistoryFragment : Fragment() {
 
         // Data dummy untuk history kehadiran
         val attendanceRecords = listOf(
-            Attendance("Alice", "2024-11-01", "Shift 1", "07:00-09:00", "Hadir"),
-            Attendance("Bob", "2024-11-01", "Shift 2", "09:00-12:00", "Hadir"),
-            Attendance("Charlie", "2024-11-02", "Shift 4", "14:00-16:00", "Hadir"),
-            Attendance("Dave", "2024-11-02", "Shift 1", "07:00-09:00", "Tidak Hadir"),
-            Attendance("Eve", "2024-11-03", "Shift 3", "12:00-14:00", "Tidak Hadir"),
-            Attendance("Frank", "2024-11-03", "Shift 4", "14:00-16:00", "Hadir"),
-            Attendance("Grace", "2024-11-04", "Shift 1", "07:00-09:00", "Hadir"),
-            Attendance("Hank", "2024-11-04", "Shift 3", "12:00-14:00", "Hadir"),
-            Attendance("Ivy", "2024-11-05", "Shift 4", "14:00-16:00", "Hadir"),
-            Attendance("Jack", "2024-11-05", "Shift 1", "07:00-09:00", "Tidak Hadir"),
-            Attendance("Kathy", "2024-11-06", "Shift 3", "12:00-14:00", "Tidak Hadir"),
-            Attendance("Liam", "2024-11-06", "Shift 4", "14:00-16:00", "Hadir"),
-            Attendance("Mia", "2024-11-07", "Shift 1", "07:00-09:00", "Hadir"),
-            Attendance("Nathan", "2024-11-07", "Shift 3", "12:00-14:00", "Hadir"),
-            Attendance("Olivia", "2024-11-08", "Shift 4", "14:00-16:00", "Hadir")
+            Attendance("Alice", "01/11/2024", "Shift 1", "07:00-09:00", "Hadir"),
+            Attendance("Bob", "01/11/2024", "Shift 2", "09:00-12:00", "Hadir"),
+            Attendance("Charlie", "02/11/2024", "Shift 4", "14:00-16:00", "Hadir"),
+            Attendance("Dave", "02/11/2024", "Shift 1", "07:00-09:00", "Tidak Hadir"),
+            Attendance("Eve", "03/11/2024", "Shift 3", "12:00-14:00", "Tidak Hadir"),
+            Attendance("Frank", "03/11/2024", "Shift 4", "14:00-16:00", "Hadir"),
+            Attendance("Grace", "04/11/2024", "Shift 1", "07:00-09:00", "Hadir"),
+            Attendance("Hank", "04/11/2024", "Shift 3", "12:00-14:00", "Hadir"),
+            Attendance("Ivy", "05/11/2024", "Shift 4", "14:00-16:00", "Hadir"),
+            Attendance("Jack", "05/11/2024", "Shift 1", "07:00-09:00", "Tidak Hadir"),
+            Attendance("Kathy", "06/11/2024", "Shift 3", "12:00-14:00", "Tidak Hadir"),
+            Attendance("Liam", "06/11/2024", "Shift 4", "14:00-16:00", "Hadir"),
+            Attendance("Mia", "07/11/2024", "Shift 1", "07:00-09:00", "Hadir"),
+            Attendance("Nathan", "07/11/2024", "Shift 3", "12:00-14:00", "Hadir"),
+            Attendance("Olivia", "08/11/2024", "Shift 4", "14:00-16:00", "Hadir")
         )
+
 
         // Hitung jumlah awal
         updateFilterCounts(attendanceRecords)
@@ -99,50 +101,59 @@ class HistoryFragment : Fragment() {
 
     private fun setupDatePickers(attendanceRecords: List<Attendance>) {
         binding.btnStartDate.setOnClickListener {
-            showDatePickerDialog { date ->
+            showDatePicker(isStartDate = true) { date ->
                 startDate = date
-                binding.btnStartDate.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
+                binding.btnStartDate.text = dateFormat.format(date)
                 updateActiveFilter(activeFilter, attendanceRecords)
             }
         }
 
         binding.btnEndDate.setOnClickListener {
-            showDatePickerDialog { date ->
+            showDatePicker(isStartDate = false) { date ->
                 endDate = date
-                binding.btnEndDate.text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
+                binding.btnEndDate.text = dateFormat.format(date)
                 updateActiveFilter(activeFilter, attendanceRecords)
             }
         }
     }
 
-    private fun showDatePickerDialog(onDateSet: (Date) -> Unit) {
+
+    private fun showDatePicker(isStartDate: Boolean, onDateSelected: (Date) -> Unit) {
         val calendar = Calendar.getInstance()
-        val datePickerDialog = DatePickerDialog(
+        DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
                 val selectedDate = Calendar.getInstance().apply {
                     set(year, month, dayOfMonth)
                 }.time
 
-                // Validasi jika startDate atau endDate sudah diisi
-                if ((startDate != null && selectedDate < startDate!!) ||
-                    (endDate != null && selectedDate > endDate!!)) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Tanggal tidak valid! Pastikan tanggal mulai sebelum tanggal selesai.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (isStartDate) {
+                    if (endDate != null && selectedDate.after(endDate)) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Tanggal mulai tidak boleh setelah tanggal selesai!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@DatePickerDialog
+                    }
                 } else {
-                    onDateSet(selectedDate)
+                    if (startDate != null && selectedDate.before(startDate)) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Tanggal selesai tidak boleh sebelum tanggal mulai!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@DatePickerDialog
+                    }
                 }
+
+                onDateSelected(selectedDate)
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
-        )
-        datePickerDialog.show()
+        ).show()
     }
-
 
     private fun setupClearSearchButton(attendanceRecords: List<Attendance>) {
         // Menyembunyikan tombol Clear Search secara default
@@ -204,6 +215,17 @@ class HistoryFragment : Fragment() {
         labelTextView.setTextColor(ContextCompat.getColor(requireContext(), textColor))
     }
 
+    private fun Date.stripTime(): Date {
+        val calendar = Calendar.getInstance().apply {
+            time = this@stripTime
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return calendar.time
+    }
+
     private fun filterAndDisplayData(attendanceRecords: List<Attendance>, filter: String) {
         var filteredRecords = when (filter) {
             "Hadir" -> attendanceRecords.filter { it.attendance == "Hadir" }
@@ -211,18 +233,18 @@ class HistoryFragment : Fragment() {
             else -> attendanceRecords
         }
 
-        // Filter berdasarkan rentang tanggal jika ada
-        if (startDate != null && endDate != null) {
+        // Filter berdasarkan rentang tanggal jika start date dan end date tidak null
+        // Menggunakan `stripTime()` untuk menghapus waktu dari tanggal
+        val strippedStartDate = startDate?.stripTime()
+        val strippedEndDate = endDate?.stripTime()
+        if (strippedStartDate != null && strippedEndDate != null) {
             filteredRecords = filteredRecords.filter { attendance ->
-                val attendanceDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(attendance.date)
-                attendanceDate != null && !attendanceDate.before(startDate) && !attendanceDate.after(endDate)
+                val attendanceDate = dateFormat.parse(attendance.date)!!.stripTime()
+                !attendanceDate.before(strippedStartDate) && !attendanceDate.after(strippedEndDate)
             }
         }
 
-        // Perbarui hitungan statistik
         updateFilteredCounts(filteredRecords)
-
-        // Perbarui tabel
         displayData(filteredRecords)
     }
 
@@ -238,8 +260,7 @@ class HistoryFragment : Fragment() {
     }
 
     private fun displayData(attendanceRecords: List<Attendance>) {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
         // Periksa apakah ada data
         if (attendanceRecords.isEmpty()) {
@@ -270,26 +291,37 @@ class HistoryFragment : Fragment() {
         binding.attendanceTableView.addView(headerRow)
 
         // Tambahkan data ke tabel
-        for (attendance in attendanceRecords) {
+        // Add data to the table
+        for ((index, attendance) in attendanceRecords.withIndex()) {
             val formattedDate = try {
                 val date = dateFormat.parse(attendance.date)
                 outputFormat.format(date!!)
             } catch (e: Exception) {
-                attendance.date // Fallback jika format gagal
+                attendance.date // Fallback if parsing fails
             }
 
             val row = TableRow(context)
             row.setPadding(8, 16, 8, 16)
-            row.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.white))
+            // Alternate row colors based on the index (even = white, odd = secondary color)
+            row.setBackgroundColor(
+                if (index % 2 == 0) {
+                    ContextCompat.getColor(requireContext(), R.color.white)  // Even rows
+                } else {
+                    ContextCompat.getColor(requireContext(), R.color.secondary)  // Odd rows
+                }
+            )
 
+            // Add text views to the row
             row.addView(createTextView(attendance.employeeName))
             row.addView(createTextView(formattedDate))
             row.addView(createTextView(attendance.shift))
             row.addView(createTextView(attendance.time))
             row.addView(createTextView(attendance.attendance))
 
+            // Add the row to the table
             binding.attendanceTableView.addView(row)
         }
+
     }
 
 

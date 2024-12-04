@@ -91,7 +91,6 @@ class MenuFragment : Fragment() {
         // Create an ArrayAdapter for the Spinner using a simple layout
         val nameAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, arrayNames)
         nameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        //set text color
 
         // Set the adapter to the Spinner using binding
         binding.spFilterName.adapter = nameAdapter

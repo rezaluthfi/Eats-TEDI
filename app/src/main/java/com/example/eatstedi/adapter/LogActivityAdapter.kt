@@ -25,7 +25,7 @@ class LogActivityAdapter(private val logActivities: MutableList<LogActivity>) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(logActivity: LogActivity) {
-            binding.tvLogMessage.text = "Sistem mencatat user ${logActivity.user} ${logActivity.activity} pada pukul ${logActivity.time}"
+            binding.tvLogMessage.text = "Sistem mencatat user ${logActivity.user} ${logActivity.activity} pada pukul ${logActivity.time} tanggal ${logActivity.date}"
         }
     }
 
