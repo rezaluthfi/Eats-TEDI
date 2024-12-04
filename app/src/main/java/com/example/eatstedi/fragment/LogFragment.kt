@@ -7,6 +7,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.eatstedi.adapter.LogActivityAdapter
@@ -108,7 +109,19 @@ class LogFragment : Fragment() {
             { _, year, month, dayOfMonth ->
                 val selectedDate = Calendar.getInstance()
                 selectedDate.set(year, month, dayOfMonth)
-                onDateSelected(selectedDate.time)
+                val newDate = selectedDate.time
+
+                // Validasi jika startDate atau endDate sudah diisi
+                if ((startDate != null && newDate < startDate!!) ||
+                    (endDate != null && newDate > endDate!!)) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Tanggal tidak valid! Pastikan tanggal mulai sebelum tanggal selesai.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    onDateSelected(newDate)
+                }
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -122,12 +135,14 @@ class LogFragment : Fragment() {
             val matchesQuery = log.user.lowercase(Locale.getDefault()).contains(query) ||
                     log.activity.lowercase(Locale.getDefault()).contains(query)
 
-            val matchesDate = if (startDate != null || endDate != null) {
+            val matchesDate = if (startDate != null && endDate != null) {
                 val logDate = SimpleDateFormat("HH.mm", Locale.getDefault()).parse(log.time)
-                val afterStartDate = startDate?.let { logDate!! >= it } ?: true
-                val beforeEndDate = endDate?.let { logDate!! <= it } ?: true
+                val afterStartDate = logDate!! >= startDate!!
+                val beforeEndDate = logDate <= endDate!!
                 afterStartDate && beforeEndDate
-            } else true
+            } else {
+                true
+            }
 
             matchesQuery && matchesDate
         }
@@ -147,6 +162,7 @@ class LogFragment : Fragment() {
         val isFilterApplied = query.isNotEmpty() || startDate != null || endDate != null
         binding.ivClearSearch.visibility = if (isFilterApplied) View.VISIBLE else View.GONE
     }
+
 
     private fun clearFilters() {
         // Reset filters
@@ -170,3 +186,4 @@ class LogFragment : Fragment() {
         _binding = null
     }
 }
+
