@@ -10,15 +10,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/bg_modal"
+        android:background="@drawable/bg_form_login"
         android:padding="32dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:text="Apakah anda yakin ingin \nmenyimpan perubahan?"
+            android:text="Apakah anda yakin ingin menyimpan perubahan?"
             android:textSize="32sp"
+            android:textAlignment="center"
             android:fontFamily="@font/noto_sans_gujarati_bold"
             android:textColor="@color/black" />
 
@@ -32,18 +33,18 @@
             <Button
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="No"
+                android:text="Batal"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />
 
             <Button
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="Yes"
+                android:text="Ya"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:layout_marginStart="24dp"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />

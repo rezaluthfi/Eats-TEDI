@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    android:paddingStart="307dp"
+    android:scrollbars="none"
     tools:context=".fragment.DashboardFragment"
     tools:ignore="RtlSymmetry">
 
@@ -37,10 +37,9 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Jadwal Employee"
+                    android:text="Jadwal Karyawan"
                     android:textSize="20sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
@@ -52,32 +51,18 @@
                     android:layout_weight="1"
                     android:gravity="end">
 
-                    <EditText
-                        android:layout_width="200dp"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_search"
-                        android:drawableLeft="@drawable/icon_search"
-                        android:drawablePadding="8dp"
-                        android:hint="Search"
-                        android:inputType="text"
-                        android:orientation="horizontal"
-                        android:padding="10dp"
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/white"
-                        android:textSize="16sp" />
-
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="24dp"
                         android:background="@drawable/bg_btn_primary" >
 
-                        <Spinner
-                            android:id="@+id/sp_shift"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@android:color/white"
-                            android:padding="10dp" />
+<!--                        <Spinner-->
+<!--                            android:id="@+id/sp_shift"-->
+<!--                            android:layout_width="wrap_content"-->
+<!--                            android:layout_height="wrap_content"-->
+<!--                            android:textColor="@android:color/white"-->
+<!--                            android:padding="10dp" />-->
 
                     </LinearLayout>
                 </LinearLayout>
@@ -117,7 +102,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:text="Employee"
+                    android:text="Karyawan"
                     android:textColor="@color/black"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -128,7 +113,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:text="View All"
+                    android:text="Lihat semua>"
                     android:textColor="@color/black"
                     android:textSize="20sp"
                     android:clickable="true"
@@ -172,7 +157,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:text="Supplier"
+                    android:text="Pemasok"
                     android:textColor="@color/black"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -183,7 +168,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:text="View All"
+                    android:text="Lihat semua>"
                     android:textColor="@color/black"
                     android:textSize="20sp" />
 
@@ -212,7 +197,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="48dp"
-            android:text="Payments"
+            android:text="Pembayaran"
             android:textColor="@color/black"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -229,7 +214,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Payments"
+                android:text="Keuangan"
                 android:textSize="16sp"
                 android:textColor="@color/black"
                 android:fontFamily="@font/noto_sans_gujarati_bold"/>
@@ -280,7 +265,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Daily"
+                    android:text="Harian"
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_bold"/>
@@ -315,7 +300,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Weekly"
+                    android:text="Mingguan"
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_bold"/>
@@ -356,7 +341,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Monthly"
+                    android:text="Bulanan"
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_bold"/>

@@ -1,11 +1,13 @@
 package com.example.eatstedi.adapter
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.example.eatstedi.ManageStockMenuActivity
 import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.model.MenuItem
@@ -64,8 +66,12 @@ class MenuAdapter(
                     true
                 }
                 R.id.action_set_stock_menu -> {
-                    // Handle share action for this menu item
-                    // Add share logic here
+                    // Pindah ke ManageStockMenuActivity
+                    val context = view.context
+                    val intent = Intent(context, ManageStockMenuActivity::class.java).apply {
+                        putExtra("MENU_ITEM_ID", menuItem.menuName) // Kirim ID menu atau data lainnya
+                    }
+                    context.startActivity(intent)
                     true
                 }
                 else -> false

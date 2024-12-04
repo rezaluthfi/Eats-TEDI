@@ -30,10 +30,10 @@ class RecapFragment : Fragment() {
 
         // Data dummy untuk tabel rekap transaksi
         val transactions = listOf(
-            Transaction("Alice", "Nasi Goreng", "Warung Makan", 15000, 2, 30000),
-            Transaction("Bob", "Ayam Bakar", "Dapoer Ayu", 20000, 1, 20000),
-            Transaction("Charlie", "Mie Ayam", "Bakso Pak Slamet", 18000, 3, 54000),
-            Transaction("Dave", "Sate Ayam", "Sate Cak Udin", 22000, 2, 44000)
+            Transaction("Alice", "Nasi Goreng", "Warung Makan", "QRIS", 20000, 30000),
+            Transaction("Bob", "Ayam Bakar", "Dapoer Ayu", "QRIS", 20000, 20000),
+            Transaction("Charlie", "Mie Ayam", "Bakso Pak Slamet", "Cash", 20000, 54000),
+            Transaction("Dave", "Sate Ayam", "Sate Cak Udin", "QRIS", 20000, 44000)
         )
 
         // Membuat header tabel
@@ -42,11 +42,11 @@ class RecapFragment : Fragment() {
         headerRow.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary))
 
         headerRow.addView(createTextView("Nama Employee", isHeader = true))
+        headerRow.addView(createTextView("Tanggal", isHeader = true))
         headerRow.addView(createTextView("Menu", isHeader = true))
-        headerRow.addView(createTextView("Supplier", isHeader = true))
-        headerRow.addView(createTextView("Harga", isHeader = true))
-        headerRow.addView(createTextView("Kuantitas", isHeader = true))
+        headerRow.addView(createTextView("Tipe Pembayaran", isHeader = true))
         headerRow.addView(createTextView("Total Harga", isHeader = true))
+        headerRow.addView(createTextView("Kembalian", isHeader = true))
 
         binding.tableView.addView(headerRow)
 
@@ -57,11 +57,11 @@ class RecapFragment : Fragment() {
             row.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.white))
 
             row.addView(createTextView(transaction.employeeName))
+            row.addView(createTextView(transaction.date))
             row.addView(createTextView(transaction.menu))
-            row.addView(createTextView(transaction.supplier))
-            row.addView(createTextView("Rp${transaction.price}"))
-            row.addView(createTextView(transaction.quantity.toString()))
+            row.addView(createTextView(transaction.paymentType))
             row.addView(createTextView("Rp${transaction.totalPrice}"))
+            row.addView(createTextView("Rp${transaction.change}"))
 
             binding.tableView.addView(row)
         }

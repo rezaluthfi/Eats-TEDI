@@ -28,16 +28,16 @@
                 android:id="@+id/tv_day"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hari"
-                android:textSize="24sp"
+                android:layout_marginTop="16dp"
                 android:fontFamily="@font/noto_sans_gujarati_bold"
+                android:text="Hari"
                 android:textColor="@color/black"
-                android:layout_marginTop="16dp" />
+                android:textSize="24sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_input" >
+                android:background="@drawable/bg_input">
 
                 <Spinner
                     android:id="@+id/sp_day"
@@ -51,16 +51,16 @@
                 android:id="@+id/tv_shift"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Shift"
-                android:textSize="24sp"
+                android:layout_marginTop="16dp"
                 android:fontFamily="@font/noto_sans_gujarati_bold"
+                android:text="Shift"
                 android:textColor="@color/black"
-                android:layout_marginTop="16dp" />
+                android:textSize="24sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_input" >
+                android:background="@drawable/bg_input">
 
                 <Spinner
                     android:id="@+id/sp_shift"
@@ -83,9 +83,9 @@
                 android:id="@+id/btn_cancel_schedule"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="Cancel"
+                android:text="Batal"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />
 
@@ -93,9 +93,9 @@
                 android:id="@+id/btn_save_schedule"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="Save"
+                android:text="Simpan"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:layout_marginStart="24dp"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />

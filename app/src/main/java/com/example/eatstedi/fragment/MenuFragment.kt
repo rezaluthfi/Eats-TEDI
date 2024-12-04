@@ -58,7 +58,7 @@ class MenuFragment : Fragment() {
             addItemToOrder(menuItem)
         }
         binding.rvAllMenu.adapter = menuAdapter
-       //jika nested scroll view tampil, maka grid layout manager berkolom 2
+       //jika nested scroll view tampil, maka grid layout manager berkolom 2, jika tidak maka berkolom 3
         binding.rvAllMenu.layoutManager = if (binding.nestedScrollView.visibility == View.VISIBLE) {
             GridLayoutManager(context, 2)
         } else {
@@ -91,6 +91,7 @@ class MenuFragment : Fragment() {
         // Create an ArrayAdapter for the Spinner using a simple layout
         val nameAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, arrayNames)
         nameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        //set text color
 
         // Set the adapter to the Spinner using binding
         binding.spFilterName.adapter = nameAdapter

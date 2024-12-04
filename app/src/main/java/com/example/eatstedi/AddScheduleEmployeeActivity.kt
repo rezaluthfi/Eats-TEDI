@@ -9,14 +9,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.eatstedi.R
-import com.example.eatstedi.databinding.ActivityScheduleEmployeeBinding
+import com.example.eatstedi.databinding.ActivityAddScheduleEmployeeBinding
 import com.example.eatstedi.databinding.ViewModalScheduleBinding
 
-class ScheduleEmployeeActivity : AppCompatActivity() {
+class AddScheduleEmployeeActivity : AppCompatActivity() {
 
     private val binding by lazy {
-        ActivityScheduleEmployeeBinding.inflate(layoutInflater)
+        ActivityAddScheduleEmployeeBinding.inflate(layoutInflater)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +34,7 @@ class ScheduleEmployeeActivity : AppCompatActivity() {
             }
 
             ivArrowBack.setOnClickListener {
-                val intent = Intent(this@ScheduleEmployeeActivity, AllEmployeeActivity::class.java)
+                val intent = Intent(this@AddScheduleEmployeeActivity, AllEmployeeActivity::class.java)
                 startActivity(intent)
             }
         }

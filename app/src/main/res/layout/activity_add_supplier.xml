@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ProfileEmployeeActivity">
+    tools:context=".AddSupplierActivity">
 
     <ImageView
         android:id="@+id/iv_arrow_back"
@@ -71,44 +71,13 @@
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <TextView
-                    android:id="@+id/tv_supplier_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="John Lenon"
-                    android:textSize="40sp"
-                    android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:textColor="@color/black"
-                    />
-
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/grey"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="48dp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end"
-                    android:layout_marginTop="16dp">
 
-                    <TextView
-                        android:id="@+id/tv_delete"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:drawableLeft="@drawable/icon_delete"
-                        android:drawablePadding="8dp"
-                        android:text="Delete"
-                        android:fontFamily="@font/noto_sans_gujarati_regular"
-                        android:background="@drawable/bg_search"
-                        android:paddingVertical="8dp"
-                        android:paddingHorizontal="24dp"
-                        android:layout_marginEnd="16dp"
-                        android:textColor="@color/white"
-                        />
-                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -134,13 +103,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_name"
+                    <EditText
+                        android:id="@+id/et_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="Nama"
-                        android:textColor="@color/black"
+                        android:inputType="text"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -164,8 +133,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_phone_number"
+                    <EditText
+                        android:id="@+id/et_phone_number"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -202,13 +171,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_username"
+                    <EditText
+                        android:id="@+id/et_username"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Username"
-                        android:textColor="@color/black"
+                        android:hint="Nama Pengguna"
+                        android:inputType="text"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -232,13 +201,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_address"
+                    <EditText
+                        android:id="@+id/et_address"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Yogyakarta"
-                        android:textColor="@color/black"
+                        android:hint="Alamat"
+                        android:inputType="text"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -270,13 +239,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_email"
+                    <EditText
+                        android:id="@+id/et_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="Email"
-                        android:textColor="@color/black"
+                        android:inputType="textEmailAddress"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -300,13 +269,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_status"
+                    <EditText
+                        android:id="@+id/et_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="Status"
-                        android:textColor="@color/black"
+                        android:inputType="textEmailAddress"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -333,10 +302,10 @@
                     app:backgroundTint="@null" />
 
                 <Button
-                    android:id="@+id/btn_edit"
+                    android:id="@+id/btn_save"
                     android:layout_width="155dp"
                     android:layout_height="wrap_content"
-                    android:text="Edit"
+                    android:text="Simpan"
                     android:textSize="16sp"
                     android:textColor="@color/white"
                     android:layout_marginStart="24dp"

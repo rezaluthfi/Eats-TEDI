@@ -1,6 +1,6 @@
-<!-- res/layout/navigation_header.xml -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nav_header"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_sidebar"
@@ -14,13 +14,13 @@
         android:layout_height="80dp"
         android:layout_marginTop="24dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/user_profile" />
+        android:src="@drawable/img_avatar" />
 
     <TextView
         android:id="@+id/username"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="John"
+        android:text="Demi"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -30,7 +30,7 @@
         android:id="@+id/email"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="john23@gmail.com"
+        android:text="demi838@kita.com"
         android:textColor="@color/white"
         android:textSize="14sp"
         android:layout_marginTop="4dp"

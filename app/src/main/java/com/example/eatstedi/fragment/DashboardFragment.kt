@@ -57,21 +57,6 @@ class DashboardFragment : Fragment() {
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
 
-        // Set adapter ke Spinner menggunakan binding
-        binding.spShift.adapter = spinnerAdapter
-
-        // Set listener untuk menangani pemilihan shift
-        binding.spShift.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parentView: AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedShift = shifts[position]
-                // Gunakan selectedShift untuk memfilter data
-                filterDataByShift(selectedShift)
-            }
-
-            override fun onNothingSelected(parentView: AdapterView<*>) {
-                // Optional: tindakan jika tidak ada yang dipilih
-            }
-        }
 
         with(binding) {
             // Set listener untuk tombol View All Employee
@@ -89,19 +74,19 @@ class DashboardFragment : Fragment() {
 
         // Data dummy jadwal
         val scheduleList = listOf(
-            EmployeeSchedule("Alice Johnson", "Senin", "Shift 1", "08:00 - 16:00"),
-            EmployeeSchedule("Bob Smith", "Selasa", "Shift 1", "12:00 - 20:00"),
-            EmployeeSchedule("Charlie Lee", "Rabu", "Shift 1", "20:00 - 04:00"),
-            EmployeeSchedule("David Kim", "Kamis", "Shift 1", "08:00 - 16:00"),
-            EmployeeSchedule("Eve Brown", "Jumat", "Shift 1", "12:00 - 20:00"),
-            EmployeeSchedule("Frank White", "Sabtu", "Shift 1", "20:00 - 04:00"),
-            EmployeeSchedule("Grace Davis", "Minggu", "Shift 1", "08:00 - 16:00"),
-            EmployeeSchedule("Henry Wilson", "Senin", "Shift 2", "12:00 - 20:00"),
-            EmployeeSchedule("Ivy Thomas", "Selasa", "Shift 2", "20:00 - 04:00"),
-            EmployeeSchedule("Jack Harris", "Rabu", "Shift 2", "08:00 - 16:00"),
-            EmployeeSchedule("Katie Clark", "Kamis", "Shift 2", "12:00 - 20:00"),
-            EmployeeSchedule("Laura Miller", "Jumat", "Shift 2", "20:00 - 04:00"),
-            EmployeeSchedule("Michael Brown", "Sabtu", "Shift 2", "08:00 - 16:00")
+            EmployeeSchedule("Alice Johnson", "Senin", "1", "07:00-09:00"),
+            EmployeeSchedule("Bob Smith", "Selasa", "1", "07:00-09:00"),
+            EmployeeSchedule("Charlie Lee", "Rabu", "1", "07:00-09:00"),
+            EmployeeSchedule("David Kim", "Kamis", "1", "07:00-09:00"),
+            EmployeeSchedule("Eve Brown", "Jumat", "2", "09:00-12:00"),
+            EmployeeSchedule("Frank White", "Sabtu", "2", "09:00-12:00"),
+            EmployeeSchedule("Grace Davis", "Minggu", "2", "09:00-12:00"),
+            EmployeeSchedule("Henry Wilson", "Senin", "2", "09:00-12:00"),
+            EmployeeSchedule("Ivy Thomas", "Selasa", "3", "12:00-14:00"),
+            EmployeeSchedule("Jack Harris", "Rabu", "3", "12:00-14:00"),
+            EmployeeSchedule("Katie Clark", "Kamis", "3", "12:00-14:00"),
+            EmployeeSchedule("Laura Miller", "Jumat", "4", "14:00-16:00"),
+            EmployeeSchedule("Michael Brown", "Sabtu", "4", "14:00-16:00")
         )
 
         // Data dummy employee
@@ -317,7 +302,7 @@ class DashboardFragment : Fragment() {
             setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary)) // Sesuaikan warna
         }
 
-        headerRow.addView(createTextView("Nama Employee", isHeader = true))
+        headerRow.addView(createTextView("Nama Karyawan", isHeader = true))
         headerRow.addView(createTextView("Hari", isHeader = true))
         headerRow.addView(createTextView("Shift", isHeader = true))
         headerRow.addView(createTextView("Waktu", isHeader = true))

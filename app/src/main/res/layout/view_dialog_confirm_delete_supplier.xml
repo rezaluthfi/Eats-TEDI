@@ -16,9 +16,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Apakah anda yakin ingin menghapus menu ini?"
-            android:textAlignment="center"
+            android:text="Apakah anda yakin ingin menghapus pemasok?"
             android:textSize="24sp"
+            android:textAlignment="center"
             android:fontFamily="@font/noto_sans_gujarati_bold"
             android:textColor="@color/black" />
 
@@ -30,6 +30,7 @@
             android:layout_marginTop="72dp" >
 
             <Button
+                android:id="@+id/btn_cancel_supplier"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
                 android:text="Batal"
@@ -39,6 +40,7 @@
                 app:backgroundTint="@null" />
 
             <Button
+                android:id="@+id/btn_delete_supplier"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
                 android:text="Hapus"

@@ -10,14 +10,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/bg_modal"
+        android:background="@drawable/bg_form_login"
         android:padding="32dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Apakah anda yakin ingin menghapus employee?"
+            android:text="Apakah anda yakin ingin menghapus karyawan?"
             android:textSize="24sp"
+            android:textAlignment="center"
             android:fontFamily="@font/noto_sans_gujarati_bold"
             android:textColor="@color/black" />
 
@@ -29,20 +30,22 @@
             android:layout_marginTop="72dp" >
 
             <Button
+                android:id="@+id/btn_cancel_employee"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="Cancel"
+                android:text="Batal"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />
 
             <Button
+                android:id="@+id/btn_delete_employee"
                 android:layout_width="155dp"
                 android:layout_height="wrap_content"
-                android:text="Delete"
+                android:text="Hapus"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:layout_marginStart="24dp"
                 android:background="@drawable/bg_btn_secondary"
                 app:backgroundTint="@null" />

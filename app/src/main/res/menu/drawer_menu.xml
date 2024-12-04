@@ -2,20 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:id="@+id/menu_items">
 
-<!--        <item-->
-<!--            android:title=""-->
-<!--            android:background="@drawable/selector_menu_item"-->
-<!--            android:textColor="@color/selector_menu_item_text_color" />-->
-
         <item
             android:id="@+id/nav_dashboard"
-            android:title="Dashboard"
+            android:title="Dasbor"
             android:icon="@drawable/icon_home"
             android:checkable="true"
             android:background="@drawable/selector_menu_item"
             android:textColor="@color/selector_menu_item_text_color" />
-
-
         <item
             android:id="@+id/nav_menu"
             android:title="Menu"
@@ -24,19 +17,18 @@
             android:background="@drawable/selector_menu_item" />
         <item
             android:id="@+id/nav_history"
-            android:title="History"
+            android:title="Riwayat"
             android:icon="@drawable/icon_history"
             android:checkable="true"
             android:background="@drawable/selector_menu_item"
             android:textColor="@color/selector_menu_item_text_color" />
         <item
             android:id="@+id/nav_recap"
-            android:title="Recap"
+            android:title="Rekap"
             android:icon="@drawable/icon_recap"
             android:checkable="true"
             android:background="@drawable/selector_menu_item"
             android:textColor="@color/selector_menu_item_text_color" />
-
         <item
             android:id="@+id/nav_log"
             android:title="Log"
@@ -45,10 +37,6 @@
             android:background="@drawable/selector_menu_item"
             android:textColor="@color/selector_menu_item_text_color" />
 
-<!--        <item-->
-<!--            android:title=""-->
-<!--            android:background="@drawable/selector_menu_item"-->
-<!--            android:textColor="@color/selector_menu_item_text_color" />-->
     </group>
 
     <!-- Group terpisah untuk item Logout -->
@@ -61,4 +49,5 @@
             android:background="@drawable/selector_menu_item"
             android:textColor="@color/selector_menu_item_text_color" />
     </group>
+
 </menu>

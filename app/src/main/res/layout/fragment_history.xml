@@ -11,7 +11,6 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:layout_marginTop="32dp"
-        android:paddingStart="307dp"
         app:layout_constraintTop_toTopOf="parent" >
 
         <LinearLayout
@@ -38,23 +37,37 @@
                 android:layout_gravity="center_vertical"
                 android:orientation="horizontal"  >
 
-                <ImageView
-                    android:layout_width="56dp"
+                <Button
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:text="dd/mm/yyyy"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/noto_sans_gujarati_regular"
                     android:background="@drawable/bg_search"
-                    android:src="@drawable/icon_date"
-                    android:padding="10dp" />
+                    app:backgroundTint="@null"
+                    android:drawableLeft="@drawable/icon_date"
+                    android:drawablePadding="16dp"/>
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="dd/mm/yyyy"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/noto_sans_gujarati_regular"
+                    android:background="@drawable/bg_search"
+                    app:backgroundTint="@null"
+                    android:drawableLeft="@drawable/icon_date"
+                    android:drawablePadding="16dp"/>
 
                 <ImageView
-                    android:layout_width="56dp"
+                    android:layout_width="80dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:layout_marginStart="16dp"
                     android:background="@drawable/bg_search"
                     android:src="@drawable/icon_download"
-                    android:padding="10dp"/>
+                    android:padding="16dp"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -78,7 +91,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Total Employee"
+                    android:text="Total"
                     android:textSize="16sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_regular"/>

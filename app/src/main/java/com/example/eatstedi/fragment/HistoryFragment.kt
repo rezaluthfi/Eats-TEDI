@@ -30,11 +30,11 @@ class HistoryFragment : Fragment() {
 
         // Data dummy untuk history kehadiran
         val attendanceRecords = listOf(
-            Attendance("Alice", "2024-11-01", "Pagi", "08:00 - 12:00"),
-            Attendance("Bob", "2024-11-01", "Siang", "12:00 - 16:00"),
-            Attendance("Charlie", "2024-11-02", "Malam", "16:00 - 20:00"),
-            Attendance("Dave", "2024-11-02", "Pagi", "08:00 - 12:00"),
-            Attendance("Eve", "2024-11-03", "Siang", "12:00 - 16:00"),
+            Attendance("Alice", "2024-11-01", "Pagi", "08:00 - 12:00", "Present"),
+            Attendance("Bob", "2024-11-01", "Siang", "12:00 - 16:00", "Present"),
+            Attendance("Charlie", "2024-11-02", "Malam", "16:00 - 20:00", "Present"),
+            Attendance("Dave", "2024-11-02", "Pagi", "08:00 - 12:00", "Present"),
+            Attendance("Eve", "2024-11-03", "Siang", "12:00 - 16:00", "Present"),
         )
 
         // Membuat header tabel
@@ -46,6 +46,7 @@ class HistoryFragment : Fragment() {
         headerRow.addView(createTextView("Tanggal", isHeader = true))
         headerRow.addView(createTextView("Shift", isHeader = true))
         headerRow.addView(createTextView("Waktu", isHeader = true))
+        headerRow.addView(createTextView("Attendance", isHeader = true))
 
         binding.attendanceTableView.addView(headerRow)
 
@@ -59,6 +60,7 @@ class HistoryFragment : Fragment() {
             row.addView(createTextView(attendance.date))
             row.addView(createTextView(attendance.shift))
             row.addView(createTextView(attendance.time))
+            row.addView(createTextView(attendance.attendance))
 
             binding.attendanceTableView.addView(row)
         }

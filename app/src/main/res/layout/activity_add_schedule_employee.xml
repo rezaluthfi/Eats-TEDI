@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ScheduleEmployeeActivity">
+    tools:context=".AddScheduleEmployeeActivity">
 
     <ImageView
         android:id="@+id/iv_arrow_back"
@@ -27,35 +27,34 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" >
 
-       <RelativeLayout
-           android:layout_width="match_parent"
-           android:layout_height="wrap_content" >
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" >
 
-           <TextView
-               android:id="@+id/tv_schedule"
-               android:layout_width="wrap_content"
-               android:layout_height="wrap_content"
-               android:text="Jadwal"
-               android:textSize="40sp"
-               android:fontFamily="@font/noto_sans_gujarati_bold"
-               android:textColor="@color/black"
-               android:layout_marginTop="16dp" />
+            <TextView
+                android:id="@+id/tv_schedule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Jadwal"
+                android:textSize="40sp"
+                android:fontFamily="@font/noto_sans_gujarati_bold"
+                android:textColor="@color/black"
+                android:layout_marginTop="16dp" />
 
-           <Button
-               android:id="@+id/btn_add_schedule"
-               android:layout_width="wrap_content"
-               android:layout_height="wrap_content"
-               android:visibility="gone"
-               android:text="Tambah Jadwal"
-               android:textSize="16sp"
-               android:textColor="@color/white"
-               android:layout_marginStart="24dp"
-               android:layout_alignTop="@+id/tv_schedule"
-               android:layout_alignParentEnd="true"
-               android:drawableLeft="@drawable/icon_plus"
-               android:background="@drawable/bg_btn_primary"
-               app:backgroundTint="@null" />
-       </RelativeLayout>
+            <Button
+                android:id="@+id/btn_add_schedule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tambah Jadwal"
+                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:layout_marginStart="24dp"
+                android:layout_alignTop="@+id/tv_schedule"
+                android:layout_alignParentEnd="true"
+                android:drawableLeft="@drawable/icon_plus"
+                android:background="@drawable/bg_btn_primary"
+                app:backgroundTint="@null" />
+        </RelativeLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_schedule"

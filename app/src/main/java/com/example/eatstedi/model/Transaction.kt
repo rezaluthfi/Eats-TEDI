@@ -2,9 +2,9 @@ package com.example.eatstedi.model
 
 data class Transaction(
     val employeeName: String,
+    val date: String,
     val menu: String,
-    val supplier: String,
-    val price: Int,
-    val quantity: Int,
-    val totalPrice: Int
+    val paymentType: String,
+    val totalPrice: Int,
+    val change: Int
 )

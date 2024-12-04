@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ProfileEmployeeActivity">
+    tools:context=".ProfileAdminActivity">
 
     <ImageView
         android:id="@+id/iv_arrow_back"
@@ -52,7 +52,7 @@
                         android:id="@+id/img_menu"
                         android:layout_width="150dp"
                         android:layout_height="150dp"
-                        android:src="@drawable/image_menu"
+                        android:src="@drawable/img_avatar"
                         android:layout_marginTop="40dp"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -72,10 +72,10 @@
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <TextView
-                    android:id="@+id/tv_supplier_name"
+                    android:id="@+id/tv_admin_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="John Lenon"
+                    android:text="Demi Wikinison"
                     android:textSize="40sp"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
                     android:textColor="@color/black"
@@ -87,28 +87,6 @@
                     android:background="@color/grey"
                     android:layout_marginTop="8dp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="end"
-                    android:layout_marginTop="16dp">
-
-                    <TextView
-                        android:id="@+id/tv_delete"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:drawableLeft="@drawable/icon_delete"
-                        android:drawablePadding="8dp"
-                        android:text="Delete"
-                        android:fontFamily="@font/noto_sans_gujarati_regular"
-                        android:background="@drawable/bg_search"
-                        android:paddingVertical="8dp"
-                        android:paddingHorizontal="24dp"
-                        android:layout_marginEnd="16dp"
-                        android:textColor="@color/white"
-                        />
-                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -139,7 +117,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Nama"
+                        android:text="Demi Wikinison"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
@@ -169,8 +148,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="No. Telepon"
-                        android:inputType="number"
+                        android:text="0812345678"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
+                        android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         />
@@ -207,7 +187,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Username"
+                        android:text="demi838"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
@@ -238,6 +219,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="Yogyakarta"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
@@ -275,7 +257,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Email"
+                        android:text="demi838@kita.com"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
@@ -294,18 +277,19 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Status"
+                        android:text="kata Sandi"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
                         android:textColor="@color/black"
                         />
 
                     <TextView
-                        android:id="@+id/tv_status"
+                        android:id="@+id/tv_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="Status"
+                        android:text="demi123"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
                         android:padding="16dp"

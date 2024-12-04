@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="32dp"
-        android:paddingStart="307dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -54,7 +53,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
+                android:gravity="end|center_vertical"
                 android:orientation="horizontal" >
 
                 <Button
@@ -62,6 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Add New Menu"
+                    android:fontFamily="@font/noto_sans_gujarati_regular"
                     android:textSize="16sp"
                     android:textColor="@color/white"
                     android:layout_marginStart="24dp"
@@ -148,6 +148,8 @@
         android:background="#FFFAE3"
         android:padding="16dp"
         android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
