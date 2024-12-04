@@ -23,18 +23,19 @@
             android:orientation="horizontal" >
 
             <EditText
+                android:id="@+id/et_search_menu"
                 android:layout_width="320dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:background="@drawable/bg_btn_primary"
-                android:padding="10dp"
                 android:drawableLeft="@drawable/icon_search"
-                android:textSize="16sp"
-                android:textColor="@color/white"
+                android:drawablePadding="8dp"
                 android:hint="Search"
-                android:textColorHint="@color/white"
                 android:inputType="text"
-                android:drawablePadding="8dp"/>
+                android:orientation="horizontal"
+                android:padding="10dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/white"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -60,7 +61,7 @@
                     android:id="@+id/btn_add_new_menu"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Add New Menu"
+                    android:text="Tambah Menu"
                     android:fontFamily="@font/noto_sans_gujarati_regular"
                     android:textSize="16sp"
                     android:textColor="@color/white"

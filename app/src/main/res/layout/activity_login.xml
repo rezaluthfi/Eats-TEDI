@@ -75,7 +75,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:text="Hey, Enter your details to get sign in \nto your account"
+                    android:text="Hai, masukkan detail anda untuk \nmasuk ke akun"
                     android:textColor="@color/black"
                     android:textSize="18sp"
                     android:textAlignment="center"

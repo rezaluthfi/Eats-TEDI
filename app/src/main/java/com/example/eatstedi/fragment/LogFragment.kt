@@ -23,8 +23,9 @@ class LogFragment : Fragment() {
     private lateinit var originalLogActivities: List<LogActivity>
     private lateinit var adapter: LogActivityAdapter
 
-    private var startDate: Date? = null
-    private var endDate: Date? = null
+    private var startDate: Calendar? = null
+    private var endDate: Calendar? = null
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -39,24 +40,23 @@ class LogFragment : Fragment() {
 
         // Data dummy
         originalLogActivities = listOf(
-            LogActivity("Reza", "update profile", "10.00"),
-            LogActivity("Mira", "edit menu", "11.30"),
-            LogActivity("John", "add transaction", "14.00"),
-            LogActivity("Nina", "delete item", "16.15"),
-            LogActivity("Rudi", "add user", "17.45"),
-            LogActivity("Sari", "delete user", "19.30"),
-            LogActivity("Tayo", "update profile", "20.00"),
-            LogActivity("Rina", "edit menu", "21.30"),
-            LogActivity("Joko", "add transaction", "22.00"),
-            LogActivity("Nana", "delete item", "23.15"),
-            LogActivity("Rudi", "add user", "23.45"),
-            LogActivity("Sari", "delete user", "23.30"),
-            LogActivity("Tayo", "update profile", "23.00"),
-            LogActivity("Rina", "edit menu", "23.30"),
-            LogActivity("Joko", "add transaction", "23.00"),
-            LogActivity("Nana", "delete item", "23.15"),
-            LogActivity("Rudi", "add user", "23.45"),
-            LogActivity("Sari", "delete user", "23.30"),
+            LogActivity("Banu", "delete user", "16.00", "13/12/2024"),
+            LogActivity("Banu", "add user", "15.58", "13/12/2024"),
+            LogActivity("Banu", "delete user", "15.56", "13/12/2024"),
+            LogActivity("Rudi", "add user", "13.10", "13/12/2024"),
+            LogActivity("Nina", "delete item", "12.48", "12/12/2024"),
+            LogActivity("Reza", "update profile", "11.42", "11/12/2024"),
+            LogActivity("Tayo", "edit menu", "12.12", "10/12/2024"),
+            LogActivity("John", "add transaction", "11.52", "10/12/2024"),
+            LogActivity("Sari", "delete user", "16.40", "08/12/2024"),
+            LogActivity("Rudi", "add user", "15.50", "07/12/2024"),
+            LogActivity("Sari", "delete user", "15.40", "06/12/2024"),
+            LogActivity("Rudi", "add user", "14.50", "05/12/2024"),
+            LogActivity("Nina", "delete item", "14.21", "04/12/2024"),
+            LogActivity("John", "add transaction", "12.20", "03/12/2024"),
+            LogActivity("Mira", "edit menu", "11.12", "02/12/2024"),
+            LogActivity("Reza", "edit menu", "13.42", "01/12/2024"),
+            LogActivity("Reza", "update profile", "10.20", "01/12/2024")
         )
 
         // Set up RecyclerView
@@ -83,45 +83,54 @@ class LogFragment : Fragment() {
     }
 
     private fun setupDateFilter() {
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-
         binding.btnStartDate.setOnClickListener {
-            showDatePicker { date ->
+            showDatePicker(isStartDate = true) { date ->
                 startDate = date
-                binding.btnStartDate.text = dateFormat.format(date)
+                binding.btnStartDate.text = dateFormat.format(date.time)
                 filterLogs()
             }
         }
 
         binding.btnEndDate.setOnClickListener {
-            showDatePicker { date ->
+            showDatePicker(isStartDate = false) { date ->
                 endDate = date
-                binding.btnEndDate.text = dateFormat.format(date)
+                binding.btnEndDate.text = dateFormat.format(date.time)
                 filterLogs()
             }
         }
     }
 
-    private fun showDatePicker(onDateSelected: (Date) -> Unit) {
+    private fun showDatePicker(isStartDate: Boolean, onDateSelected: (Calendar) -> Unit) {
         val calendar = Calendar.getInstance()
         DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
-                val selectedDate = Calendar.getInstance()
-                selectedDate.set(year, month, dayOfMonth)
-                val newDate = selectedDate.time
-
-                // Validasi jika startDate atau endDate sudah diisi
-                if ((startDate != null && newDate < startDate!!) ||
-                    (endDate != null && newDate > endDate!!)) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Tanggal tidak valid! Pastikan tanggal mulai sebelum tanggal selesai.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    onDateSelected(newDate)
+                val selectedDate = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth)
                 }
+
+                // Validasi jika tanggal mulai lebih besar dari tanggal selesai atau sebaliknya
+                if (isStartDate) {
+                    if (endDate != null && selectedDate.after(endDate)) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Tanggal mulai tidak boleh setelah tanggal selesai!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@DatePickerDialog
+                    }
+                } else {
+                    if (startDate != null && selectedDate.before(startDate)) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Tanggal selesai tidak boleh sebelum tanggal mulai!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@DatePickerDialog
+                    }
+                }
+
+                onDateSelected(selectedDate)
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -129,17 +138,33 @@ class LogFragment : Fragment() {
         ).show()
     }
 
+    // Fungsi untuk menghapus waktu dan hanya menyimpan tanggal
+    private fun Calendar.stripTime(): Calendar {
+        this.set(Calendar.HOUR_OF_DAY, 0)
+        this.set(Calendar.MINUTE, 0)
+        this.set(Calendar.SECOND, 0)
+        this.set(Calendar.MILLISECOND, 0)
+        return this
+    }
+
+    // Filter untuk log activity berdasarkan query pencarian dan rentang tanggal
     private fun filterLogs() {
         val query = binding.etSearch.text.toString().lowercase(Locale.getDefault())
         val filteredLogs = originalLogActivities.filter { log ->
+            // Memeriksa kecocokan query pencarian dengan pengguna atau aktivitas
             val matchesQuery = log.user.lowercase(Locale.getDefault()).contains(query) ||
                     log.activity.lowercase(Locale.getDefault()).contains(query)
 
+            // Memeriksa apakah log berada dalam rentang tanggal yang ditentukan
             val matchesDate = if (startDate != null && endDate != null) {
-                val logDate = SimpleDateFormat("HH.mm", Locale.getDefault()).parse(log.time)
-                val afterStartDate = logDate!! >= startDate!!
-                val beforeEndDate = logDate <= endDate!!
-                afterStartDate && beforeEndDate
+                val logDate = Calendar.getInstance().apply {
+                    time = dateFormat.parse(log.date)!!
+                }.stripTime() // Menghapus waktu pada tanggal log
+
+                val strippedStartDate = startDate?.stripTime()
+                val strippedEndDate = endDate?.stripTime()
+
+                !logDate.before(strippedStartDate) && !logDate.after(strippedEndDate)
             } else {
                 true
             }
@@ -147,9 +172,10 @@ class LogFragment : Fragment() {
             matchesQuery && matchesDate
         }
 
+        // Update data pada adapter
         adapter.updateData(filteredLogs)
 
-        // Atur visibilitas TextView "tv_no_data"
+        // Menyembunyikan atau menampilkan pesan jika tidak ada data yang sesuai
         if (filteredLogs.isEmpty()) {
             binding.tvNoData.visibility = View.VISIBLE
             binding.rvLogActivity.visibility = View.GONE
@@ -158,23 +184,20 @@ class LogFragment : Fragment() {
             binding.rvLogActivity.visibility = View.VISIBLE
         }
 
-        // Toggle Clear Search visibility
-        val isFilterApplied = query.isNotEmpty() || startDate != null || endDate != null
-        binding.ivClearSearch.visibility = if (isFilterApplied) View.VISIBLE else View.GONE
+        // Menampilkan ikon clear search jika ada filter yang aktif
+        binding.ivClearSearch.visibility = if (query.isNotEmpty() || startDate != null || endDate != null) View.VISIBLE else View.GONE
     }
 
-
+    // Membersihkan filter pencarian dan tanggal
     private fun clearFilters() {
-        // Reset filters
         binding.etSearch.text.clear()
         startDate = null
         endDate = null
 
-        // Reset date filter buttons
-        binding.btnStartDate.text = "dd/mm/yyyy"
-        binding.btnEndDate.text = "dd/mm/yyyy"
+        binding.btnStartDate.text = "dd/mm/yyyy" // Teks default untuk start date
+        binding.btnEndDate.text = "dd/mm/yyyy" // Teks default untuk end date
 
-        // Reset data and UI
+        // Mengupdate data dengan log activities asli
         adapter.updateData(originalLogActivities)
         binding.tvNoData.visibility = View.GONE
         binding.rvLogActivity.visibility = View.VISIBLE
@@ -186,4 +209,3 @@ class LogFragment : Fragment() {
         _binding = null
     }
 }
-

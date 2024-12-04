@@ -24,6 +24,7 @@
         android:layout_gravity="start"
         android:background="@drawable/bg_sidebar"
         android:fitsSystemWindows="true"
+        app:theme="@style/CustomNavigationViewStyle"
         app:menu="@menu/drawer_menu"
         app:headerLayout="@layout/navigation_header"
         app:itemTextColor="@color/white"

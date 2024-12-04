@@ -95,7 +95,7 @@ class AllEmployeeActivity : AppCompatActivity() {
             setBackgroundColor(ContextCompat.getColor(this@AllEmployeeActivity, R.color.secondary))
         }
 
-        headerRow.addView(createTextView("Nama Employee", isHeader = true))
+        headerRow.addView(createTextView("Nama Karyawan", isHeader = true))
         headerRow.addView(createTextView("Status", isHeader = true))
         headerRow.addView(createTextView("Nama Pengguna", isHeader = true))
         headerRow.addView(createTextView("Email", isHeader = true))
