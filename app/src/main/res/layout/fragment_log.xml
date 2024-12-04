@@ -28,6 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="Log Aktivitas"
                 android:textSize="32sp"
+                android:textColor="@color/black"
                 android:fontFamily="@font/noto_sans_gujarati_bold" />
 
             <LinearLayout
@@ -38,11 +39,13 @@
                 android:orientation="horizontal" >
 
                 <EditText
+                    android:id="@+id/et_search"
                     android:layout_width="200dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="40dp"
                     android:orientation="horizontal"
                     android:background="@drawable/bg_search"
                     android:padding="10dp"
+                    android:layout_marginEnd="16dp"
                     android:drawableLeft="@drawable/icon_search"
                     android:textSize="16sp"
                     android:textColor="@color/white"
@@ -51,25 +54,66 @@
                     android:inputType="text"
                     android:drawablePadding="8dp"/>
 
+                <Button
+                    android:id="@+id/btn_start_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="16dp"
+                    android:text="dd/mm/yyyy"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/noto_sans_gujarati_regular"
+                    android:background="@drawable/bg_search"
+                    app:backgroundTint="@null"
+                    android:drawableLeft="@drawable/icon_date"
+                    android:drawablePadding="16dp"/>
+
+                <Button
+                    android:id="@+id/btn_end_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="dd/mm/yyyy"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/noto_sans_gujarati_regular"
+                    android:background="@drawable/bg_search"
+                    app:backgroundTint="@null"
+                    android:drawableLeft="@drawable/icon_date"
+                    android:drawablePadding="16dp"/>
+
                 <ImageView
-                    android:layout_width="56dp"
-                    android:layout_height="wrap_content"
+                    android:id="@+id/iv_clear_search"
+                    android:layout_width="80dp"
+                    android:layout_height="40dp"
                     android:layout_gravity="center_vertical"
                     android:layout_marginStart="16dp"
                     android:background="@drawable/bg_search"
-                    android:src="@drawable/icon_date"
-                    android:padding="10dp" />
+                    android:src="@drawable/icon_close"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
 
             </LinearLayout>
 
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_no_data"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="48dp"
+            android:text="Maaf, data tidak ditemukan."
+            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:fontFamily="@font/noto_sans_gujarati_regular"
+            android:visibility="gone"
+            />
 
        <androidx.recyclerview.widget.RecyclerView
            android:id="@+id/rv_log_activity"
            android:layout_width="match_parent"
            android:layout_height="wrap_content"
            android:background="@drawable/bg_container"
-           android:layout_marginTop="8dp"
+           android:layout_marginTop="48dp"
+           android:padding="8dp"
            tools:listitem="@layout/view_item_log_activity" />
 
     </LinearLayout>

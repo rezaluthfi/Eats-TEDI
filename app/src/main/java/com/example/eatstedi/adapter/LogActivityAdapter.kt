@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.eatstedi.databinding.ViewItemLogActivityBinding
 import com.example.eatstedi.model.LogActivity
 
-class LogActivityAdapter(private val logActivities: List<LogActivity>) :
+class LogActivityAdapter(private val logActivities: MutableList<LogActivity>) :
     RecyclerView.Adapter<LogActivityAdapter.LogActivityViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LogActivityViewHolder {
@@ -27,5 +27,11 @@ class LogActivityAdapter(private val logActivities: List<LogActivity>) :
         fun bind(logActivity: LogActivity) {
             binding.tvLogMessage.text = "Sistem mencatat user ${logActivity.user} ${logActivity.activity} pada pukul ${logActivity.time}"
         }
+    }
+
+    fun updateData(newLogActivities: List<LogActivity>) {
+        logActivities.clear()
+        logActivities.addAll(newLogActivities)
+        notifyDataSetChanged()
     }
 }
