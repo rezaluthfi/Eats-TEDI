@@ -1,5 +1,6 @@
 package com.example.eatstedi.adapter
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
@@ -12,11 +13,14 @@ import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.model.MenuItem
 
-// Add a callback interface
 class MenuAdapter(
-    private val menuList: List<MenuItem>,
-    private val onItemClick: (MenuItem) -> Unit
+    private var menuList: List<MenuItem>,
+    private val onItemClick: (MenuItem) -> Unit,
+    private val onEditMenu: (MenuItem) -> Unit,
+    private val onDeleteMenu: (MenuItem) -> Unit
 ) : RecyclerView.Adapter<MenuAdapter.MenuViewHolder>() {
+
+    private var filteredMenuList: List<MenuItem> = menuList // Menginisialisasi filteredMenuList dengan menuList
 
     inner class MenuViewHolder(val binding: ViewItemMenuBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -26,50 +30,58 @@ class MenuAdapter(
     }
 
     override fun onBindViewHolder(holder: MenuViewHolder, position: Int) {
-        val menuItem = menuList[position]
-        holder.binding.tvMenuName.text = menuItem.menuName
-        holder.binding.tvOwnerName.text = menuItem.ownerName
-        holder.binding.tvPrice.text = menuItem.price
+        val menuItem = filteredMenuList[position]
+        with(holder.binding) {
+            tvMenuName.text = menuItem.menuName
+            tvOwnerName.text = menuItem.ownerName
+            tvPrice.text = menuItem.price
+            tvStock.text = "Sisa: ${menuItem.stock}" // Pastikan ini diupdate
 
-        // Load image using Glide
-        Glide.with(holder.itemView.context)
-            .load(menuItem.imageUrl)
-            .into(holder.binding.ivMenu)
+            Glide.with(holder.itemView.context)
+                .load(menuItem.imageUrl)
+                .placeholder(R.drawable.image_menu)
+                .error(R.drawable.ic_launcher_background)
+                .into(ivMenuImage)
 
-        // Set click listener to trigger callback
-        holder.itemView.setOnClickListener {
-            onItemClick(menuItem)
-        }
-
-        // Set listener for iv_more
-        holder.binding.ivMore.setOnClickListener { view ->
-            showPopupMenu(view, menuItem)
+            root.setOnClickListener { onItemClick(menuItem) }
+            ivMore.setOnClickListener { showPopupMenu(it, menuItem) }
         }
     }
 
-    override fun getItemCount() = menuList.size
 
-    // Display the popup menu
+    override fun getItemCount() = filteredMenuList.size
+
+    fun updateList(newList: List<MenuItem>) {
+        menuList = newList
+        filteredMenuList = newList // Menyesuaikan filteredMenuList dengan menuList baru
+        notifyDataSetChanged() // Memperbarui tampilan RecyclerView
+    }
+
+    fun filterMenus(query: String) {
+        filteredMenuList = menuList.filter { it.menuName.contains(query, ignoreCase = true) }
+        notifyDataSetChanged()
+    }
+
     private fun showPopupMenu(view: View, menuItem: MenuItem) {
         val popupMenu = PopupMenu(view.context, view)
         popupMenu.menuInflater.inflate(R.menu.menu_item_options, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener { menuItemSelected ->
             when (menuItemSelected.itemId) {
                 R.id.action_edit_menu -> {
-                    // Handle edit action for this menu item
-                    // Add edit logic here
+                    onEditMenu(menuItem)
                     true
                 }
                 R.id.action_delete_menu -> {
-                    // Handle delete action for this menu item
-                    // Add delete logic here
+                    onDeleteMenu(menuItem)
                     true
                 }
                 R.id.action_set_stock_menu -> {
-                    // Pindah ke ManageStockMenuActivity
                     val context = view.context
                     val intent = Intent(context, ManageStockMenuActivity::class.java).apply {
-                        putExtra("MENU_ITEM_ID", menuItem.menuName) // Kirim ID menu atau data lainnya
+                        putExtra("MENU_ITEM_ID", menuItem.id) // Kirim ID menu
+                        putExtra("MENU_ITEM_NAME", menuItem.menuName) // Kirim nama menu
+                        putExtra("MENU_ITEM_IMAGE_URL", menuItem.imageUrl) // Kirim URL gambar menu
+                        putExtra("MENU_ITEM_STOCK", menuItem.stock) // Kirim stok saat ini
                     }
                     context.startActivity(intent)
                     true
@@ -79,6 +91,5 @@ class MenuAdapter(
         }
         popupMenu.show()
     }
+
 }
-
-

@@ -26,7 +26,7 @@
         android:fitsSystemWindows="true"
         app:theme="@style/CustomNavigationViewStyle"
         app:menu="@menu/drawer_menu"
-        app:headerLayout="@layout/navigation_header"
+        app:headerLayout="@layout/custom_navigation_header"
         app:itemTextColor="@color/white"
         app:itemBackground="@drawable/selector_menu_item"
         app:itemIconTint="@drawable/selector_menu_item_icon" />

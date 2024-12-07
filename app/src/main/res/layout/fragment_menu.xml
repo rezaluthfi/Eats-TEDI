@@ -25,11 +25,11 @@
             <EditText
                 android:id="@+id/et_search_menu"
                 android:layout_width="320dp"
-                android:layout_height="wrap_content"
+                android:layout_height="40dp"
                 android:background="@drawable/bg_btn_primary"
                 android:drawableLeft="@drawable/icon_search"
                 android:drawablePadding="8dp"
-                android:hint="Search"
+                android:hint="Cari Menu..."
                 android:inputType="text"
                 android:orientation="horizontal"
                 android:padding="10dp"
@@ -46,8 +46,10 @@
                 <Spinner
                     android:id="@+id/sp_filter_name"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="10dp" />
+                    android:layout_height="40dp"
+                    android:padding="10dp"
+                    android:textColor="@android:color/white"
+                    android:theme="@style/SpinnerTheme"/>
 
             </LinearLayout>
 
@@ -60,7 +62,7 @@
                 <Button
                     android:id="@+id/btn_add_new_menu"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="40dp"
                     android:text="Tambah Menu"
                     android:fontFamily="@font/noto_sans_gujarati_regular"
                     android:textSize="16sp"
@@ -78,63 +80,93 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="40dp"
-            app:singleSelection="true">
+            app:singleSelection="true"
+            app:selectionRequired="true">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_all_menu"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="All Menu"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:text="Semua Item"
                 android:textAlignment="center"
-                android:textColor="@color/white"
-                app:chipBackgroundColor="@color/red"
+                android:textColor="@color/selector_text_chip_category"
+                android:layout_marginEnd="16dp"
+                app:chipBackgroundColor="@color/selector_bg_chip_category"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp" />
+                app:chipStartPadding="10dp"
+                app:chipStrokeWidth="1dp"
+                app:chipStrokeColor="@color/grey"
+                android:checked="true"/>
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_foods"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Foods"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:text="Makanan"
                 android:textAlignment="center"
-                android:textColor="@color/black"
-                app:chipBackgroundColor="@color/white"
+                android:textColor="@color/selector_text_chip_category"
+                android:layout_marginEnd="16dp"
+                app:chipBackgroundColor="@color/selector_bg_chip_category"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp" />
+                app:chipStartPadding="10dp"
+                app:chipStrokeWidth="1dp"
+                app:chipStrokeColor="@color/grey"/>
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_drinks"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Drinks"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:text="Minuman"
                 android:textAlignment="center"
-                android:textColor="@color/black"
-                app:chipBackgroundColor="@color/white"
+                android:textColor="@color/selector_text_chip_category"
+                android:layout_marginEnd="16dp"
+                app:chipBackgroundColor="@color/selector_bg_chip_category"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp" />
+                app:chipStartPadding="10dp"
+                app:chipStrokeWidth="1dp"
+                app:chipStrokeColor="@color/grey"/>
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_snacks"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Snacks"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:text="Camilan"
                 android:textAlignment="center"
-                android:textColor="@color/black"
-                app:chipBackgroundColor="@color/white"
+                android:textColor="@color/selector_text_chip_category"
+                android:layout_marginEnd="16dp"
+                app:chipBackgroundColor="@color/selector_bg_chip_category"
                 app:chipCornerRadius="300dp"
                 app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp" />
+                app:chipStartPadding="10dp"
+                app:chipStrokeWidth="1dp"
+                app:chipStrokeColor="@color/grey"/>
 
         </com.google.android.material.chip.ChipGroup>
+
+        <TextView
+            android:id="@+id/tv_no_data"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:layout_gravity="center"
+            android:text="Maaf, data tidak ditemukan."
+            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:visibility="gone"/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_all_menu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="32dp"
             android:paddingVertical="16dp"
             app:layout_constraintTop_toBottomOf="@id/chip_group"
             tools:listitem="@layout/view_item_menu" />
@@ -166,8 +198,21 @@
                 android:layout_height="wrap_content"
                 android:text="Order Menu"
                 android:textSize="24sp"
+                android:textColor="@color/black"
                 android:layout_marginBottom="8dp"
                 android:fontFamily="@font/noto_sans_gujarati_bold"/>
+
+            <TextView
+                android:id="@+id/tv_empty_order"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="48dp"
+                android:layout_marginBottom="56dp"
+                android:layout_gravity="center"
+                android:text="Belum ada menu yang dipilih."
+                android:textSize="16sp"
+                android:textColor="@color/black"
+                android:visibility="gone"/>
 
             <!-- Daftar menu pesanan -->
             <androidx.recyclerview.widget.RecyclerView
@@ -191,6 +236,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="2dp"
                     android:background="@drawable/line_dotted"
+                    android:layout_marginTop="24dp"
                     android:layout_marginBottom="16dp"/>
 
                 <LinearLayout
@@ -202,7 +248,7 @@
                         android:id="@+id/tv_total_payment_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Total Payment"
+                        android:text="Total Bayar"
                         android:textColor="@color/black"
                         android:textSize="16sp"
                         android:textStyle="bold"/>
@@ -223,7 +269,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/black"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"/>
 
                 <!-- Payment Method Label -->
@@ -231,7 +277,7 @@
                     android:id="@+id/tv_payment_method"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Payment Method"
+                    android:text="Metode Pembayaran"
                     android:textColor="@color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -292,7 +338,7 @@
                     android:layout_height="wrap_content"
                     android:hint="Nominal Pembayaran"
                     android:inputType="numberDecimal"
-                    android:background="@drawable/bg_input"
+                    android:background="@drawable/bg_outline"
                     android:padding="8dp"
                     android:textColor="@color/black"
                     android:layout_marginTop="8dp"/>
@@ -304,15 +350,16 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:layout_marginBottom="32dp"
-                    android:text="Pay now"
+                    android:text="Bayar"
                     android:background="@drawable/bg_btn_primary"
                     app:backgroundTint="@null"
                     android:textColor="@color/white"/>
+
             </LinearLayout>
+
         </LinearLayout>
+
     </androidx.core.widget.NestedScrollView>
-
-
 
     <!-- Tombol Panah untuk menyembunyikan/memunculkan Order Menu -->
     <ImageView
@@ -326,8 +373,5 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         />
-
-
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

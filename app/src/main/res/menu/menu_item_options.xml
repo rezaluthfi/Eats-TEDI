@@ -10,6 +10,6 @@
         app:showAsAction="always" />
     <item
         android:id="@+id/action_set_stock_menu"
-        android:title="Atur Stock"
+        android:title="Atur Stok"
         app:showAsAction="always" />
 </menu>

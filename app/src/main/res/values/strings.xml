@@ -29,15 +29,19 @@
 
     <!-- Data untuk dropdown kategori menu -->
     <string-array name="menu_category">
-        <item>Foods</item>
-        <item>Drinks</item>
-        <item>Snacks</item>
+        <item>Makanan</item>
+        <item>Minuman</item>
+        <item>Camilan</item>
     </string-array>
 
     <!-- Data untuk dropdown filter nama supplier -->
     <string-array name="supplier_name">
-        <item>Supplier 1</item>
-        <item>Supplier 2</item>
-        <item>Supplier 3</item>
+        <item>Semua Pemasok</item>
+        <item>Dapoer Ayu</item>
+        <item>Warung Makan Bu Tuti</item>
+        <item>Warung Es Kelapa Muda</item>
+        <item>Warung Es Cincau</item>
+        <item>Warung Es Doger</item>
+        <item>Warung Es Teh</item>
     </string-array>
 </resources>
