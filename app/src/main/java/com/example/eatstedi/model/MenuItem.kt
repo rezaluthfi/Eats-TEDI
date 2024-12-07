@@ -7,6 +7,7 @@ data class MenuItem(
     val category: String,
     val price: String,
     var stock: Int,
-    val imageUrl: String // URL atau resource ID untuk gambar
+    val imageUrl: String, // URL atau resource ID untuk gambar
+    var quantity: Int = 1 // Tambahkan properti quantity dengan nilai default 1
 )
 

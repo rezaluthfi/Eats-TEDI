@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="560dp"
-    android:layout_height="match_parent"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_form_login"
-    android:gravity="center" >
+    android:gravity="center"
+    android:padding="16dp"
+    android:layout_margin="32dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp">
 
@@ -85,6 +87,7 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
+            android:id="@+id/ll_menu_items"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -101,17 +104,6 @@
                 android:fontFamily="@font/noto_sans_gujarati_regular" />
 
             <TextView
-                android:id="@+id/tv_quantity"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="2"
-                android:textAlignment="textEnd"
-                android:textSize="20sp"
-                android:fontFamily="@font/noto_sans_gujarati_regular"
-                android:textColor="@color/black" />
-
-            <TextView
                 android:id="@+id/tv_menu_price"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -126,7 +118,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginBottom="16dp"
             android:layout_marginTop="16dp"
@@ -232,7 +224,7 @@
                 android:layout_marginBottom="16dp"/>
 
             <Button
-                android:id="@+id/pay_now"
+                android:id="@+id/btn_close"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"

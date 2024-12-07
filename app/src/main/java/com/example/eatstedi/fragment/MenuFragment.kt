@@ -30,8 +30,10 @@ import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.databinding.ViewModalAddEditMenuBinding
 import com.example.eatstedi.databinding.ViewModalInvoiceOrderBinding
 import com.example.eatstedi.model.MenuItem
+import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class MenuFragment : Fragment() {
 
@@ -82,6 +84,7 @@ class MenuFragment : Fragment() {
 
         setupMenuRecyclerView()
         setupOrderRecyclerView()
+        setupInputPayment()
         setupChipFilter()
         setupButtons()
         setupSpinner()
@@ -321,18 +324,116 @@ class MenuFragment : Fragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupOrderRecyclerView() {
-        orderAdapter = OrderAdapter(selectedMenuItems)
+        // Inisialisasi adapter untuk RecyclerView
+        orderAdapter = OrderAdapter(selectedMenuItems) {
+            // Callback untuk memperbarui total pembayaran dan memeriksa pesan
+            updateTotalPayment() // Memperbarui total pembayaran
+            showNoOrderMessage(selectedMenuItems.isEmpty()) // Periksa dan tampilkan pesan jika kosong
+        }
+
+        // Setup RecyclerView
         binding.rvOrderMenu.apply {
             adapter = orderAdapter
             layoutManager = LinearLayoutManager(context)
         }
 
-        // Pastikan memanggil setelah adapter di-setup dan data diperbarui
+        // Tambahkan listener untuk radio button
+        binding.rbCash.setOnClickListener {
+            binding.tvInputPayment.visibility = View.VISIBLE // Tampilkan label pembayaran
+            binding.etInputPayment.visibility = View.VISIBLE // Tampilkan input pembayaran
+        }
+
+        binding.rbQris.setOnClickListener {
+            binding.tvInputPayment.visibility = View.GONE // Sembunyikan label pembayaran
+            binding.etInputPayment.visibility = View.GONE // Sembunyikan input pembayaran
+        }
+
+        // Listener untuk tombol bayar
+        binding.btnPayNow.setOnClickListener {
+            // Cek apakah tidak ada pesanan
+            if (selectedMenuItems.isEmpty()) {
+                Toast.makeText(requireContext(), "Tidak ada menu yang dipilih", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Jika metode pembayaran adalah Cash
+            if (binding.rbCash.isChecked) {
+                // Ambil input pembayaran dan hapus "Rp" untuk validasi
+                val paymentInput = binding.etInputPayment.text.toString().replace("Rp", "").replace(".", "").trim()
+
+                // Cek apakah input pembayaran kosong
+                if (paymentInput.isEmpty()) {
+                    Toast.makeText(requireContext(), "Mohon masukkan jumlah pembayaran", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                // Cek apakah jumlah pembayaran kurang dari total pesanan
+                val totalPayment = selectedMenuItems.sumOf { it.price.replace("Rp", "").replace(".", "").toInt() }
+                if (paymentInput.toInt() < totalPayment) {
+                    Toast.makeText(requireContext(), "Jumlah pembayaran kurang", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                // Jika semua validasi berhasil
+                Toast.makeText(requireContext(), "Pembayaran cash berhasil!", Toast.LENGTH_SHORT).show()
+
+            } else if (binding.rbQris.isChecked) {
+                // Jika metode pembayaran adalah QRIS
+                if (selectedMenuItems.isEmpty()) {
+                    Toast.makeText(requireContext(), "Tidak ada menu yang dipilih", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                // Jika semua validasi berhasil
+                Toast.makeText(requireContext(), "Pembayaran QRIS berhasil!", Toast.LENGTH_SHORT).show()
+            }
+
+            // Tampilkan dialog invoice
+            showInvoiceDialog()
+
+            // Tampilkan pesan setelah membayar
+            showNoOrderMessage(selectedMenuItems.isEmpty())
+
+            // Reset input pembayaran
+            binding.etInputPayment.setText("")
+            //binding.etInputPayment.setText("Rp") // Set kembali ke default "Rp" jika menggunakan cash
+        }
+
+        // Panggil callback untuk memperbarui total pembayaran dan memeriksa pesan
+        updateTotalPayment() // Memperbarui total pembayaran
+        // Tampilkan pesan jika tidak ada pesanan
         showNoOrderMessage(selectedMenuItems.isEmpty())
-
-
     }
+
+    // Inisialisasi TextWatcher untuk memformat input pembayaran
+    private fun setupInputPayment() {
+        // Set default text "Rp" di depan EditText
+        //binding.etInputPayment.setText("Rp")
+
+        // Tambahkan TextWatcher untuk memformat input
+        binding.etInputPayment.addTextChangedListener(object : TextWatcher {
+            private var isFormatting = false // Flag untuk mencegah loop
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (isFormatting) return // Jika sedang memformat, keluar dari fungsi
+
+                // Hapus "Rp" dan format angka
+                val input = s.toString().replace("Rp", "").replace(".", "").trim()
+                if (input.isNotEmpty()) {
+                    isFormatting = true // Set flag sebelum memformat
+                    val amount = input.toInt()
+                    binding.etInputPayment.setText(formatPrice(amount))
+                    binding.etInputPayment.setSelection(binding.etInputPayment.text.length) // Set cursor di akhir
+                    isFormatting = false // Reset flag setelah memformat
+                }
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
 
     private fun showNoOrderMessage(empty: Boolean) {
         Log.d("OrderDebug", "selectedMenuItems.isEmpty(): $empty")
@@ -380,17 +481,53 @@ class MenuFragment : Fragment() {
     private fun setupButtons() {
         binding.apply {
             arrowToggle.setOnClickListener { toggleSidebar() }
-            btnPayNow.setOnClickListener { showInvoiceDialog() }
             btnAddNewMenu.setOnClickListener { showMenuDialog() }
         }
     }
 
     private fun addItemToOrder(menuItem: MenuItem) {
-        selectedMenuItems.add(menuItem)
+        // Simpan posisi scroll saat ini
+        val layoutManager = binding.rvAllMenu.layoutManager as LinearLayoutManager
+
+        // Cek apakah item sudah ada dalam daftar pesanan
+        val existingItem = selectedMenuItems.find { it.id == menuItem.id }
+
+        if (existingItem != null) {
+            // Jika item sudah ada, tambahkan kuantitasnya
+            existingItem.quantity += 1
+            orderAdapter.notifyItemChanged(selectedMenuItems.indexOf(existingItem)) // Update item yang ada
+            Toast.makeText(requireContext(), "${menuItem.menuName} sudah ditambahkan, kuantitas bertambah", Toast.LENGTH_SHORT).show()
+        } else {
+            // Jika item belum ada, tambahkan ke daftar pesanan
+            selectedMenuItems.add(menuItem.copy(quantity = 1)) // Set kuantitas awal ke 1
+            orderAdapter.notifyItemInserted(selectedMenuItems.size - 1) // Notifikasi item baru
+            Toast.makeText(requireContext(), "${menuItem.menuName} ditambahkan ke pesanan", Toast.LENGTH_SHORT).show()
+        }
+
         orderAdapter.notifyDataSetChanged()
         binding.nestedScrollView.visibility = View.VISIBLE
         binding.rvAllMenu.layoutManager = GridLayoutManager(context, 2)
+
+        // Hitung total pembayaran setelah menambahkan item
+        updateTotalPayment()
+
+        // Tampilkan pesan jika tidak ada pesanan
         showNoOrderMessage(selectedMenuItems.isEmpty())
+    }
+
+    fun formatPrice(price: Int): String {
+        val numberFormat = NumberFormat.getInstance(Locale("id", "ID"))
+        return numberFormat.format(price)
+    }
+
+    private fun updateTotalPayment() {
+        // Hitung total pembayaran
+        val totalPayment = selectedMenuItems.sumOf {
+            it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity
+        }
+
+        // Tampilkan total pembayaran dengan format yang benar
+        binding.tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
     }
 
     private fun toggleSidebar() {
@@ -412,63 +549,22 @@ class MenuFragment : Fragment() {
     private fun showInvoiceDialog() {
         val dialogBinding = ViewModalInvoiceOrderBinding.inflate(layoutInflater)
 
-        // If user select RbCash, then set the payment method to "Bayar (Cash)"
-        with(binding) {
-            rbCash.setOnClickListener {
-               dialogBinding.tvPaymentMethodLabel.text = "Bayar (Cash)"
-               etInputPayment.visibility = View.VISIBLE
-            }
-            // If user select RbQris, then set the payment method to "Bayar (QRIS)"
-            rbQris.setOnClickListener {
-                dialogBinding.tvPaymentMethodLabel.text = "Bayar (QRIS)"
-                etInputPayment.visibility = View.GONE
-            }
-        }
-
-        // Gabungkan menu yang sama dan hitung total pembayaran
-        val combinedMenuItems = selectedMenuItems
-            .groupBy { it.menuName }
-            .map { (name, items) ->
-                val totalQty = items.sumOf { it.stock }
-                val totalPrice = items.sumOf {
-                    it.price.replace("Rp", "").replace(".", "").toInt()
-                }
-                MenuItem(0, name, items[0].ownerName, items[0].category, "Rp$totalPrice", totalQty, items[0].imageUrl)
-            }
-
-        val totalPayment = combinedMenuItems.sumOf {
-            it.price.replace("Rp", "").replace(".", "").toInt()
+        // Hitung total pembayaran
+        val totalPayment = selectedMenuItems.sumOf {
+            it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity
         }
 
         dialogBinding.apply {
             // Atur total pembayaran
-            binding.tvTotalPaymentAmount.text = "Rp${totalPayment}"
-
-            // Hitung kembalian
-            binding.etInputPayment.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val moneyPay = s.toString()
-                    if (moneyPay.isNotEmpty()) {
-                        val change = moneyPay.toInt() - totalPayment
-                        tvMoneyChange.text = "Rp${change}"
-                    } else {
-                        tvMoneyChange.text = "Rp0"
-                    }
-                }
-                override fun afterTextChanged(s: Editable?) {}
-            })
+            tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
 
             // Tampilkan menu, harga, dan jumlah
-            val menuNames = combinedMenuItems.joinToString("\n") { it.menuName }
-            val menuPrices = combinedMenuItems.joinToString("\n") { it.price }
+            val menuNames = selectedMenuItems.joinToString("\n") { "${it.menuName} (x${it.quantity})" }
+            val menuPrices = selectedMenuItems.joinToString("\n") {
+                "Rp${formatPrice(it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity)}"
+            }
             tvMenuName.text = menuNames
             tvMenuPrice.text = menuPrices
-
-            // Properti maxLines 1 untuk setiap item menu, jika berbeda menu maka akan menyesuaikan
-            val maxLines = combinedMenuItems.map { it.menuName.length }.maxOrNull() ?: 1
-            tvMenuName.maxLines = maxLines
-            tvMenuPrice.maxLines = maxLines
 
             // Tampilkan tanggal, waktu, dan kasir
             val currentDateTime = LocalDateTime.now()
@@ -476,30 +572,65 @@ class MenuFragment : Fragment() {
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
             tvDateOrder.text = currentDateTime.format(dateFormatter)
             tvTimeOrder.text = currentDateTime.format(timeFormatter)
-            tvNameEmployee.text = "Admin"
+            tvNameEmployee.text = "Kasir"
 
+            // Tampilkan metode pembayaran
+            val paymentMethod = if (binding.rbCash.isChecked) "Cash" else "QRIS"
+            tvPaymentMethodLabel.text = "Bayar ($paymentMethod)"
+            tvMoneyPay.text = "Rp${formatPrice(totalPayment)}" // Tampilkan total pembayaran
+
+            // Hitung kembalian jika menggunakan cash
+            if (binding.rbCash.isChecked) {
+                val paymentInput = binding.etInputPayment.text.toString().replace("Rp", "").replace(".", "").trim()
+                val moneyPay = if (paymentInput.isNotEmpty()) paymentInput.toInt() else 0
+                val change = moneyPay - totalPayment
+                tvMoneyChange.text = "Rp${formatPrice(change)}"
+            } else {
+                tvMoneyChange.text = "Rp0" // Tidak ada kembalian untuk QRIS
+            }
         }
 
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogBinding.root)
             .create()
 
-        dialogBinding.payNow.setOnClickListener {
-            dialog.dismiss()
-            selectedMenuItems.clear()
-            orderAdapter.notifyDataSetChanged()
+        // Mengatur agar dialog dapat dibatalkan dengan menekan di luar area dialog
+        dialog.setCancelable(true)
+
+        // Listener untuk menutup dialog dan mereset data ketika dialog dibatalkan
+        dialog.setOnCancelListener {
+            resetOrderData()
+        }
+
+        // Listener untuk tombol tutup
+        dialogBinding.btnClose.setOnClickListener {
+            dialog.dismiss() // Menutup dialog
+            resetOrderData() // Mereset data pesanan
         }
 
         dialog.show()
 
-        // Atur dimensi dialog (tinggi tetap, lebar penuh)
+        // Atur dimensi dialog (lebar penuh, tinggi sesuai konten)
         val dialogWindow = dialog.window
         dialogWindow?.setLayout(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+
+        // Tambahkan padding di dalam dialog
+        dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent) // Menghilangkan background default
+        dialogBinding.root.setPadding(24, 48, 24, 24) // Menambahkan padding di sekitar konten
     }
 
+    // Metode untuk mereset data pesanan
+    private fun resetOrderData() {
+        selectedMenuItems.clear()
+        orderAdapter.notifyDataSetChanged()
+        binding.tvTotalPaymentAmount.text = "Rp0" // Reset total payment
+
+        // Tampilkan pesan tidak ada menu ketika pesanan sudah dibayar
+        showNoOrderMessage(selectedMenuItems.isEmpty())
+    }
 
     private fun showMenuDialog() {
         val dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
@@ -539,11 +670,15 @@ class MenuFragment : Fragment() {
                     originalMenuList.add(newMenuItem)
                     filteredMenuList = originalMenuList
                     menuAdapter.updateList(filteredMenuList)
+
+                    Toast.makeText(requireContext(), "Berhasil menambahkan menu baru", Toast.LENGTH_SHORT).show()
+
                     dialog.dismiss()
+                } else {
+                    Toast.makeText(requireContext(), "Mohon isi semua data", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-
 
         dialog.show()
     }

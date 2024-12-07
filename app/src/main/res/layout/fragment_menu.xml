@@ -317,15 +317,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/black"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginVertical="8dp"/>
 
                 <!-- Input Payment Label -->
                 <TextView
                     android:id="@+id/tv_input_payment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Input Payment"
+                    android:text="Masukkan Pembayaran"
                     android:textColor="@color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -341,7 +340,7 @@
                     android:background="@drawable/bg_outline"
                     android:padding="8dp"
                     android:textColor="@color/black"
-                    android:layout_marginTop="8dp"/>
+                    android:layout_marginTop="16dp"/>
 
                 <!-- Tombol Pay Now -->
                 <Button
