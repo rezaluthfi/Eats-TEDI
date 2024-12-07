@@ -20,7 +20,7 @@
         android:id="@+id/username"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Demi"
+        android:text="Reza Luthfi Akbar"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -30,10 +30,10 @@
         android:id="@+id/email"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="demi838@kita.com"
+        android:text="hello.rezaluthfi@gmail.com"
         android:textColor="@color/white"
         android:textSize="14sp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:layout_marginBottom="32dp"/>
 
 </LinearLayout>

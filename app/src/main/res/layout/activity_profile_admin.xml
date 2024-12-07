@@ -75,7 +75,8 @@
                     android:id="@+id/tv_admin_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Demi Wikinison"
+                    android:layout_marginTop="8dp"
+                    android:text="Reza Luthfi Akbar"
                     android:textSize="40sp"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
                     android:textColor="@color/black"
@@ -112,17 +113,17 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_name"
+                    <EditText
+                        android:id="@+id/et_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Demi Wikinison"
-                        android:fontFamily="@font/noto_sans_gujarati_regular"
-                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:hint="Nama Anda"
                         android:background="@drawable/bg_input"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:padding="16dp"
-                        />
+                        android:textColor="@color/black" />
 
                 </LinearLayout>
 
@@ -143,15 +144,17 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_phone_number"
+                    <EditText
+                        android:id="@+id/et_phone_number"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="0812345678"
+                        android:textSize="16sp"
+                        android:hint="Nomor Telepon"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
+                        android:inputType="number"
                         android:padding="16dp"
                         />
 
@@ -183,11 +186,12 @@
                         />
 
                     <TextView
-                        android:id="@+id/tv_username"
+                        android:id="@+id/et_username"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi838"
+                        android:textSize="16sp"
+                        android:hint="Nama Pengguna"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
@@ -213,12 +217,13 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_address"
+                    <EditText
+                        android:id="@+id/et_address"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Yogyakarta"
+                        android:textSize="16sp"
+                        android:hint="Alamat"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
@@ -253,11 +258,12 @@
                         />
 
                     <TextView
-                        android:id="@+id/tv_email"
+                        android:id="@+id/et_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi838@kita.com"
+                        android:textSize="16sp"
+                        android:hint="Alamat Email"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
@@ -283,15 +289,17 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_password"
+                    <EditText
+                        android:id="@+id/et_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi123"
+                        android:textSize="16sp"
+                        android:hint="Kata Sandi"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
+                        android:inputType="textPassword"
                         android:padding="16dp"
                         />
 
@@ -304,7 +312,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginTop="56dp">
+                android:layout_marginTop="56dp"
+                android:layout_marginBottom="32dp">
 
                 <Button
                     android:id="@+id/btn_cancel"
