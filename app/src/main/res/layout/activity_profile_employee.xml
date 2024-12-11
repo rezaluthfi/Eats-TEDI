@@ -150,8 +150,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_name"
+                    <EditText
+                        android:id="@+id/et_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -181,8 +181,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_phone_number"
+                    <EditText
+                        android:id="@+id/et_phone_number"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -220,8 +220,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_username"
+                    <EditText
+                        android:id="@+id/et_username"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -251,8 +251,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_address"
+                    <EditText
+                        android:id="@+id/et_address"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -290,8 +290,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_email"
+                    <EditText
+                        android:id="@+id/et_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -321,8 +321,8 @@
                         android:textColor="@color/black"
                         />
 
-                    <TextView
-                        android:id="@+id/tv_status"
+                    <EditText
+                        android:id="@+id/et_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"

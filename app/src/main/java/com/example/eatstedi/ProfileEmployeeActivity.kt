@@ -3,6 +3,8 @@ package com.example.eatstedi
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.eatstedi.databinding.ActivityProfileEmployeeBinding
@@ -12,6 +14,8 @@ class ProfileEmployeeActivity : AppCompatActivity() {
     private val binding by lazy {
         ActivityProfileEmployeeBinding.inflate(layoutInflater)
     }
+
+    private var isEditing = false // Menandakan apakah dalam mode edit
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,14 +29,14 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         val employeePhone = intent.getStringExtra("EMPLOYEE_PHONE")
         val employeeSalary = intent.getStringExtra("EMPLOYEE_SALARY")
 
-        // Menampilkan data pada TextView
+        // Menampilkan data pada EditText
         with(binding) {
             tvEmployeeName.text = employeeName
-            tvName.text = employeeName
-            tvStatus.text = employeeStatus
-            tvUsername.text = employeeUsername
-            tvEmail.text = employeeEmail
-            tvPhoneNumber.text = employeePhone
+            etName.setText(employeeName)
+            etStatus.setText(employeeStatus)
+            etUsername.setText(employeeUsername)
+            etEmail.setText(employeeEmail)
+            etPhoneNumber.setText(employeePhone)
 
             // Tombol kembali
             ivArrowBack.setOnClickListener {
@@ -43,7 +47,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             tvSchedule.setOnClickListener {
                 val intent = Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java).apply {
                     putExtra("EMPLOYEE_NAME", employeeName)
-                    putExtra("EMPLOYEE_STATUS", employeeStatus)
                     putExtra("EMPLOYEE_USERNAME", employeeUsername)
                     putExtra("EMPLOYEE_EMAIL", employeeEmail)
                     putExtra("EMPLOYEE_PHONE", employeePhone)
@@ -65,9 +68,79 @@ class ProfileEmployeeActivity : AppCompatActivity() {
 
             // Tombol edit
             btnEdit.setOnClickListener {
-                // Handle edit button click
+                if (isEditing) {
+                    // Simpan perubahan
+                    saveUserData()
+                    // Kembali ke mode tidak edit
+                    setEditTextEnabled(false)
+                    btnEdit.text = "Edit"
+                } else {
+                    // Masuk ke mode edit
+                    setEditTextEnabled(true)
+                    btnEdit.text = "Simpan"
+                }
+                isEditing = !isEditing // Toggle mode editing
             }
+
+            // Set editable false
+            setEditTextEnabled(false)
+
+            // Tambahkan listener untuk setiap EditText
+            setEditTextClickListener()
         }
+    }
+
+    private fun setEditTextClickListener() {
+        with(binding) {
+            etName.setOnClickListener { showToastIfNotEditing() }
+            etEmail.setOnClickListener { showToastIfNotEditing() }
+            etAddress.setOnClickListener { showToastIfNotEditing() }
+            etStatus.setOnClickListener { showToastIfNotEditing() }
+            etUsername.setOnClickListener { showToastIfNotEditing() }
+            etPhoneNumber.setOnClickListener { showToastIfNotEditing() }
+        }
+    }
+
+    private fun showToastIfNotEditing() {
+        if (!isEditing) {
+            Toast.makeText(this, "Aktifkan mode edit terlebih dahulu", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setEditTextEnabled(enabled: Boolean) {
+        with(binding) {
+            etName.isFocusable = enabled
+            etName.isFocusableInTouchMode = enabled
+            etStatus.isFocusable = enabled // Status sekarang bisa diedit
+            etStatus.isFocusableInTouchMode = enabled
+            etUsername.isFocusable = enabled
+            etUsername.isFocusableInTouchMode = enabled
+            etAddress.isFocusable = enabled
+            etAddress.isFocusableInTouchMode = enabled
+            etEmail.isFocusable = enabled
+            etEmail.isFocusableInTouchMode = enabled
+            etPhoneNumber.isFocusable = enabled
+            etPhoneNumber.isFocusableInTouchMode = enabled
+        }
+    }
+
+    private fun saveUserData() {
+        val employeeName = binding.etName.text.toString()
+        employeeName.let {
+            binding.tvEmployeeName.text = it
+        }
+        val address = binding.etAddress.text.toString()
+        val name = binding.etName.text.toString()
+        val status = binding.etStatus.text.toString() // Ambil status yang diedit
+        val username = binding.etUsername.text.toString()
+        val email = binding.etEmail.text.toString()
+        val phoneNumber = binding.etPhoneNumber.text.toString()
+
+        // Log untuk melihat data yang disimpan
+        println("User Data Saved: Name: $name, Status: $status, Username: $username, Address: $address, Email: $email, Phone: $phoneNumber")
+
+        // Tampilkan toast untuk memberi tahu pengguna bahwa data telah diperbarui
+        Toast.makeText(this, "Data berhasil diperbarui", Toast.LENGTH_SHORT).show()
     }
 
     private fun showDeleteConfirmationDialog() {
@@ -89,7 +162,7 @@ class ProfileEmployeeActivity : AppCompatActivity() {
 
         // Handle Delete button
         btnDelete.setOnClickListener {
-            // Handle the deletion of the supplier
+            // Handle the deletion of the employee
             // Add your deletion logic here
 
             alertDialog.dismiss()
