@@ -1,8 +1,10 @@
 package com.example.eatstedi
 
-import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +17,8 @@ class ProfileSupplierActivity : AppCompatActivity() {
     private val binding by lazy {
         ActivityProfileSupplierBinding.inflate(layoutInflater)
     }
+
+    private var isEditing = false // Menandakan apakah dalam mode edit
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,13 +41,13 @@ class ProfileSupplierActivity : AppCompatActivity() {
         val supplierIncome = intent.getStringExtra("SUPPLIER_INCOME")
 
         with(binding) {
-            // Display data in TextView
+            // Display data in EditText
             tvSupplierName.text = supplierName
-            tvName.text = supplierName
-            tvStatus.text = supplierStatus
-            tvUsername.text = supplierUsername
-            tvEmail.text = supplierEmail
-            tvPhoneNumber.text = supplierPhone
+            etName.setText(supplierName)
+            etStatus.setText(supplierStatus)
+            etUsername.setText(supplierUsername)
+            etEmail.setText(supplierEmail)
+            etPhoneNumber.setText(supplierPhone)
 
             // Back button
             ivArrowBack.setOnClickListener {
@@ -57,7 +61,18 @@ class ProfileSupplierActivity : AppCompatActivity() {
 
             // Edit button
             btnEdit.setOnClickListener {
-                // Handle the edit button click
+                if (isEditing) {
+                    // Save changes
+                    saveSupplierData()
+                    // Switch back to non-edit mode
+                    setEditTextEnabled(false)
+                    btnEdit.text = "Edit"
+                } else {
+                    // Switch to edit mode
+                    setEditTextEnabled(true)
+                    btnEdit.text = "Simpan"
+                }
+                isEditing = !isEditing // Toggle editing mode
             }
 
             // Delete button
@@ -65,7 +80,64 @@ class ProfileSupplierActivity : AppCompatActivity() {
                 // Show the confirmation dialog
                 showDeleteConfirmationDialog()
             }
+
+            // Set editable false initially
+            setEditTextEnabled(false)
+
+            // Tambahkan listener untuk setiap EditText
+            setEditTextClickListener()
         }
+    }
+
+    private fun setEditTextClickListener() {
+        with(binding) {
+            etName.setOnClickListener { showToastIfNotEditing() }
+            etEmail.setOnClickListener { showToastIfNotEditing() }
+            etAddress.setOnClickListener { showToastIfNotEditing() }
+            etStatus.setOnClickListener { showToastIfNotEditing() }
+            etUsername.setOnClickListener { showToastIfNotEditing() }
+            etPhoneNumber.setOnClickListener { showToastIfNotEditing() }
+        }
+    }
+
+    private fun showToastIfNotEditing() {
+        if (!isEditing) {
+            Toast.makeText(this, "Aktifkan mode edit terlebih dahulu", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setEditTextEnabled(enabled: Boolean) {
+        with(binding) {
+            etName.isFocusable = enabled
+            etName.isFocusableInTouchMode = enabled
+            etStatus.isFocusable = enabled
+            etStatus.isFocusableInTouchMode = enabled
+            etUsername.isFocusable = enabled
+            etUsername.isFocusableInTouchMode = enabled
+            etEmail.isFocusable = enabled
+            etEmail.isFocusableInTouchMode = enabled
+            etPhoneNumber.isFocusable = enabled
+            etPhoneNumber.isFocusableInTouchMode = enabled
+        }
+    }
+
+    private fun saveSupplierData() {
+        // Get data from EditText
+        val name = binding.etName.text.toString()
+        val supplierName = binding.tvSupplierName.text.toString()
+        supplierName.let {
+            binding.tvSupplierName.text = name
+        }
+        val status = binding.etStatus.text.toString()
+        val username = binding.etUsername.text.toString()
+        val email = binding.etEmail.text.toString()
+        val phoneNumber = binding.etPhoneNumber.text.toString()
+
+        // Log to see the saved data
+        println("Supplier Data Saved: Name: $name, Status: $status, Username: $username, Email: $email, Phone: $phoneNumber")
+
+        // Show toast to inform the user that the data has been updated
+        Toast.makeText(this, "Data berhasil diperbarui", Toast.LENGTH_SHORT).show()
     }
 
     private fun showDeleteConfirmationDialog() {
