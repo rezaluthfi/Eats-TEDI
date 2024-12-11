@@ -1,5 +1,6 @@
 package com.example.eatstedi
 
+import ScheduleAdapter
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -9,15 +10,19 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.eatstedi.R
+import androidx.recyclerview.widget.GridLayoutManager
 import com.example.eatstedi.databinding.ActivityScheduleEmployeeBinding
 import com.example.eatstedi.databinding.ViewModalScheduleBinding
+import com.example.eatstedi.model.Schedule
 
 class ScheduleEmployeeActivity : AppCompatActivity() {
 
     private val binding by lazy {
         ActivityScheduleEmployeeBinding.inflate(layoutInflater)
     }
+
+    private lateinit var scheduleAdapter: ScheduleAdapter
+    private val schedules = mutableListOf<Schedule>() // Daftar untuk menyimpan jadwal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,35 +34,43 @@ class ScheduleEmployeeActivity : AppCompatActivity() {
             insets
         }
 
+        // Menerima data dari Intent
+        //val employeeName = intent.getStringExtra("EMPLOYEE_NAME")
+        //binding.tvEmployeeName.text = employeeName // Menampilkan nama karyawan
+
+        // Inisialisasi RecyclerView
+        scheduleAdapter = ScheduleAdapter(schedules) { position ->
+            removeSchedule(position) // Panggil fungsi untuk menghapus jadwal
+        }
+        binding.rvSchedule.apply {
+            layoutManager = GridLayoutManager(this@ScheduleEmployeeActivity, 3)
+            adapter = scheduleAdapter
+        }
+
         with(binding) {
             btnAddSchedule.setOnClickListener {
                 showScheduleModal()
             }
 
             ivArrowBack.setOnClickListener {
-                val intent = Intent(this@ScheduleEmployeeActivity, AllEmployeeActivity::class.java)
-                startActivity(intent)
+                finish()
             }
         }
     }
 
     private fun showScheduleModal() {
-        // Inisialisasi binding untuk modal
         val modalBinding = ViewModalScheduleBinding.inflate(layoutInflater)
 
-        // Buat AlertDialog dengan custom view
         val dialog = AlertDialog.Builder(this)
             .setView(modalBinding.root)
             .create()
 
-        // Atur tampilan dialog di tengah layar
         dialog.window?.setLayout(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT
         )
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Menambahkan adapter untuk dropdown hari
         val daysAdapter = ArrayAdapter.createFromResource(
             this,
             R.array.days_array,
@@ -66,7 +79,6 @@ class ScheduleEmployeeActivity : AppCompatActivity() {
         daysAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spDay.adapter = daysAdapter
 
-        // Menambahkan adapter untuk dropdown shift
         val shiftAdapter = ArrayAdapter.createFromResource(
             this,
             R.array.shift_array_with_hours,
@@ -75,21 +87,29 @@ class ScheduleEmployeeActivity : AppCompatActivity() {
         shiftAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spShift.adapter = shiftAdapter
 
-        // Set listener untuk tombol simpan menggunakan binding
         modalBinding.btnSaveSchedule.setOnClickListener {
-            // Logika untuk menyimpan jadwal berdasarkan pilihan hari dan shift
             val selectedDay = modalBinding.spDay.selectedItem.toString()
             val selectedShift = modalBinding.spShift.selectedItem.toString()
-            // Tambahkan logika penyimpanan dengan data yang dipilih
+            val newSchedule = Schedule(selectedDay, selectedShift)
+
+            scheduleAdapter.addSchedule(newSchedule) // Tambahkan ke adapter
             dialog.dismiss()
         }
 
-        // Set listener untuk tombol batal
         modalBinding.btnCancelSchedule.setOnClickListener {
             dialog.dismiss()
         }
 
-        // Tampilkan modal di tengah
         dialog.show()
     }
+
+    private fun removeSchedule(position: Int) {
+        if (position >= 0 && position < schedules.size) { // Pastikan indeks valid
+            schedules.removeAt(position)
+            scheduleAdapter.notifyItemRemoved(position)
+        } else {
+            println("Invalid position: $position") // Tambahkan log untuk debugging
+        }
+    }
+
 }

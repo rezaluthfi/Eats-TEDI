@@ -1,5 +1,6 @@
 package com.example.eatstedi
 
+import ScheduleAdapter
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -9,14 +10,20 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.eatstedi.databinding.ActivityAddScheduleEmployeeBinding
 import com.example.eatstedi.databinding.ViewModalScheduleBinding
+import com.example.eatstedi.model.Schedule
 
 class AddScheduleEmployeeActivity : AppCompatActivity() {
 
     private val binding by lazy {
         ActivityAddScheduleEmployeeBinding.inflate(layoutInflater)
     }
+
+    private lateinit var scheduleAdapter: ScheduleAdapter
+    private val schedules = mutableListOf<Schedule>() // Daftar untuk menyimpan jadwal
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +33,15 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+
+        // Inisialisasi RecyclerView
+        scheduleAdapter = ScheduleAdapter(schedules) { position ->
+            removeSchedule(position) // Panggil fungsi untuk menghapus jadwal
+        }
+        binding.rvSchedule.apply {
+            layoutManager = GridLayoutManager(this@AddScheduleEmployeeActivity, 3)
+            adapter = scheduleAdapter
         }
 
         with(binding) {
@@ -41,22 +57,18 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
     }
 
     private fun showScheduleModal() {
-        // Inisialisasi binding untuk modal
         val modalBinding = ViewModalScheduleBinding.inflate(layoutInflater)
 
-        // Buat AlertDialog dengan custom view
         val dialog = AlertDialog.Builder(this)
             .setView(modalBinding.root)
             .create()
 
-        // Atur tampilan dialog di tengah layar
         dialog.window?.setLayout(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT
         )
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Menambahkan adapter untuk dropdown hari
         val daysAdapter = ArrayAdapter.createFromResource(
             this,
             R.array.days_array,
@@ -65,7 +77,6 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
         daysAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spDay.adapter = daysAdapter
 
-        // Menambahkan adapter untuk dropdown shift
         val shiftAdapter = ArrayAdapter.createFromResource(
             this,
             R.array.shift_array_with_hours,
@@ -74,21 +85,34 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
         shiftAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spShift.adapter = shiftAdapter
 
-        // Set listener untuk tombol simpan menggunakan binding
         modalBinding.btnSaveSchedule.setOnClickListener {
-            // Logika untuk menyimpan jadwal berdasarkan pilihan hari dan shift
             val selectedDay = modalBinding.spDay.selectedItem.toString()
             val selectedShift = modalBinding.spShift.selectedItem.toString()
-            // Tambahkan logika penyimpanan dengan data yang dipilih
+            val newSchedule = Schedule(selectedDay, selectedShift)
+
+            // Tambahkan log untuk debugging
+            println("Selected Day: $selectedDay, Selected Shift: $selectedShift")
+
+            // Tambahkan jadwal baru ke daftar dan adapter
+            addSchedule(newSchedule)
             dialog.dismiss()
         }
 
-        // Set listener untuk tombol batal
         modalBinding.btnCancelSchedule.setOnClickListener {
             dialog.dismiss()
         }
 
-        // Tampilkan modal di tengah
         dialog.show()
+    }
+
+    private fun addSchedule(schedule: Schedule) {
+        scheduleAdapter.addSchedule(schedule) // Tambahkan ke adapter
+    }
+
+    private fun removeSchedule(position: Int) {
+        if (position >= 0 && position < schedules.size) { // Pastikan indeks valid
+            schedules.removeAt(position)
+            scheduleAdapter.notifyItemRemoved(position)
+        }
     }
 }

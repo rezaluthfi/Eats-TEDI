@@ -41,7 +41,14 @@ class ProfileEmployeeActivity : AppCompatActivity() {
 
             // Tombol jadwal
             tvSchedule.setOnClickListener {
-                val intent = Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java)
+                val intent = Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java).apply {
+                    putExtra("EMPLOYEE_NAME", employeeName)
+                    putExtra("EMPLOYEE_STATUS", employeeStatus)
+                    putExtra("EMPLOYEE_USERNAME", employeeUsername)
+                    putExtra("EMPLOYEE_EMAIL", employeeEmail)
+                    putExtra("EMPLOYEE_PHONE", employeePhone)
+                    putExtra("EMPLOYEE_SALARY", employeeSalary)
+                }
                 startActivity(intent)
             }
 
@@ -61,7 +68,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                 // Handle edit button click
             }
         }
-
     }
 
     private fun showDeleteConfirmationDialog() {

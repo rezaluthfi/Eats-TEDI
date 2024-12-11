@@ -107,6 +107,10 @@ class ProfileAdminActivity : AppCompatActivity() {
 
     private fun saveUserData() {
         // Ambil data dari EditText
+        val nameProfile = binding.etName.text.toString()
+        nameProfile.let {
+            binding.tvAdminName.text = it
+        }
         val name = binding.etName.text.toString()
         val email = binding.etEmail.text.toString()
         val address = binding.etAddress.text.toString()

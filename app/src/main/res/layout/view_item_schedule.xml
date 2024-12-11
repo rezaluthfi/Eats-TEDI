@@ -17,6 +17,7 @@
         android:textColor="@color/black" />
 
     <ImageView
+        android:id="@+id/iv_delete"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_alignTop="@+id/tv_day"

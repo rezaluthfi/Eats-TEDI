@@ -45,7 +45,6 @@
                android:id="@+id/btn_add_schedule"
                android:layout_width="wrap_content"
                android:layout_height="wrap_content"
-               android:visibility="gone"
                android:text="Tambah Jadwal"
                android:textSize="16sp"
                android:textColor="@color/white"
