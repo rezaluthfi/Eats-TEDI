@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import android.content.Intent
 import android.graphics.Typeface
@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
+import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ActivityManageStockMenuBinding
 import com.example.eatstedi.model.HistoryStock
 
@@ -138,7 +139,9 @@ class ManageStockMenuActivity : AppCompatActivity() {
         // Menambahkan header untuk tabel
         val headerRow = TableRow(this).apply {
             setPadding(8, 16, 8, 16)
-            setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity, R.color.secondary))
+            setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity,
+                R.color.secondary
+            ))
         }
 
         // Menambahkan header kolom
@@ -154,7 +157,9 @@ class ManageStockMenuActivity : AppCompatActivity() {
         for (history in historyList) {
             val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
-                setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity, R.color.white))
+                setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity,
+                    R.color.white
+                ))
             }
 
             // Tambahkan TextView untuk setiap kolom data

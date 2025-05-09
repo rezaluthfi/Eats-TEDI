@@ -42,10 +42,19 @@ android {
 dependencies {
 
 
+    //viewpager2
+    implementation(libs.androidx.viewpager2)
+
     //mpandroidchart
     implementation(libs.mpandroidchart)
+
     //tableview
     implementation(libs.tableview)
+
+    //retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.logging.interceptor)
     implementation(libs.glide)
 
     implementation(libs.androidx.core.ktx)

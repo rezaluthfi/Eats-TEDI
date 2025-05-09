@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import ScheduleAdapter
 import android.content.Intent
@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ActivityAddScheduleEmployeeBinding
 import com.example.eatstedi.databinding.ViewModalScheduleBinding
 import com.example.eatstedi.model.Schedule

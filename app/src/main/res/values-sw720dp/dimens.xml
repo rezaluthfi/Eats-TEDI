@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="content_margin">120dp</dimen>
+    <dimen name="illustration_size">380dp</dimen>
+    <dimen name="form_width">400dp</dimen>
+    <dimen name="bg_login_left_width">558dp</dimen>
+    <dimen name="bg_login_right_width">493dp</dimen>
+    <dimen name="margin_form_padding">40dp</dimen>
+    <dimen name="text_size_title">52sp</dimen>
+    <dimen name="text_size_subtitle">20sp</dimen>
+    <dimen name="text_size_input">18sp</dimen>
+    <dimen name="text_size_button">18sp</dimen>
+    <dimen name="line_height_subtitle">32dp</dimen>
+</resources>

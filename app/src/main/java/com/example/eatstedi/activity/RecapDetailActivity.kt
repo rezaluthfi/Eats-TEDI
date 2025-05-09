@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import android.os.Bundle
 import android.view.View
@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ActivityRecapDetailBinding
 import com.example.eatstedi.model.TransactionDetail
 
@@ -95,7 +96,9 @@ class RecapDetailActivity : AppCompatActivity() {
             // Tambahkan header tabel
             val headerRow = TableRow(this).apply {
                 setPadding(16, 16, 16, 16)
-                setBackgroundColor(ContextCompat.getColor(this@RecapDetailActivity, R.color.secondary))
+                setBackgroundColor(ContextCompat.getColor(this@RecapDetailActivity,
+                    R.color.secondary
+                ))
             }
 
             headerRow.addView(createTextView("Nama Pemasok", true))
@@ -154,11 +157,15 @@ class RecapDetailActivity : AppCompatActivity() {
                             row?.setBackgroundColor(
                                 // If the first row (header), use secondary color, else alternate between white and secondary
                                 if (i == 0)
-                                    ContextCompat.getColor(this@RecapDetailActivity, R.color.secondary)
+                                    ContextCompat.getColor(this@RecapDetailActivity,
+                                        R.color.secondary
+                                    )
                                 else if ((i - 1) % 2 == 0) // Adjust for zero-based index after header
                                     ContextCompat.getColor(this@RecapDetailActivity, R.color.white)
                                 else
-                                    ContextCompat.getColor(this@RecapDetailActivity, R.color.secondary)
+                                    ContextCompat.getColor(this@RecapDetailActivity,
+                                        R.color.secondary
+                                    )
                             )
                         }
                     }

@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import com.example.eatstedi.R
-import com.example.eatstedi.RecapDetailActivity
+import com.example.eatstedi.activity.RecapDetailActivity
 import com.example.eatstedi.databinding.FragmentRecapBinding
 import com.example.eatstedi.model.Transaction
 import java.text.SimpleDateFormat
@@ -36,6 +36,12 @@ class RecapFragment : Fragment() {
     // Variabel untuk menyimpan referensi semua checkbox
     private val checkBoxList = mutableListOf<CheckBox>()
 
+    // Pagination variables
+    private var currentPage = 1
+    private val itemsPerPage = 10// Jumlah item per halaman
+    private var currentDisplayedData = listOf<Transaction>() // Data yang sedang ditampilkan setelah filter
+    private var totalPages = 1
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -51,8 +57,11 @@ class RecapFragment : Fragment() {
         // Set up button click listeners for start and end date
         setupDateFilter()
 
+        // Set up pagination controls
+        setupPagination()
+
         // Menampilkan transaksi awal tanpa filter
-        displayTransactions(transactions)
+        filterAndDisplayTransactions(transactions)
 
         // Set up listener for search EditText to filter data without pressing Enter
         setupSearchListener()
@@ -105,7 +114,7 @@ class RecapFragment : Fragment() {
             // Toggle status visibility checkbox
             isCheckboxVisible = !isCheckboxVisible
             // Refresh table to toggle checkbox visibility
-            displayTransactions(transactions)
+            displayTransactions(getPageItems())
 
             // Panggil toggleDeleteButtonVisibility untuk memperbarui visibilitas tombol delete
             toggleDeleteButtonVisibility()
@@ -113,8 +122,84 @@ class RecapFragment : Fragment() {
 
         binding.ivDelete.setOnClickListener {
             // Handle delete rekap transaksi
+            deleteSelectedItems()
+        }
+    }
+
+    private fun setupPagination() {
+        // Listener for previous page button
+        binding.btnPrevPage.setOnClickListener {
+            if (currentPage > 1) {
+                currentPage--
+                updatePageDisplay()
+                displayTransactions(getPageItems())
+            }
         }
 
+        // Listener for next page button
+        binding.btnNextPage.setOnClickListener {
+            if (currentPage < totalPages) {
+                currentPage++
+                updatePageDisplay()
+                displayTransactions(getPageItems())
+            }
+        }
+    }
+
+    private fun updatePageDisplay() {
+        binding.tvPageInfo.text = "Halaman $currentPage / $totalPages"
+
+        // Enable/disable pagination buttons based on current page
+        binding.btnPrevPage.isEnabled = currentPage > 1
+        binding.btnNextPage.isEnabled = currentPage < totalPages
+
+        // Update button opacity based on enabled state
+        binding.btnPrevPage.alpha = if (currentPage > 1) 1.0f else 0.5f
+        binding.btnNextPage.alpha = if (currentPage < totalPages) 1.0f else 0.5f
+    }
+
+    private fun calculateTotalPages(dataSize: Int): Int {
+        return if (dataSize == 0) 1 else (dataSize + itemsPerPage - 1) / itemsPerPage
+    }
+
+    private fun getPageItems(): List<Transaction> {
+        val startIndex = (currentPage - 1) * itemsPerPage
+        val endIndex = minOf(startIndex + itemsPerPage, currentDisplayedData.size)
+
+        return if (currentDisplayedData.isEmpty()) {
+            emptyList()
+        } else if (startIndex >= currentDisplayedData.size) {
+            // If current page is now invalid (e.g., after deletion of items), adjust to last valid page
+            currentPage = maxOf(1, totalPages)
+            getPageItems()
+        } else {
+            currentDisplayedData.subList(startIndex, endIndex)
+        }
+    }
+
+    private fun deleteSelectedItems() {
+        val checkedIndices = checkBoxList.mapIndexedNotNull { index, checkBox ->
+            if (checkBox.isChecked) index else null
+        }
+
+        if (checkedIndices.isNotEmpty()) {
+            // Get the current page's data
+            val pageItems = getPageItems()
+            // Get actual indices in the full data list
+            val actualIndices = checkedIndices.map { (currentPage - 1) * itemsPerPage + it }
+
+            // Create a new list without the selected items
+            val updatedTransactions = currentDisplayedData.filterIndexed { index, _ ->
+                !actualIndices.contains(index)
+            }
+
+            // Update the displayed data and reset pagination if needed
+            filterAndDisplayTransactions(updatedTransactions)
+
+            // Hide delete button after deletion
+            isCheckboxVisible = false
+            toggleDeleteButtonVisibility()
+        }
     }
 
     // Fungsi untuk memeriksa apakah sentuhan berada di dalam area etSearch
@@ -154,7 +239,7 @@ class RecapFragment : Fragment() {
         binding.etSearch.visibility = View.VISIBLE // Pastikan etSearch tetap terlihat
 
         // Reset tampilan tabel transaksi ke kondisi default
-        displayTransactions(transactions)
+        filterAndDisplayTransactions(transactions)
 
         // Mengembalikan warna teks dan hint menjadi default
         binding.etSearch.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
@@ -237,33 +322,24 @@ class RecapFragment : Fragment() {
     }
 
     private fun filterTransactions() {
-        if (startDate == null || endDate == null) {
-            displayTransactions(transactions)
-            binding.tvNoData.visibility = View.GONE
-            binding.tableView.visibility = View.VISIBLE
-            return
-        }
-
-        val filteredTransactions = transactions.filter { transaction ->
-            val transactionDate = Calendar.getInstance().apply {
-                time = dateFormat.parse(transaction.date)!!
-            }.stripTime()
-
-            val strippedStartDate = startDate?.stripTime()
-            val strippedEndDate = endDate?.stripTime()
-
-            !transactionDate.before(strippedStartDate) && !transactionDate.after(strippedEndDate)
-        }
-
-        displayTransactions(filteredTransactions)
-
-        if (filteredTransactions.isEmpty()) {
-            binding.tvNoData.visibility = View.VISIBLE
-            binding.tableView.visibility = View.GONE
+        val filteredTransactions = if (startDate == null || endDate == null) {
+            transactions
         } else {
-            binding.tvNoData.visibility = View.GONE
-            binding.tableView.visibility = View.VISIBLE
+            transactions.filter { transaction ->
+                val transactionDate = Calendar.getInstance().apply {
+                    time = dateFormat.parse(transaction.date)!!
+                }.stripTime()
+
+                val strippedStartDate = startDate?.stripTime()
+                val strippedEndDate = endDate?.stripTime()
+
+                !transactionDate.before(strippedStartDate) && !transactionDate.after(strippedEndDate)
+            }
         }
+
+        // Reset to first page when applying new filters
+        currentPage = 1
+        filterAndDisplayTransactions(filteredTransactions)
 
         binding.ivClearSearch.visibility = if (startDate != null || endDate != null) View.VISIBLE else View.GONE
     }
@@ -284,11 +360,13 @@ class RecapFragment : Fragment() {
                 isCheckboxVisible = false
                 checkBoxList.forEach { it.visibility = View.GONE }
 
-                // Filter data berdasarkan pencarian
+                // Filter data berdasarkan pencarian dan reset ke halaman pertama
                 val filteredTransactions = transactions.filter { transaction ->
                     transaction.employeeName.lowercase().contains(query)
                 }
-                displayTransactions(filteredTransactions)
+
+                currentPage = 1
+                filterAndDisplayTransactions(filteredTransactions)
             } else {
                 // Kembalikan tampilan default
                 resetSearchView()
@@ -296,62 +374,77 @@ class RecapFragment : Fragment() {
         }
     }
 
+    private fun filterAndDisplayTransactions(transactionsToDisplay: List<Transaction>) {
+        // Update the current displayed data
+        currentDisplayedData = transactionsToDisplay
+
+        // Calculate total pages
+        totalPages = calculateTotalPages(transactionsToDisplay.size)
+
+        // Ensure current page is valid
+        currentPage = minOf(currentPage, totalPages)
+
+        // Update page display
+        updatePageDisplay()
+
+        // Display current page items
+        displayTransactions(getPageItems())
+
+        // Show/hide no data message
+        if (transactionsToDisplay.isEmpty()) {
+            binding.tvNoData.visibility = View.VISIBLE
+            binding.tableView.visibility = View.GONE
+            binding.paginationLayout.visibility = View.GONE
+        } else {
+            binding.tvNoData.visibility = View.GONE
+            binding.tableView.visibility = View.VISIBLE
+            binding.paginationLayout.visibility = View.VISIBLE
+        }
+    }
 
     private fun displayTransactions(transactionsToDisplay: List<Transaction>) {
         binding.tableView.removeAllViews()
         checkBoxList.clear() // Bersihkan list saat tabel diperbarui
 
-        if (transactionsToDisplay.isEmpty()) {
-            binding.tvNoData.visibility = View.VISIBLE
-            binding.tableView.visibility = View.GONE
-            binding.ivDelete.visibility = View.GONE
-        } else {
-            binding.tvNoData.visibility = View.GONE
-            binding.tableView.visibility = View.VISIBLE
-            binding.ivDelete.visibility = View.GONE  // Ensure delete button is hidden initially
+        // Create header row
+        val headerRow = TableRow(context).apply {
+            setPadding(16, 16, 16, 16)
+            setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary))
 
-            // Create header row
-            val headerRow = TableRow(context).apply {
-                setPadding(16, 16, 16, 16)
-                setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary))
-
-                // Add headers
-                addView(createTextView("Nama Karyawan", isHeader = true))
-                addView(createTextView("Tanggal", isHeader = true))
-                addView(createTextView("Tipe Pembayaran", isHeader = true))
-                addView(createTextView("Harga", isHeader = true))
-                addView(createTextView("Kembalian", isHeader = true))
-            }
-            binding.tableView.addView(headerRow)
-
-            //jika ada checkbox yang dicentang dan tombol delete diklik, maka row tersebut akan dihapus
-            binding.ivDelete.setOnClickListener {
-                val checkedIndices = checkBoxList.mapIndexedNotNull { index, checkBox ->
-                    if (checkBox.isChecked) index else null
-                }
-
-                val updatedTransactions = transactionsToDisplay.toMutableList()
-                checkedIndices.reversed().forEach {
-                    updatedTransactions.removeAt(it)
-                }
-
-                displayTransactions(updatedTransactions)
-            }
-
-            // Add data rows
-            for ((index, transaction) in transactionsToDisplay.withIndex()) {
-                val row = TableRow(context).apply {
-                    setPadding(16, 16, 16, 16)
-                    setBackgroundColor(
-                        if (index % 2 == 0)
-                            ContextCompat.getColor(requireContext(), R.color.white)
-                        else
-                            ContextCompat.getColor(requireContext(), R.color.secondary)
+            // Add checkbox header if checkboxes are visible
+            if (isCheckboxVisible) {
+                addView(TextView(context).apply {
+                    layoutParams = TableRow.LayoutParams(
+                        TableRow.LayoutParams.WRAP_CONTENT,
+                        TableRow.LayoutParams.WRAP_CONTENT
                     )
+                })
+            }
 
-                    // Add checkbox
+            // Add headers
+            addView(createTextView("Nama Karyawan", isHeader = true))
+            addView(createTextView("Tanggal", isHeader = true))
+            addView(createTextView("Tipe Pembayaran", isHeader = true))
+            addView(createTextView("Harga", isHeader = true))
+            addView(createTextView("Kembalian", isHeader = true))
+        }
+        binding.tableView.addView(headerRow)
+
+        // Add data rows
+        for ((index, transaction) in transactionsToDisplay.withIndex()) {
+            val row = TableRow(context).apply {
+                setPadding(16, 16, 16, 16)
+                setBackgroundColor(
+                    if (index % 2 == 0)
+                        ContextCompat.getColor(requireContext(), R.color.white)
+                    else
+                        ContextCompat.getColor(requireContext(), R.color.secondary)
+                )
+
+                // Add checkbox if enabled
+                if (isCheckboxVisible) {
                     val checkBox = CheckBox(context).apply {
-                        visibility = if (isCheckboxVisible) View.VISIBLE else View.GONE
+                        visibility = View.VISIBLE
                         setOnCheckedChangeListener { _, _ ->
                             // Periksa jika ada checkbox yang dicentang
                             toggleDeleteButtonVisibility()
@@ -359,27 +452,29 @@ class RecapFragment : Fragment() {
                     }
                     checkBoxList.add(checkBox) // Simpan checkbox ke dalam list
                     addView(checkBox)
-
-                    // Add data columns
-                    val employeeNameView = createTextView(transaction.employeeName).apply {
-                        setOnClickListener {
-                            // Pindah ke Activity detail
-                            val intent = Intent(requireContext(), RecapDetailActivity::class.java).apply {
-                                putExtra("employeeName", transaction.employeeName)
-                            }
-                            startActivity(intent)
-                        }
-                    }
-
-                    addView(employeeNameView)
-                    addView(createTextView(transaction.date))
-                    addView(createTextView(transaction.paymentType))
-                    addView(createTextView("Rp${transaction.totalPrice}"))
-                    addView(createTextView("Rp${transaction.change}"))
                 }
-                binding.tableView.addView(row)
+
+                // Add data columns
+                val employeeNameView = createTextView(transaction.employeeName).apply {
+                    setOnClickListener {
+                        // Pindah ke Activity detail
+                        val intent = Intent(requireContext(), RecapDetailActivity::class.java).apply {
+                            putExtra("employeeName", transaction.employeeName)
+                        }
+                        startActivity(intent)
+                    }
+                }
+
+                addView(employeeNameView)
+                addView(createTextView(transaction.date))
+                addView(createTextView(transaction.paymentType))
+                addView(createTextView("Rp${transaction.totalPrice}"))
+                addView(createTextView("Rp${transaction.change}"))
             }
+            binding.tableView.addView(row)
         }
+
+        toggleDeleteButtonVisibility()
     }
 
     private fun toggleDeleteButtonVisibility() {
@@ -395,18 +490,23 @@ class RecapFragment : Fragment() {
             binding.btnStartDate.visibility = View.GONE
             binding.btnEndDate.visibility = View.GONE
             binding.etSearch.visibility = View.GONE
+            binding.paginationLayout.visibility = View.GONE
         } else {
             // Sembunyikan tombol delete
             binding.ivDelete.visibility = View.GONE
 
-            // Tampilkan kembali tombol lainnya
-            binding.ivDownload.visibility = View.VISIBLE
-            binding.btnStartDate.visibility = View.VISIBLE
-            binding.btnEndDate.visibility = View.VISIBLE
-            binding.etSearch.visibility = View.VISIBLE
+            // Tampilkan kembali tombol lainnya jika sedang tidak dalam mode search
+            if (binding.etSearch.text.toString().isEmpty()) {
+                binding.ivDownload.visibility = View.VISIBLE
+                binding.btnStartDate.visibility = View.VISIBLE
+                binding.btnEndDate.visibility = View.VISIBLE
+                binding.etSearch.visibility = View.VISIBLE
+                if (currentDisplayedData.isNotEmpty()) {
+                    binding.paginationLayout.visibility = View.VISIBLE
+                }
+            }
         }
     }
-
 
     private fun createTextView(text: String, isHeader: Boolean = false): TextView {
         return TextView(context).apply {
@@ -430,9 +530,8 @@ class RecapFragment : Fragment() {
         endDate = null
         binding.btnStartDate.text = "dd/mm/yyyy"
         binding.btnEndDate.text = "dd/mm/yyyy"
-        displayTransactions(transactions)
-        binding.tvNoData.visibility = View.GONE
-        binding.tableView.visibility = View.VISIBLE
+        currentPage = 1
+        filterAndDisplayTransactions(transactions)
         binding.ivClearSearch.visibility = View.GONE
         binding.etSearch.text.clear()
     }

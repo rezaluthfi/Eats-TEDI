@@ -1,6 +1,5 @@
 package com.example.eatstedi.adapter
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
@@ -8,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.eatstedi.ManageStockMenuActivity
+import com.example.eatstedi.activity.ManageStockMenuActivity
 import com.example.eatstedi.R
 import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.model.MenuItem
@@ -20,7 +19,7 @@ class MenuAdapter(
     private val onDeleteMenu: (MenuItem) -> Unit
 ) : RecyclerView.Adapter<MenuAdapter.MenuViewHolder>() {
 
-    private var filteredMenuList: List<MenuItem> = menuList // Menginisialisasi filteredMenuList dengan menuList
+    private var filteredMenuList: List<MenuItem> = menuList
 
     inner class MenuViewHolder(val binding: ViewItemMenuBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -34,8 +33,8 @@ class MenuAdapter(
         with(holder.binding) {
             tvMenuName.text = menuItem.menuName
             tvOwnerName.text = menuItem.ownerName
-            tvPrice.text = menuItem.price
-            tvStock.text = "Sisa: ${menuItem.stock}" // Pastikan ini diupdate
+            tvPrice.text = menuItem.formattedPrice
+            tvStock.text = "Sisa: ${menuItem.stock}"
 
             Glide.with(holder.itemView.context)
                 .load(menuItem.imageUrl)
@@ -48,13 +47,12 @@ class MenuAdapter(
         }
     }
 
-
     override fun getItemCount() = filteredMenuList.size
 
     fun updateList(newList: List<MenuItem>) {
         menuList = newList
-        filteredMenuList = newList // Menyesuaikan filteredMenuList dengan menuList baru
-        notifyDataSetChanged() // Memperbarui tampilan RecyclerView
+        filteredMenuList = newList
+        notifyDataSetChanged()
     }
 
     fun filterMenus(query: String) {
@@ -78,10 +76,10 @@ class MenuAdapter(
                 R.id.action_set_stock_menu -> {
                     val context = view.context
                     val intent = Intent(context, ManageStockMenuActivity::class.java).apply {
-                        putExtra("MENU_ITEM_ID", menuItem.id) // Kirim ID menu
-                        putExtra("MENU_ITEM_NAME", menuItem.menuName) // Kirim nama menu
-                        putExtra("MENU_ITEM_IMAGE_URL", menuItem.imageUrl) // Kirim URL gambar menu
-                        putExtra("MENU_ITEM_STOCK", menuItem.stock) // Kirim stok saat ini
+                        putExtra("MENU_ITEM_ID", menuItem.id)
+                        putExtra("MENU_ITEM_NAME", menuItem.menuName)
+                        putExtra("MENU_ITEM_IMAGE_URL", menuItem.imageUrl)
+                        putExtra("MENU_ITEM_STOCK", menuItem.stock)
                     }
                     context.startActivity(intent)
                     true
@@ -91,5 +89,4 @@ class MenuAdapter(
         }
         popupMenu.show()
     }
-
 }

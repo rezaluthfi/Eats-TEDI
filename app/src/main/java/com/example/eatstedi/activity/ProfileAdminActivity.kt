@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import android.os.Bundle
 import android.widget.Toast

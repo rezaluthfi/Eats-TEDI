@@ -154,12 +154,13 @@
             android:id="@+id/tv_no_data"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:layout_marginTop="48dp"
             android:layout_gravity="center"
             android:text="Maaf, data tidak ditemukan."
             android:textSize="16sp"
             android:textColor="@color/black"
-            android:visibility="gone"/>
+            />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_all_menu"
@@ -372,5 +373,15 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         />
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

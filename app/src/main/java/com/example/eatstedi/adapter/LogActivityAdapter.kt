@@ -29,9 +29,23 @@ class LogActivityAdapter(private val logActivities: MutableList<LogActivity>) :
         }
     }
 
+    // Method untuk memperbarui semua data
     fun updateData(newLogActivities: List<LogActivity>) {
         logActivities.clear()
         logActivities.addAll(newLogActivities)
+        notifyDataSetChanged()
+    }
+
+    // Method baru untuk menambahkan item saat pagination
+    fun addItems(newItems: List<LogActivity>) {
+        val startPosition = logActivities.size
+        logActivities.addAll(newItems)
+        notifyItemRangeInserted(startPosition, newItems.size)
+    }
+
+    // Method baru untuk membersihkan semua item
+    fun clearItems() {
+        logActivities.clear()
         notifyDataSetChanged()
     }
 }

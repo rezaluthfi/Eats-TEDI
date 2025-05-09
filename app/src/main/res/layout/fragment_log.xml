@@ -116,6 +116,46 @@
            android:padding="8dp"
            tools:listitem="@layout/view_item_log_activity" />
 
+        <LinearLayout
+            android:id="@+id/paginationLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <Button
+                android:id="@+id/btnPrevPage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sebelumnya"
+                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:background="@drawable/bg_btn_secondary"
+                app:backgroundTint="@null"/>
+
+            <TextView
+                android:id="@+id/tvPageInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:text="Halaman 1/1"
+                android:textSize="16sp"
+                android:textColor="@color/black"/>
+
+            <Button
+                android:id="@+id/btnNextPage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Selanjutnya"
+                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:background="@drawable/bg_btn_secondary"
+                app:backgroundTint="@null"/>
+
+        </LinearLayout>
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

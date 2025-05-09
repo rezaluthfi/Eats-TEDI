@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:allowBackup="true"
@@ -13,45 +17,49 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.Light.NoActionBar"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name=".RecapDetailActivity"
+            android:name=".activity.OnboardingActivity"
             android:exported="false" />
         <activity
-            android:name=".AddScheduleEmployeeActivity"
+            android:name=".activity.RecapDetailActivity"
             android:exported="false" />
         <activity
-            android:name=".AddSupplierActivity"
+            android:name=".activity.AddScheduleEmployeeActivity"
             android:exported="false" />
         <activity
-            android:name=".AddEmployeeActivity"
+            android:name=".activity.AddSupplierActivity"
             android:exported="false" />
         <activity
-            android:name=".ProfileAdminActivity"
+            android:name=".activity.AddEmployeeActivity"
             android:exported="false" />
         <activity
-            android:name=".ScheduleEmployeeActivity"
+            android:name=".activity.ProfileAdminActivity"
             android:exported="false" />
         <activity
-            android:name=".AllSupplierActivity"
+            android:name=".activity.ScheduleEmployeeActivity"
             android:exported="false" />
         <activity
-            android:name=".AllEmployeeActivity"
+            android:name=".activity.AllSupplierActivity"
             android:exported="false" />
         <activity
-            android:name=".ProfileEmployeeActivity"
+            android:name=".activity.AllEmployeeActivity"
             android:exported="false" />
         <activity
-            android:name=".ManageStockMenuActivity"
+            android:name=".activity.ProfileEmployeeActivity"
             android:exported="false" />
         <activity
-            android:name=".ProfileSupplierActivity"
+            android:name=".activity.ManageStockMenuActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activity.ProfileSupplierActivity"
             android:exported="false" />
         <activity
             android:name=".login.LoginActivity"
             android:exported="false" />
         <activity
-            android:name=".SplashScreenActivity"
+            android:name=".activity.SplashScreenActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -60,7 +68,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name=".activity.MainActivity"
             android:configChanges="orientation|screenSize"
             android:exported="false"
             android:screenOrientation="landscape" />

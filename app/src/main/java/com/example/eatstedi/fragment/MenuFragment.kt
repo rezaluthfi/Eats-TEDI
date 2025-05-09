@@ -1,35 +1,50 @@
 package com.example.eatstedi.fragment
 
-import android.annotation.SuppressLint
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
-import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
-import androidx.core.util.TypedValueCompat.dpToPx
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.example.eatstedi.R
 import com.example.eatstedi.adapter.MenuAdapter
 import com.example.eatstedi.adapter.OrderAdapter
+import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.ApiService
+import com.example.eatstedi.api.service.GenericResponse
+import com.example.eatstedi.api.service.MenuResponse
+import com.example.eatstedi.api.service.SingleMenuResponse
+import com.example.eatstedi.api.service.SearchRequest
 import com.example.eatstedi.databinding.FragmentMenuBinding
-import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.databinding.ViewModalAddEditMenuBinding
 import com.example.eatstedi.databinding.ViewModalInvoiceOrderBinding
 import com.example.eatstedi.model.MenuItem
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.io.File
 import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -42,31 +57,32 @@ class MenuFragment : Fragment() {
     private val selectedMenuItems = mutableListOf<MenuItem>()
     private lateinit var orderAdapter: OrderAdapter
     private lateinit var menuAdapter: MenuAdapter
+    private lateinit var apiService: ApiService
+    private var originalMenuList: MutableList<MenuItem> = mutableListOf()
+    private var filteredMenuList: List<MenuItem> = originalMenuList
+    private var selectedImageUri: Uri? = null
+    private var isInitialFetchComplete: Boolean = false
 
     companion object {
         private const val REQUEST_CODE_MANAGE_STOCK = 1001
     }
 
-    // Original menu list (without filter)
-     val originalMenuList = mutableListOf(
-        MenuItem(1,"Nasi Goreng Spesial", "Warung Makan Bu Tuti", "Makanan", "Rp15.000", 1, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(2,"Ayam Bakar Madu", "Dapoer Ayu", "Makanan", "Rp20.000", 12, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(3,"Mie Ayam Bakso", "Bakso Pak Slamet", "Makanan", "Rp18.000", 11, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(4,"Sate Ayam", "Sate Cak Udin", "Makanan", "Rp22.000", 21, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(5,"Es Jeruk", "Warung Es Jeruk", "Minuman", "Rp6.000", 6, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(6,"Keripik Singkong", "Dapoer Ayu", "Camilan", "Rp5.000", 5, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(7,"Es Teh Manis", "Warung Es Teh", "Minuman", "Rp5.000", 5, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(8,"Es Campur", "Warung Es Campur", "Minuman", "Rp7.000", 7, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(7,"Es Kelapa Muda", "Warung Es Kelapa Muda", "Minuman", "Rp8.000", 8, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(8,"Es Cincau", "Warung Es Cincau", "Minuman", "Rp9.000", 9, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(9,"Es Doger", "Warung Es Doger", "Minuman", "Rp10.000", 10, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(10,"Keripik Singkong", "Dapoer Ayu", "Camilan", "Rp5.000", 5, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(11,"Keripik Pisang", "Dapoer Ayu", "Camilan", "Rp6.000", 6, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(12,"Keripik Tempe", "Dapoer Ayu", "Camilan", "Rp7.000", 7, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"),
-        MenuItem(13,"Keripik Kentang", "Dapoer Ayu", "Camilan", "Rp8.000", 8, "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg")
-    )
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            openGallery()
+        } else {
+            Toast.makeText(requireContext(), "Izin akses galeri ditolak", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-    private var filteredMenuList: List<MenuItem> = originalMenuList
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            Glide.with(this).load(it).into(dialogBinding.imgMenu)
+        }
+    }
+
+    private lateinit var dialogBinding: ViewModalAddEditMenuBinding
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -80,8 +96,12 @@ class MenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        println("Debug: Original list size = ${originalMenuList.size}")
+        // Initialize with tvNoData and rvAllMenu GONE until data is fetched
+        binding.tvNoData.visibility = View.GONE
+        binding.rvAllMenu.visibility = View.GONE
+        Log.d("MenuFragment", "onViewCreated: tv_no_data set to GONE, rvAllMenu set to GONE")
 
+        apiService = RetrofitClient.getInstance(requireContext())
         setupMenuRecyclerView()
         setupOrderRecyclerView()
         setupInputPayment()
@@ -89,7 +109,83 @@ class MenuFragment : Fragment() {
         setupButtons()
         setupSpinner()
         setupSearchView()
+        fetchMenuFromServer()
+    }
 
+    private fun showProgressBar() {
+        binding.progressBar.visibility = View.VISIBLE
+        binding.tvNoData.visibility = View.GONE
+        binding.rvAllMenu.visibility = View.GONE
+        Log.d("MenuFragment", "showProgressBar: Showing progress bar, tv_no_data GONE, rvAllMenu GONE")
+    }
+
+    private fun hideProgressBar() {
+        binding.progressBar.visibility = View.GONE
+        Log.d("MenuFragment", "hideProgressBar: Hiding progress bar")
+    }
+
+    private fun fetchMenuFromServer() {
+        showProgressBar()
+        apiService.getMenu().enqueue(object : Callback<MenuResponse> {
+            override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                hideProgressBar()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    originalMenuList.clear()
+                    originalMenuList.addAll(response.body()?.data ?: emptyList())
+                    filteredMenuList = originalMenuList
+                    menuAdapter.updateList(filteredMenuList)
+                    isInitialFetchComplete = true
+                    updateVisibility()
+                    Log.d("MenuFragment", "Menu fetched: ${originalMenuList.size} items, tvNoData=${if (filteredMenuList.isEmpty()) "VISIBLE" else "GONE"}")
+                    if (originalMenuList.isNotEmpty()) {
+                        Toast.makeText(requireContext(), "Berhasil mengambil ${originalMenuList.size} menu", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    originalMenuList.clear()
+                    filteredMenuList = originalMenuList
+                    menuAdapter.updateList(filteredMenuList)
+                    isInitialFetchComplete = true
+                    updateVisibility()
+                    handleErrorResponse(response, "Gagal mengambil menu")
+                }
+            }
+
+            override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                hideProgressBar()
+                originalMenuList.clear()
+                filteredMenuList = originalMenuList
+                menuAdapter.updateList(filteredMenuList)
+                isInitialFetchComplete = true
+                updateVisibility()
+                handleNetworkError(t, "Error fetching menu")
+            }
+        })
+    }
+
+    private fun handleErrorResponse(response: Response<*>, defaultMessage: String) {
+        val message = try {
+            response.errorBody()?.string()
+                ?: response.body()?.javaClass?.getDeclaredField("message")?.apply { isAccessible = true }?.get(response.body())?.toString()
+                ?: defaultMessage
+        } catch (e: Exception) {
+            defaultMessage
+        }
+        Log.e("MenuFragment", "$defaultMessage: $message")
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+        if (response.code() == 401) {
+            Toast.makeText(requireContext(), "Sesi habis, silakan login kembali", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun handleNetworkError(t: Throwable, context: String) {
+        Log.e("MenuFragment", "$context: ${t.message}", t)
+        Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_LONG).show()
+    }
+
+    private fun updateVisibility() {
+        binding.rvAllMenu.visibility = if (filteredMenuList.isEmpty()) View.GONE else View.VISIBLE
+        binding.tvNoData.visibility = if (filteredMenuList.isEmpty()) View.VISIBLE else View.GONE
+        Log.d("MenuFragment", "updateVisibility: rvAllMenu=${if (filteredMenuList.isEmpty()) "GONE" else "VISIBLE"}, tvNoData=${if (filteredMenuList.isEmpty()) "VISIBLE" else "GONE"}")
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -97,22 +193,14 @@ class MenuFragment : Fragment() {
         if (requestCode == REQUEST_CODE_MANAGE_STOCK && resultCode == Activity.RESULT_OK) {
             val menuItemId = data?.getIntExtra("MENU_ITEM_ID", 0) ?: 0
             val newStock = data?.getIntExtra("NEW_STOCK", 0) ?: 0
-
-            // Log untuk debugging
             Log.d("MenuFragment", "Menu Item ID: $menuItemId, New Stock: $newStock")
-
-            // Temukan menu item berdasarkan ID
             val menuItem = originalMenuList.find { it.id == menuItemId }
-
             menuItem?.let {
-                // Memperbarui stok menu item
-                it.stock = newStock // Update stok
-                // Memperbarui tampilan menu
+                it.stock = newStock
                 val index = originalMenuList.indexOf(it)
-                originalMenuList[index] = it // Pastikan kita memperbarui daftar asli
-                menuAdapter.updateList(originalMenuList) // Memperbarui adapter
-
-                // Log untuk memastikan menu item diperbarui
+                originalMenuList[index] = it
+                menuAdapter.updateList(filteredMenuList)
+                updateVisibility()
                 Log.d("MenuFragment", "Updated Menu Item: $it")
             } ?: run {
                 Log.d("MenuFragment", "Menu item not found for ID: $menuItemId")
@@ -133,348 +221,398 @@ class MenuFragment : Fragment() {
     }
 
     private fun filterMenus(query: String) {
-        filteredMenuList = originalMenuList.filter { it.menuName.contains(query, ignoreCase = true) }
-        menuAdapter.updateList(filteredMenuList)
-        showNoDataMessage(filteredMenuList.isEmpty())
+        if (query.isEmpty()) {
+            // Disable listeners to prevent filter reapplication
+            binding.chipGroup.setOnCheckedChangeListener(null)
+            binding.spFilterName.onItemSelectedListener = null
+
+            filteredMenuList = originalMenuList
+            menuAdapter.updateList(filteredMenuList)
+            // Reset UI state
+            binding.chipAllMenu.isChecked = true
+            binding.spFilterName.setSelection(0)
+            updateVisibility()
+            Log.d("MenuFragment", "filterMenus: Reset to original list, originalSize=${originalMenuList.size}, filteredSize=${filteredMenuList.size}")
+
+            // Re-enable listeners
+            setupChipFilterListener()
+            setupSpinnerListener()
+            return
+        }
+        showProgressBar()
+        apiService.searchMenu(SearchRequest(query)).enqueue(object : Callback<MenuResponse> {
+            override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                hideProgressBar()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    filteredMenuList = response.body()?.data ?: emptyList()
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    Log.d("MenuFragment", "Search result for query='$query': ${filteredMenuList.size} items")
+                } else {
+                    filteredMenuList = emptyList()
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    Log.e("MenuFragment", "Search failed for query='$query': ${response.errorBody()?.string() ?: "Unknown error"}")
+                }
+            }
+
+            override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                hideProgressBar()
+                filteredMenuList = emptyList()
+                menuAdapter.updateList(filteredMenuList)
+                updateVisibility()
+                Log.e("MenuFragment", "Search network error: ${t.message}", t)
+            }
+        })
     }
 
     private fun setupChipFilter() {
-        // Pastikan chip group dan chips ada
-        println("Debug: Setting up chip filter")
-
-        // Set default chip
         binding.chipAllMenu.isChecked = true
-
-        // Tambahkan listener untuk setiap chip
         binding.apply {
             chipAllMenu.setOnClickListener {
-                println("Debug: All menu chip clicked")
-                menuAdapter.updateList(originalMenuList)
-                showNoDataMessage(originalMenuList.isEmpty())
-                println("Debug: Showing all menu items, size = ${originalMenuList.size}")
+                filteredMenuList = originalMenuList
+                menuAdapter.updateList(filteredMenuList)
+                updateVisibility()
+                Log.d("MenuFragment", "Showing all menu items, size=${filteredMenuList.size}")
             }
-
-            chipFoods.setOnClickListener {
-                println("Debug: Foods chip clicked")
-                val foodList = originalMenuList.filter { it.category == "Makanan" }
-                menuAdapter.updateList(foodList)
-                showNoDataMessage(foodList.isEmpty())
-                println("Debug: Showing food items, size = ${foodList.size}")
-            }
-
-            chipDrinks.setOnClickListener {
-                println("Debug: Drinks chip clicked")
-                val drinkList = originalMenuList.filter { it.category == "Minuman" }
-                menuAdapter.updateList(drinkList)
-                showNoDataMessage(drinkList.isEmpty())
-                println("Debug: Showing drink items, size = ${drinkList.size}")
-            }
-
-            chipSnacks.setOnClickListener {
-                println("Debug: Snacks chip clicked")
-                val snackList = originalMenuList.filter { it.category == "Camilan" }
-                menuAdapter.updateList(snackList)
-                showNoDataMessage(snackList.isEmpty())
-                println("Debug: Showing snack items, size = ${snackList.size}")
-            }
+            chipFoods.setOnClickListener { filterByFoodType("food") }
+            chipDrinks.setOnClickListener { filterByFoodType("drink") }
+            chipSnacks.setOnClickListener { filterByFoodType("snack") }
         }
+        setupChipFilterListener()
+    }
 
-        // Tambahkan juga listener untuk chip group
-        binding.chipGroup.setOnCheckedChangeListener { group, checkedId ->
-            println("Debug: ChipGroup checked changed to $checkedId")
-            val selectedSupplier = binding.spFilterName.selectedItem.toString()
+    private fun setupChipFilterListener() {
+        binding.chipGroup.setOnCheckedChangeListener { _, checkedId ->
+            if (!isInitialFetchComplete) return@setOnCheckedChangeListener
+            val selectedSupplier = binding.spFilterName.selectedItemPosition
             when (checkedId) {
-                R.id.chip_all_menu -> {
-                    filterMenuBySupplierAndCategory(selectedSupplier, null)
-                }
-                R.id.chip_foods -> {
-                    filterMenuBySupplierAndCategory(selectedSupplier, "Makanan")
-                }
-                R.id.chip_drinks -> {
-                    filterMenuBySupplierAndCategory(selectedSupplier, "Minuman")
-                }
-                R.id.chip_snacks -> {
-                    filterMenuBySupplierAndCategory(selectedSupplier, "Camilan")
-                }
+                R.id.chip_all_menu -> filterMenuBySupplierAndCategory(selectedSupplier, null)
+                R.id.chip_foods -> filterMenuBySupplierAndCategory(selectedSupplier, "food")
+                R.id.chip_drinks -> filterMenuBySupplierAndCategory(selectedSupplier, "drink")
+                R.id.chip_snacks -> filterMenuBySupplierAndCategory(selectedSupplier, "snack")
             }
         }
     }
 
-    private fun filterMenuBySupplierAndCategory(supplierName: String, category: String?) {
-        filteredMenuList = if (supplierName == "Semua Pemasok") {
-            if (category != null) {
-                originalMenuList.filter { it.category == category }
-            } else {
-                originalMenuList
+    private fun filterByFoodType(foodType: String) {
+        showProgressBar()
+        apiService.filterByFoodType(foodType).enqueue(object : Callback<MenuResponse> {
+            override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                hideProgressBar()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    filteredMenuList = response.body()?.data ?: emptyList()
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    Log.d("MenuFragment", "Filtered by food type '$foodType': ${filteredMenuList.size} items")
+                } else {
+                    filteredMenuList = emptyList()
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    handleErrorResponse(response, "Gagal memfilter berdasarkan tipe makanan")
+                }
             }
-        } else {
-            if (category != null) {
-                originalMenuList.filter { it.ownerName == supplierName && it.category == category }
-            } else {
-                originalMenuList.filter { it.ownerName == supplierName }
+
+            override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                hideProgressBar()
+                filteredMenuList = emptyList()
+                menuAdapter.updateList(filteredMenuList)
+                updateVisibility()
+                handleNetworkError(t, "Error filtering by food type")
             }
-        }
-        menuAdapter.updateList(filteredMenuList)
-        showNoDataMessage(filteredMenuList.isEmpty())
-        println("Debug: Supplier and category filter applied, new size = ${filteredMenuList.size}")
+        })
     }
 
-    private fun showNoDataMessage(show: Boolean) {
-        binding.tvNoData.visibility = if (show) View.VISIBLE else View.GONE
+    private fun filterMenuBySupplierAndCategory(supplierId: Int, foodType: String?) {
+        if (!isInitialFetchComplete) {
+            Log.d("MenuFragment", "Skipping filterMenuBySupplierAndCategory: Initial fetch not complete")
+            return
+        }
+        if (supplierId == 0 && foodType == null) {
+            filteredMenuList = originalMenuList
+            menuAdapter.updateList(filteredMenuList)
+            updateVisibility()
+            Log.d("MenuFragment", "Reset to all menu items, size=${filteredMenuList.size}")
+            return
+        }
+        if (supplierId == 0) {
+            filterByFoodType(foodType!!)
+            return
+        }
+        showProgressBar()
+        apiService.filterBySupplier(supplierId).enqueue(object : Callback<MenuResponse> {
+            override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                hideProgressBar()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    var result = response.body()?.data ?: emptyList()
+                    if (foodType != null) {
+                        result = result.filter { it.foodType == foodType }
+                    }
+                    filteredMenuList = result
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    Log.d("MenuFragment", "Filtered by supplier $supplierId and food type '$foodType': ${filteredMenuList.size} items")
+                } else {
+                    filteredMenuList = emptyList()
+                    menuAdapter.updateList(filteredMenuList)
+                    updateVisibility()
+                    handleErrorResponse(response, "Gagal memfilter berdasarkan pemasok")
+                }
+            }
+
+            override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                hideProgressBar()
+                filteredMenuList = emptyList()
+                menuAdapter.updateList(filteredMenuList)
+                updateVisibility()
+                handleNetworkError(t, "Error filtering by supplier")
+            }
+        })
     }
 
     private fun showEditMenuDialog(menuItem: MenuItem) {
-        val dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
-
+        dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
         val categories = resources.getStringArray(R.array.menu_category)
         val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, categories)
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         dialogBinding.spinnerMenuCategory.adapter = spinnerAdapter
-
-        // Isi form dengan data menu saat ini
-        dialogBinding.etSupplierName.setText(menuItem.ownerName)
-        dialogBinding.etSupplierName.setBackgroundResource(R.drawable.bg_input_disabled)
-        //set etSupplierName to non editable
-        dialogBinding.etSupplierName.isEnabled = false
+        val suppliers = listOf(Pair(1, "Warung Bu Tuti"))
+        val supplierNames = suppliers.map { it.second }.toTypedArray()
+        val supplierAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, supplierNames)
+        supplierAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        dialogBinding.spinnerSupplierName.adapter = supplierAdapter
+        val supplierIndex = suppliers.indexOfFirst { it.first == menuItem.idSupplier }
+        if (supplierIndex != -1) {
+            dialogBinding.spinnerSupplierName.setSelection(supplierIndex)
+        } else {
+            dialogBinding.spinnerSupplierName.setSelection(0)
+        }
         dialogBinding.etMenuName.setText(menuItem.menuName)
-        dialogBinding.etMenuPrice.setText(menuItem.price)
+        dialogBinding.etMenuPrice.setText(menuItem.price.toString())
+        dialogBinding.etMenuStock.setText(menuItem.stock.toString())
         dialogBinding.spinnerMenuCategory.setSelection(categories.indexOf(menuItem.category))
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogBinding.root)
-            .create()
-
+        Glide.with(this).load(menuItem.imageUrl).into(dialogBinding.imgMenu)
+        dialogBinding.btnCameraMenu.setOnClickListener { checkStoragePermission() }
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
         dialogBinding.apply {
-            btnCancel.setOnClickListener {
-                dialog.dismiss()
-            }
-
+            btnCancel.setOnClickListener { dialog.dismiss() }
             btnSave.setOnClickListener {
+                val supplierIndex = spinnerSupplierName.selectedItemPosition
+                val supplierId = suppliers[supplierIndex].first
+                val supplierName = suppliers[supplierIndex].second
                 val menuName = etMenuName.text.toString()
-                val menuPrice = etMenuPrice.text.toString()
+                val menuPrice = etMenuPrice.text.toString().toIntOrNull() ?: 0
+                val menuStock = etMenuStock.text.toString().toIntOrNull() ?: 0
                 val category = spinnerMenuCategory.selectedItem.toString()
-
-                // Lakukan pembaruan data menu di sini
-                updateMenu(menuItem, menuName, menuPrice, category)
-                Toast.makeText(requireContext(), "Berhasil memperbarui menu", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
+                if (menuName.isNotEmpty() && menuPrice > 0 && menuStock >= 0) {
+                    updateMenu(menuItem.id, menuName, menuPrice, menuStock, supplierId, supplierName, category)
+                    dialog.dismiss()
+                } else {
+                    Toast.makeText(requireContext(), "Mohon isi nama, harga, dan stok valid", Toast.LENGTH_SHORT).show()
+                }
             }
         }
-
         dialog.show()
     }
 
-    private fun updateMenu(
-        menuItem: MenuItem,
-        newMenuName: String,
-        newMenuPrice: String,
-        newCategory: String
-    ) {
-        // Lakukan pembaruan data menu di sini
-        val updatedMenuItem = menuItem.copy(
-            menuName = newMenuName,
-            price = newMenuPrice,
-            category = newCategory
-        )
+    private fun updateMenu(menuId: Int, newMenuName: String, newMenuPrice: Int, newMenuStock: Int, newSupplierId: Int, newSupplierName: String, newCategory: String) {
+        val foodType = when (newCategory) {
+            "Makanan" -> "food"
+            "Camilan" -> "snack"
+            "Minuman" -> "drink"
+            else -> "other"
+        }
+        val namePart = newMenuName.toRequestBody("text/plain".toMediaTypeOrNull())
+        val pricePart = newMenuPrice.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val stockPart = newMenuStock.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val idSupplierPart = newSupplierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val supplierNamePart = newSupplierName.toRequestBody("text/plain".toMediaTypeOrNull())
+        val foodTypePart = foodType.toRequestBody("text/plain".toMediaTypeOrNull())
+        var imagePart: MultipartBody.Part? = null
+        selectedImageUri?.let { uri ->
+            val file = File(requireContext().cacheDir, "menu_image_${System.currentTimeMillis()}.jpg")
+            requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            }
+            val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+            imagePart = MultipartBody.Part.createFormData("menu_picture", file.name, requestFile)
+        }
+        apiService.updateMenu(menuId, namePart, pricePart, stockPart, idSupplierPart, supplierNamePart, foodTypePart, imagePart)
+            .enqueue(object : Callback<SingleMenuResponse> {
+                override fun onResponse(call: Call<SingleMenuResponse>, response: Response<SingleMenuResponse>) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        response.body()?.data?.let { updatedMenu ->
+                            Log.d("MenuFragment", "Updated menu received: $updatedMenu")
+                            val index = originalMenuList.indexOfFirst { menu -> menu.id == menuId }
+                            if (index != -1) {
+                                originalMenuList[index] = updatedMenu
+                                filteredMenuList = originalMenuList
+                                menuAdapter.updateList(filteredMenuList)
+                                updateVisibility()
+                                Toast.makeText(requireContext(), "Berhasil memperbarui menu", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Log.e("MenuFragment", "Menu with ID $menuId not found in originalMenuList")
+                                Toast.makeText(requireContext(), "Menu tidak ditemukan di daftar", Toast.LENGTH_SHORT).show()
+                            }
+                        } ?: run {
+                            Log.e("MenuFragment", "No data in updateMenu response: ${response.body()}")
+                            Toast.makeText(requireContext(), "Menu tidak ditemukan di respons", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        handleErrorResponse(response, "Gagal memperbarui menu")
+                    }
+                    selectedImageUri = null
+                }
 
-        // Perbarui daftar menu
-        val index = originalMenuList.indexOf(menuItem)
-        originalMenuList[index] = updatedMenuItem
-        filteredMenuList = originalMenuList//.filter { it.menuName == newMenuName }
-        menuAdapter.updateList(filteredMenuList)
+                override fun onFailure(call: Call<SingleMenuResponse>, t: Throwable) {
+                    handleNetworkError(t, "Error updating menu")
+                    selectedImageUri = null
+                }
+            })
     }
 
     private fun deleteMenu(menuItem: MenuItem) {
-        // Hapus menu dari daftar menu
-        originalMenuList.remove(menuItem)
-        filteredMenuList = originalMenuList.filter { it.menuName != menuItem.menuName }
-        menuAdapter.updateList(filteredMenuList)
+        apiService.deleteMenu(menuItem.id).enqueue(object : Callback<GenericResponse> {
+            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    originalMenuList.remove(menuItem)
+                    filteredMenuList = originalMenuList
+                    menuAdapter.updateList(filteredMenuList)
+                    selectedMenuItems.remove(menuItem)
+                    orderAdapter.notifyDataSetChanged()
+                    updateVisibility()
+                    Toast.makeText(requireContext(), "Berhasil menghapus menu", Toast.LENGTH_SHORT).show()
+                } else {
+                    handleErrorResponse(response, "Gagal menghapus menu")
+                }
+            }
 
-        // Perbarui order jika ada menu yang dihapus
-        selectedMenuItems.remove(menuItem)
-        orderAdapter.notifyDataSetChanged()
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                handleNetworkError(t, "Error deleting menu")
+            }
+        })
     }
 
     private fun setupMenuRecyclerView() {
         menuAdapter = MenuAdapter(
             filteredMenuList,
+            onItemClick = { menuItem -> addItemToOrder(menuItem) },
             onEditMenu = { menuItem -> showEditMenuDialog(menuItem) },
-            onDeleteMenu = { menuItem -> deleteMenu(menuItem) },
-            onItemClick = { menuItem -> addItemToOrder(menuItem) }
+            onDeleteMenu = { menuItem -> deleteMenu(menuItem) }
         )
-
         binding.rvAllMenu.apply {
             adapter = menuAdapter
-
-            // Dynamically adjust layout manager based on sidebar visibility
-            val layoutManager = if (binding.nestedScrollView.visibility == View.VISIBLE) {
+            layoutManager = if (binding.nestedScrollView.visibility == View.VISIBLE) {
                 GridLayoutManager(context, 2)
             } else {
                 GridLayoutManager(context, 3)
             }
-
-            this.layoutManager = layoutManager
-
-            // Adjust RecyclerView's width to ensure it doesn't get hidden behind the sidebar
             this.layoutParams.width = if (binding.nestedScrollView.visibility == View.VISIBLE) {
                 ViewGroup.LayoutParams.MATCH_PARENT
             } else {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             }
         }
+        Log.d("MenuFragment", "setupMenuRecyclerView: MenuAdapter initialized")
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun setupOrderRecyclerView() {
-        // Inisialisasi adapter untuk RecyclerView
         orderAdapter = OrderAdapter(selectedMenuItems) {
-            // Callback untuk memperbarui total pembayaran dan memeriksa pesan
-            updateTotalPayment() // Memperbarui total pembayaran
-            showNoOrderMessage(selectedMenuItems.isEmpty()) // Periksa dan tampilkan pesan jika kosong
+            updateTotalPayment()
+            showNoOrderMessage(selectedMenuItems.isEmpty())
         }
-
-        // Setup RecyclerView
         binding.rvOrderMenu.apply {
             adapter = orderAdapter
             layoutManager = LinearLayoutManager(context)
         }
-
-        // Tambahkan listener untuk radio button
         binding.rbCash.setOnClickListener {
-            binding.tvInputPayment.visibility = View.VISIBLE // Tampilkan label pembayaran
-            binding.etInputPayment.visibility = View.VISIBLE // Tampilkan input pembayaran
+            binding.tvInputPayment.visibility = View.VISIBLE
+            binding.etInputPayment.visibility = View.VISIBLE
         }
-
         binding.rbQris.setOnClickListener {
-            binding.tvInputPayment.visibility = View.GONE // Sembunyikan label pembayaran
-            binding.etInputPayment.visibility = View.GONE // Sembunyikan input pembayaran
+            binding.tvInputPayment.visibility = View.GONE
+            binding.etInputPayment.visibility = View.GONE
         }
-
-        // Listener untuk tombol bayar
         binding.btnPayNow.setOnClickListener {
-            // Cek apakah tidak ada pesanan
             if (selectedMenuItems.isEmpty()) {
                 Toast.makeText(requireContext(), "Tidak ada menu yang dipilih", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            // Jika metode pembayaran adalah Cash
             if (binding.rbCash.isChecked) {
-                // Ambil input pembayaran dan hapus "Rp" untuk validasi
                 val paymentInput = binding.etInputPayment.text.toString().replace("Rp", "").replace(".", "").trim()
-
-                // Cek apakah input pembayaran kosong
                 if (paymentInput.isEmpty()) {
                     Toast.makeText(requireContext(), "Mohon masukkan jumlah pembayaran", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-
-                // Cek apakah jumlah pembayaran kurang dari total pesanan
-                val totalPayment = selectedMenuItems.sumOf { it.price.replace("Rp", "").replace(".", "").toInt() }
+                val totalPayment = selectedMenuItems.sumOf { it.price * it.quantity }
                 if (paymentInput.toInt() < totalPayment) {
-                    Toast.makeText(requireContext(), "Jumlah pembayaran kurang", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Jumlah pembayaran hasil", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                // Jika semua validasi berhasil
                 Toast.makeText(requireContext(), "Pembayaran cash berhasil!", Toast.LENGTH_SHORT).show()
-
             } else if (binding.rbQris.isChecked) {
-                // Jika metode pembayaran adalah QRIS
-                if (selectedMenuItems.isEmpty()) {
-                    Toast.makeText(requireContext(), "Tidak ada menu yang dipilih", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                // Jika semua validasi berhasil
                 Toast.makeText(requireContext(), "Pembayaran QRIS berhasil!", Toast.LENGTH_SHORT).show()
             }
-
-            // Tampilkan dialog invoice
             showInvoiceDialog()
-
-            // Tampilkan pesan setelah membayar
             showNoOrderMessage(selectedMenuItems.isEmpty())
-
-            // Reset input pembayaran
             binding.etInputPayment.setText("")
-            //binding.etInputPayment.setText("Rp") // Set kembali ke default "Rp" jika menggunakan cash
         }
-
-        // Panggil callback untuk memperbarui total pembayaran dan memeriksa pesan
-        updateTotalPayment() // Memperbarui total pembayaran
-        // Tampilkan pesan jika tidak ada pesanan
+        updateTotalPayment()
         showNoOrderMessage(selectedMenuItems.isEmpty())
     }
 
-    // Inisialisasi TextWatcher untuk memformat input pembayaran
     private fun setupInputPayment() {
-        // Set default text "Rp" di depan EditText
-        //binding.etInputPayment.setText("Rp")
-
-        // Tambahkan TextWatcher untuk memformat input
         binding.etInputPayment.addTextChangedListener(object : TextWatcher {
-            private var isFormatting = false // Flag untuk mencegah loop
-
+            private var isFormatting = false
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (isFormatting) return // Jika sedang memformat, keluar dari fungsi
-
-                // Hapus "Rp" dan format angka
+                if (isFormatting) return
                 val input = s.toString().replace("Rp", "").replace(".", "").trim()
                 if (input.isNotEmpty()) {
-                    isFormatting = true // Set flag sebelum memformat
-                    val amount = input.toInt()
+                    isFormatting = true
+                    val amount = input.toIntOrNull() ?: 0
                     binding.etInputPayment.setText(formatPrice(amount))
-                    binding.etInputPayment.setSelection(binding.etInputPayment.text.length) // Set cursor di akhir
-                    isFormatting = false // Reset flag setelah memformat
+                    binding.etInputPayment.setSelection(binding.etInputPayment.text.length)
+                    isFormatting = false
                 }
             }
-
             override fun afterTextChanged(s: Editable?) {}
         })
     }
 
-
     private fun showNoOrderMessage(empty: Boolean) {
-        Log.d("OrderDebug", "selectedMenuItems.isEmpty(): $empty")
         binding.tvEmptyOrder.visibility = if (empty) View.VISIBLE else View.GONE
     }
 
     private fun setupSpinner() {
-        val arrayNames = resources.getStringArray(R.array.supplier_name)
+        val supplierList = listOf(Pair(0, "Semua Pemasok"), Pair(1, "Warung Bu Tuti"))
+        val arrayNames = supplierList.map { it.second }.toTypedArray()
         val nameAdapter = ArrayAdapter(requireContext(), R.layout.custom_item_spinner, arrayNames)
         nameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
-        // Set default spinner
-        binding.spFilterName.setSelection(0)
-
         binding.spFilterName.apply {
             adapter = nameAdapter
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    val selectedName = arrayNames[position]
-                    val selectedCategory = when (binding.chipGroup.checkedChipId) {
-                        R.id.chip_foods -> "Makanan"
-                        R.id.chip_drinks -> "Minuman"
-                        R.id.chip_snacks -> "Camilan"
-                        else -> null
-                    }
-                    filterMenuBySupplierAndCategory(selectedName, selectedCategory)
-                }
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
+            setSelection(0)
         }
+        setupSpinnerListener()
     }
 
-    private fun filterMenuBySupplier(supplierName: String) {
-        filteredMenuList = if (supplierName == "Semua Pemasok") {
-            originalMenuList
-        } else {
-            originalMenuList.filter { it.ownerName == supplierName }
+    private fun setupSpinnerListener() {
+        binding.spFilterName.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!isInitialFetchComplete) return
+                val supplierList = listOf(Pair(0, "Semua Pemasok"), Pair(1, "Warung Bu Tuti"))
+                val selectedSupplierId = supplierList[position].first
+                val selectedFoodType = when (binding.chipGroup.checkedChipId) {
+                    R.id.chip_foods -> "food"
+                    R.id.chip_drinks -> "drink"
+                    R.id.chip_snacks -> "snack"
+                    else -> null
+                }
+                filterMenuBySupplierAndCategory(selectedSupplierId, selectedFoodType)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        menuAdapter.updateList(filteredMenuList)
-        showNoDataMessage(filteredMenuList.isEmpty())
-        println("Debug: Supplier filter applied, new size = ${filteredMenuList.size}")
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -486,32 +624,20 @@ class MenuFragment : Fragment() {
     }
 
     private fun addItemToOrder(menuItem: MenuItem) {
-        // Simpan posisi scroll saat ini
-        val layoutManager = binding.rvAllMenu.layoutManager as LinearLayoutManager
-
-        // Cek apakah item sudah ada dalam daftar pesanan
         val existingItem = selectedMenuItems.find { it.id == menuItem.id }
-
         if (existingItem != null) {
-            // Jika item sudah ada, tambahkan kuantitasnya
             existingItem.quantity += 1
-            orderAdapter.notifyItemChanged(selectedMenuItems.indexOf(existingItem)) // Update item yang ada
+            orderAdapter.notifyItemChanged(selectedMenuItems.indexOf(existingItem))
             Toast.makeText(requireContext(), "${menuItem.menuName} sudah ditambahkan, kuantitas bertambah", Toast.LENGTH_SHORT).show()
         } else {
-            // Jika item belum ada, tambahkan ke daftar pesanan
-            selectedMenuItems.add(menuItem.copy(quantity = 1)) // Set kuantitas awal ke 1
-            orderAdapter.notifyItemInserted(selectedMenuItems.size - 1) // Notifikasi item baru
+            selectedMenuItems.add(menuItem.copy(quantity = 1))
+            orderAdapter.notifyItemInserted(selectedMenuItems.size - 1)
             Toast.makeText(requireContext(), "${menuItem.menuName} ditambahkan ke pesanan", Toast.LENGTH_SHORT).show()
         }
-
         orderAdapter.notifyDataSetChanged()
         binding.nestedScrollView.visibility = View.VISIBLE
         binding.rvAllMenu.layoutManager = GridLayoutManager(context, 2)
-
-        // Hitung total pembayaran setelah menambahkan item
         updateTotalPayment()
-
-        // Tampilkan pesan jika tidak ada pesanan
         showNoOrderMessage(selectedMenuItems.isEmpty())
     }
 
@@ -521,12 +647,7 @@ class MenuFragment : Fragment() {
     }
 
     private fun updateTotalPayment() {
-        // Hitung total pembayaran
-        val totalPayment = selectedMenuItems.sumOf {
-            it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity
-        }
-
-        // Tampilkan total pembayaran dengan format yang benar
+        val totalPayment = selectedMenuItems.sumOf { it.price * it.quantity }
         binding.tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
     }
 
@@ -536,8 +657,6 @@ class MenuFragment : Fragment() {
         } else {
             View.VISIBLE
         }
-
-        // Update GridLayout columns based on sidebar visibility
         binding.rvAllMenu.layoutManager = if (binding.nestedScrollView.visibility == View.VISIBLE) {
             GridLayoutManager(context, 2)
         } else {
@@ -548,138 +667,145 @@ class MenuFragment : Fragment() {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun showInvoiceDialog() {
         val dialogBinding = ViewModalInvoiceOrderBinding.inflate(layoutInflater)
-
-        // Hitung total pembayaran
-        val totalPayment = selectedMenuItems.sumOf {
-            it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity
-        }
-
+        val totalPayment = selectedMenuItems.sumOf { it.price * it.quantity }
         dialogBinding.apply {
-            // Atur total pembayaran
             tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
-
-            // Tampilkan menu, harga, dan jumlah
             val menuNames = selectedMenuItems.joinToString("\n") { "${it.menuName} (x${it.quantity})" }
-            val menuPrices = selectedMenuItems.joinToString("\n") {
-                "Rp${formatPrice(it.price.replace("Rp", "").replace(".", "").toInt() * it.quantity)}"
-            }
+            val menuPrices = selectedMenuItems.joinToString("\n") { "Rp${formatPrice(it.price * it.quantity)}" }
             tvMenuName.text = menuNames
             tvMenuPrice.text = menuPrices
-
-            // Tampilkan tanggal, waktu, dan kasir
             val currentDateTime = LocalDateTime.now()
             val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
             tvDateOrder.text = currentDateTime.format(dateFormatter)
             tvTimeOrder.text = currentDateTime.format(timeFormatter)
             tvNameEmployee.text = "Kasir"
-
-            // Tampilkan metode pembayaran
             val paymentMethod = if (binding.rbCash.isChecked) "Cash" else "QRIS"
             tvPaymentMethodLabel.text = "Bayar ($paymentMethod)"
-            tvMoneyPay.text = "Rp${formatPrice(totalPayment)}" // Tampilkan total pembayaran
-
-            // Hitung kembalian jika menggunakan cash
+            tvMoneyPay.text = "Rp${formatPrice(totalPayment)}"
             if (binding.rbCash.isChecked) {
                 val paymentInput = binding.etInputPayment.text.toString().replace("Rp", "").replace(".", "").trim()
                 val moneyPay = if (paymentInput.isNotEmpty()) paymentInput.toInt() else 0
                 val change = moneyPay - totalPayment
                 tvMoneyChange.text = "Rp${formatPrice(change)}"
             } else {
-                tvMoneyChange.text = "Rp0" // Tidak ada kembalian untuk QRIS
+                tvMoneyChange.text = "Rp0"
             }
         }
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogBinding.root)
-            .create()
-
-        // Mengatur agar dialog dapat dibatalkan dengan menekan di luar area dialog
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
         dialog.setCancelable(true)
-
-        // Listener untuk menutup dialog dan mereset data ketika dialog dibatalkan
-        dialog.setOnCancelListener {
+        dialog.setOnCancelListener { resetOrderData() }
+        dialogBinding.btnClose.setOnClickListener {
+            dialog.dismiss()
             resetOrderData()
         }
-
-        // Listener untuk tombol tutup
-        dialogBinding.btnClose.setOnClickListener {
-            dialog.dismiss() // Menutup dialog
-            resetOrderData() // Mereset data pesanan
-        }
-
         dialog.show()
-
-        // Atur dimensi dialog (lebar penuh, tinggi sesuai konten)
-        val dialogWindow = dialog.window
-        dialogWindow?.setLayout(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT
-        )
-
-        // Tambahkan padding di dalam dialog
-        dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent) // Menghilangkan background default
-        dialogBinding.root.setPadding(24, 48, 24, 24) // Menambahkan padding di sekitar konten
+        dialog.window?.setLayout(android.view.WindowManager.LayoutParams.WRAP_CONTENT, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialogBinding.root.setPadding(24, 48, 24, 24)
     }
 
-    // Metode untuk mereset data pesanan
     private fun resetOrderData() {
         selectedMenuItems.clear()
         orderAdapter.notifyDataSetChanged()
-        binding.tvTotalPaymentAmount.text = "Rp0" // Reset total payment
-
-        // Tampilkan pesan tidak ada menu ketika pesanan sudah dibayar
+        binding.tvTotalPaymentAmount.text = "Rp0"
         showNoOrderMessage(selectedMenuItems.isEmpty())
     }
 
-    private fun showMenuDialog() {
-        val dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
+    private fun checkStoragePermission() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        if (ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED) {
+            openGallery()
+        } else {
+            requestPermissionLauncher.launch(permission)
+        }
+    }
 
+    private fun openGallery() {
+        pickImageLauncher.launch("image/*")
+    }
+
+    private fun showMenuDialog() {
+        dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
         val categories = resources.getStringArray(R.array.menu_category)
         val spinnerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, categories)
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         dialogBinding.spinnerMenuCategory.adapter = spinnerAdapter
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogBinding.root)
-            .create()
-
+        val suppliers = listOf(Pair(1, "Warung Bu Tuti"))
+        val supplierNames = suppliers.map { it.second }.toTypedArray()
+        val supplierAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, supplierNames)
+        supplierAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        dialogBinding.spinnerSupplierName.adapter = supplierAdapter
+        dialogBinding.btnCameraMenu.setOnClickListener { checkStoragePermission() }
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
         dialogBinding.apply {
-            btnCancel.setOnClickListener {
-                dialog.dismiss()
-            }
-
+            btnCancel.setOnClickListener { dialog.dismiss() }
             btnSave.setOnClickListener {
-                val supplierName = etSupplierName.text.toString()
+                val supplierIndex = spinnerSupplierName.selectedItemPosition
+                val supplierId = suppliers[supplierIndex].first
+                val supplierName = suppliers[supplierIndex].second
                 val menuName = etMenuName.text.toString()
-                val menuPrice = etMenuPrice.text.toString()
+                val menuPrice = etMenuPrice.text.toString().toIntOrNull() ?: 0
+                val menuStock = etMenuStock.text.toString().toIntOrNull() ?: 0
                 val category = spinnerMenuCategory.selectedItem.toString()
+                if (menuName.isNotEmpty() && menuPrice > 0 && menuStock >= 0) {
+                    val foodType = when (category) {
+                        "Makanan" -> "food"
+                        "Camilan" -> "snack"
+                        "Minuman" -> "drink"
+                        else -> "other"
+                    }
+                    val namePart = menuName.toRequestBody("text/plain".toMediaTypeOrNull())
+                    val pricePart = menuPrice.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                    val stockPart = menuStock.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                    val idSupplierPart = supplierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                    val supplierNamePart = supplierName.toRequestBody("text/plain".toMediaTypeOrNull())
+                    val foodTypePart = foodType.toRequestBody("text/plain".toMediaTypeOrNull())
+                    var imagePart: MultipartBody.Part? = null
+                    selectedImageUri?.let { uri ->
+                        val file = File(requireContext().cacheDir, "menu_image_${System.currentTimeMillis()}.jpg")
+                        requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                        imagePart = MultipartBody.Part.createFormData("menu_picture", file.name, requestFile)
+                    }
+                    apiService.createMenu(namePart, pricePart, stockPart, idSupplierPart, supplierNamePart, foodTypePart, imagePart)
+                        .enqueue(object : Callback<SingleMenuResponse> {
+                            override fun onResponse(call: Call<SingleMenuResponse>, response: Response<SingleMenuResponse>) {
+                                if (response.isSuccessful && response.body()?.success == true) {
+                                    response.body()?.data?.let { newMenu ->
+                                        Log.d("MenuFragment", "New menu created: $newMenu")
+                                        originalMenuList.add(newMenu)
+                                        filteredMenuList = originalMenuList
+                                        menuAdapter.updateList(filteredMenuList)
+                                        updateVisibility()
+                                        Toast.makeText(requireContext(), "Berhasil menambahkan menu baru", Toast.LENGTH_SHORT).show()
+                                    } ?: run {
+                                        Log.e("MenuFragment", "No data in createMenu response: ${response.body()}")
+                                        Toast.makeText(requireContext(), "Menu tidak ditemukan di respons", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    handleErrorResponse(response, "Gagal menambahkan menu")
+                                }
+                                selectedImageUri = null
+                            }
 
-                if (supplierName.isNotEmpty() && menuName.isNotEmpty() && menuPrice.isNotEmpty()) {
-                    // Add new menu item logic here if needed
-                    val newMenuItem = MenuItem(
-                        originalMenuList.size + 1,
-                        menuName,
-                        supplierName,
-                        category,
-                        menuPrice,
-                        0,
-                        "https://cdn1-production-images-kly.akamaized.net/1psFPKhBdQ4-qCoIwvI9QN7ouqA=/640x640/smart/filters:quality(75):strip_icc():format(jpeg)/kly-media-production/medias/4102226/original/065145300_1658889141-nasi_goreng_resepyummyanak.jpg"
-                    )
-                    // Add new menu item to the list
-                    originalMenuList.add(newMenuItem)
-                    filteredMenuList = originalMenuList
-                    menuAdapter.updateList(filteredMenuList)
-
-                    Toast.makeText(requireContext(), "Berhasil menambahkan menu baru", Toast.LENGTH_SHORT).show()
-
+                            override fun onFailure(call: Call<SingleMenuResponse>, t: Throwable) {
+                                handleNetworkError(t, "Error creating menu")
+                                selectedImageUri = null
+                            }
+                        })
                     dialog.dismiss()
                 } else {
-                    Toast.makeText(requireContext(), "Mohon isi semua data", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Mohon isi semua data dengan benar", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-
         dialog.show()
     }
 

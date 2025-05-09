@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.eatstedi.adapter.LogActivityAdapter
 import com.example.eatstedi.databinding.FragmentLogBinding
 import com.example.eatstedi.model.LogActivity
@@ -22,6 +23,13 @@ class LogFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var originalLogActivities: List<LogActivity>
     private lateinit var adapter: LogActivityAdapter
+
+    // Pagination parameters
+    private val pageSize = 10
+    private var currentPage = 0
+    private var isLastPage = false
+    private var isLoading = false
+    private var filteredLogs = listOf<LogActivity>()
 
     private var startDate: Calendar? = null
     private var endDate: Calendar? = null
@@ -59,13 +67,115 @@ class LogFragment : Fragment() {
             LogActivity("Reza", "update profile", "10.20", "01/12/2024")
         )
 
+        filteredLogs = originalLogActivities
+
         // Set up RecyclerView
-        adapter = LogActivityAdapter(originalLogActivities.toMutableList())
+        adapter = LogActivityAdapter(mutableListOf())
         binding.rvLogActivity.layoutManager = LinearLayoutManager(context)
         binding.rvLogActivity.adapter = adapter
 
+        setupPagination()
         setupSearchFilter()
         setupDateFilter()
+
+        // Load initial page
+        loadMoreItems()
+    }
+
+    private fun setupPagination() {
+        // Add scroll listener to detect when user reaches end of list
+        binding.rvLogActivity.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val visibleItemCount = layoutManager.childCount
+                val totalItemCount = layoutManager.itemCount
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                if (!isLoading && !isLastPage) {
+                    if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                        && firstVisibleItemPosition >= 0
+                        && totalItemCount >= pageSize) {
+                        loadMoreItems()
+                    }
+                }
+            }
+        })
+
+        // Setup pagination controls
+        binding.btnPrevPage.setOnClickListener {
+            if (currentPage > 0) {
+                currentPage--
+                loadItems()
+                updatePaginationControls()
+            }
+        }
+
+        binding.btnNextPage.setOnClickListener {
+            if (!isLastPage) {
+                currentPage++
+                loadItems()
+                updatePaginationControls()
+            }
+        }
+
+        // Initial state
+        updatePaginationControls()
+    }
+
+    private fun updatePaginationControls() {
+        // Update page indicator
+        val totalPages = (filteredLogs.size + pageSize - 1) / pageSize // Ceiling division
+        binding.tvPageInfo.text = "Halaman ${currentPage + 1}/$totalPages"
+
+        // Enable/disable pagination buttons
+        binding.btnPrevPage.isEnabled = currentPage > 0
+        binding.btnNextPage.isEnabled = !isLastPage
+
+        // Optional: Change button appearance when disabled
+        binding.btnPrevPage.alpha = if (currentPage > 0) 1.0f else 0.5f
+        binding.btnNextPage.alpha = if (!isLastPage) 1.0f else 0.5f
+    }
+
+    private fun loadMoreItems() {
+        isLoading = true
+
+        val startPosition = currentPage * pageSize
+        if (startPosition >= filteredLogs.size) {
+            isLastPage = true
+            isLoading = false
+            return
+        }
+
+        val endPosition = minOf(startPosition + pageSize, filteredLogs.size)
+        val pageItems = filteredLogs.subList(startPosition, endPosition)
+
+        // **Gunakan updateData() agar data lama diganti**
+        adapter.updateData(pageItems)
+
+        isLoading = false
+        isLastPage = endPosition >= filteredLogs.size
+
+        updatePaginationControls()
+    }
+
+
+    private fun loadItems() {
+        adapter.clearItems()
+
+        val startPosition = currentPage * pageSize
+        val endPosition = minOf(startPosition + pageSize, filteredLogs.size)
+
+        if (startPosition < filteredLogs.size) {
+            val pageItems = filteredLogs.subList(startPosition, endPosition)
+            adapter.updateData(pageItems)
+        }
+
+        // **Hitung ulang apakah ini halaman terakhir**
+        isLastPage = (currentPage + 1) * pageSize >= filteredLogs.size
+
+        updatePaginationControls()
     }
 
     private fun setupSearchFilter() {
@@ -150,7 +260,7 @@ class LogFragment : Fragment() {
     // Filter untuk log activity berdasarkan query pencarian dan rentang tanggal
     private fun filterLogs() {
         val query = binding.etSearch.text.toString().lowercase(Locale.getDefault())
-        val filteredLogs = originalLogActivities.filter { log ->
+        filteredLogs = originalLogActivities.filter { log ->
             // Memeriksa kecocokan query pencarian dengan pengguna atau aktivitas
             val matchesQuery = log.user.lowercase(Locale.getDefault()).contains(query) ||
                     log.activity.lowercase(Locale.getDefault()).contains(query)
@@ -172,16 +282,23 @@ class LogFragment : Fragment() {
             matchesQuery && matchesDate
         }
 
-        // Update data pada adapter
-        adapter.updateData(filteredLogs)
+        // Reset pagination
+        currentPage = 0
+        isLastPage = false
+
+        // Reload items
+        loadItems()
+        updatePaginationControls()
 
         // Menyembunyikan atau menampilkan pesan jika tidak ada data yang sesuai
         if (filteredLogs.isEmpty()) {
             binding.tvNoData.visibility = View.VISIBLE
             binding.rvLogActivity.visibility = View.GONE
+            binding.paginationLayout.visibility = View.GONE
         } else {
             binding.tvNoData.visibility = View.GONE
             binding.rvLogActivity.visibility = View.VISIBLE
+            binding.paginationLayout.visibility = View.VISIBLE
         }
 
         // Menampilkan ikon clear search jika ada filter yang aktif
@@ -197,10 +314,18 @@ class LogFragment : Fragment() {
         binding.btnStartDate.text = "dd/mm/yyyy" // Teks default untuk start date
         binding.btnEndDate.text = "dd/mm/yyyy" // Teks default untuk end date
 
-        // Mengupdate data dengan log activities asli
-        adapter.updateData(originalLogActivities)
+        // Reset to original data
+        filteredLogs = originalLogActivities
+        currentPage = 0
+        isLastPage = false
+
+        // Reload items
+        loadItems()
+        updatePaginationControls()
+
         binding.tvNoData.visibility = View.GONE
         binding.rvLogActivity.visibility = View.VISIBLE
+        binding.paginationLayout.visibility = View.VISIBLE
         binding.ivClearSearch.visibility = View.GONE
     }
 

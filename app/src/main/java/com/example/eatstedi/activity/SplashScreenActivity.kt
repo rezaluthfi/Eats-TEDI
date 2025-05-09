@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -18,10 +18,10 @@ class SplashScreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
-        // Menunggu beberapa detik sebelum beralih ke MainActivity
+        // Menunggu beberapa detik sebelum beralih ke OnboardingActivity
         Handler(Looper.getMainLooper()).postDelayed({
             // Pindah ke MainActivity setelah 3 detik
-            val intent = Intent(this@SplashScreenActivity, LoginActivity::class.java)
+            val intent = Intent(this@SplashScreenActivity, OnboardingActivity::class.java)
             startActivity(intent)
             finish()
         }, 3000) // Durasi splash screen (3000 ms = 3 detik)

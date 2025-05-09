@@ -1,4 +1,4 @@
-package com.example.eatstedi
+package com.example.eatstedi.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,12 +6,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.eatstedi.databinding.ActivityAddSupplierBinding
+import com.example.eatstedi.databinding.ActivityAddEmployeeBinding
 
-class AddSupplierActivity : AppCompatActivity() {
+class AddEmployeeActivity : AppCompatActivity() {
 
     private val binding by lazy {
-        ActivityAddSupplierBinding.inflate(layoutInflater)
+        ActivityAddEmployeeBinding.inflate(layoutInflater)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,8 +25,14 @@ class AddSupplierActivity : AppCompatActivity() {
         }
 
         with(binding) {
+
             ivArrowBack.setOnClickListener {
                 finish()
+            }
+
+            tvSchedule.setOnClickListener {
+                val intent = Intent(this@AddEmployeeActivity, AddScheduleEmployeeActivity::class.java)
+                startActivity(intent)
             }
 
             btnCancel.setOnClickListener {

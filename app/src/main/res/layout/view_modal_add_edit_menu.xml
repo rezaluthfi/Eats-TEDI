@@ -8,7 +8,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scrollbars="none" >
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -67,17 +67,19 @@
                     android:textColor="@color/black"
                     android:layout_marginTop="32dp" />
 
-                <EditText
-                    android:id="@+id/et_supplier_name"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Nama Supplier"
-                    android:background="@drawable/bg_modal"
-                    android:padding="16dp"
                     android:layout_marginTop="8dp"
-                    android:textSize="16sp"
-                    android:textColor="@color/black"
-                    android:inputType="text" />
+                    android:background="@drawable/bg_modal">
+
+                    <Spinner
+                        android:id="@+id/spinner_supplier_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_menu_name"
@@ -124,6 +126,28 @@
                     android:inputType="number" />
 
                 <TextView
+                    android:id="@+id/tv_menu_stock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stok"
+                    android:textSize="24sp"
+                    android:fontFamily="@font/noto_sans_gujarati_bold"
+                    android:textColor="@color/black"
+                    android:layout_marginTop="16dp" />
+
+                <EditText
+                    android:id="@+id/et_menu_stock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Stok"
+                    android:background="@drawable/bg_modal"
+                    android:padding="16dp"
+                    android:layout_marginTop="8dp"
+                    android:textSize="16sp"
+                    android:textColor="@color/black"
+                    android:inputType="number" />
+
+                <TextView
                     android:id="@+id/tv_menu_category"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -137,7 +161,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_modal" >
+                    android:background="@drawable/bg_modal">
 
                     <Spinner
                         android:id="@+id/spinner_menu_category"
