@@ -1,8 +1,13 @@
 package com.example.eatstedi.api.service
 
+import com.example.eatstedi.model.Employee
 import com.example.eatstedi.model.MenuItem
+import com.example.eatstedi.model.Schedule
+import com.example.eatstedi.model.Supplier
+import com.google.gson.annotations.SerializedName
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -11,20 +16,35 @@ interface ApiService {
     @POST("login")
     fun login(@Body loginRequest: LoginRequest): Call<LoginResponse>
 
-    @GET("get-menu")
-    fun getMenu(): Call<MenuResponse>
+    //Register new cashier/employee
+    @Multipart
+    @POST("register")
+    fun registerEmployee(
+        @Part("name") name: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("salary") salary: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part profilePicture: MultipartBody.Part?
+    ): Call<GenericResponse>
 
     @Multipart
     @POST("create-menu")
     fun createMenu(
         @Part("name") name: RequestBody,
         @Part("price") price: RequestBody,
-        @Part("stock") stock: RequestBody,
         @Part("id_supplier") idSupplier: RequestBody,
         @Part("supplier_name") supplierName: RequestBody?,
         @Part("food_type") foodType: RequestBody,
         @Part menuPicture: MultipartBody.Part?
     ): Call<SingleMenuResponse>
+
+    @GET("get-menu")
+    fun getMenu(): Call<MenuResponse>
+
+    @GET("get-menu-photo/{id}")
+    fun getMenuPhoto(@Path("id") id: Int): Call<ResponseBody>
 
     @POST("search-menu")
     fun searchMenu(@Body searchRequest: SearchRequest): Call<MenuResponse>
@@ -35,12 +55,19 @@ interface ApiService {
         @Path("id") id: Int,
         @Part("name") name: RequestBody,
         @Part("price") price: RequestBody,
-        @Part("stock") stock: RequestBody,
-        @Part("id_supplier") idSupplier: RequestBody,
-        @Part("supplier_name") supplierName: RequestBody?,
         @Part("food_type") foodType: RequestBody,
         @Part menuPicture: MultipartBody.Part?
     ): Call<SingleMenuResponse>
+
+    @FormUrlEncoded
+    @POST("update-menu-stock/{id}")
+    fun updateMenuStock(
+        @Path("id") id: Int,
+        @FieldMap stock: Map<String, String>
+    ): Call<UpdateStockResponse>
+
+    @GET("get-stock-log/{id}")
+    fun getStockLog(@Path("id") id: Int): Call<StockLogResponse>
 
     @DELETE("delete-menu/{id}")
     fun deleteMenu(@Path("id") id: Int): Call<GenericResponse>
@@ -51,10 +78,146 @@ interface ApiService {
     @GET("filter-by-food-type/{type}")
     fun filterByFoodType(@Path("type") type: String): Call<MenuResponse>
 
+    @POST("create-receipts")
+    fun createReceipt(@Body request: CreateReceiptRequest): Call<CreateReceiptResponse>
+
     @POST("logout")
     fun logout(@Header("Authorization") token: String): Call<LogoutResponse>
+
+    // Endpoint untuk rekap transaksi
+    @GET("get-receipts")
+    fun getReceipts(): Call<ReceiptResponse>
+
+    // Endpoint baru untuk get-specific-receipt
+    @GET("get-specific-receipt/{id}")
+    fun getSpecificReceipt(@Path("id") id: Int): Call<SpecificReceiptResponse>
+
+    // Endpoint baru untuk delete-specific-orders
+    @POST("delete-specific-orders")
+    fun deleteSpecificOrders(@Body request: DeleteSpecificOrdersRequest): Call<GenericResponse>
+
+    @POST("search-receipts")
+    fun searchReceipts(@Body request: SearchReceiptRequest): Call<ReceiptResponse>
+
+    @POST("search-receipts-by-date")
+    fun searchReceiptsByDate(@Body request: SearchReceiptByDateRequest): Call<ReceiptResponse>
+
+    // Ubah dari @DELETE ke @HTTP untuk mendukung body
+    @HTTP(method = "DELETE", path = "delete-receipts", hasBody = true)
+    fun deleteReceipts(@Body request: DeleteReceiptRequest): Call<GenericResponse>
+
+    @GET("export-receipts")
+    fun exportReceipts(): Call<ResponseBody>
+
+    @GET("get-admin-profile")
+    fun getAdminProfile(): Call<AdminProfileResponse>
+
+    @GET("get-cashier-profile")
+    fun getCashierProfile(): Call<CashierProfileResponse>
+
+    @Multipart
+    @POST("update-cashier-profile")
+    fun updateCashierProfile(
+        @Part("id_cashier") idCashier: RequestBody,
+        @Part profilePicture: MultipartBody.Part
+    ): Call<GenericResponse>
+
+    // Endpoint untuk menghapus cashier (metode DELETE dengan path parameter)
+    @DELETE("delete-cashier/{id}")
+    fun deleteCashier(@Path("id") id: Int, @Header("Authorization") token: String): Call<GenericResponse>
+
+    @GET("get-schedules")
+    fun getSchedules(): Call<ScheduleResponse>
+
+    @POST("create-schedule/{id_cashier}")
+    fun createSchedule(
+        @Path("id_cashier") idCashier: Int,
+        @Body request: CreateScheduleRequest
+    ): Call<GenericResponse>
+
+    @GET("get-schedule-by-id-cashier/{id_cashier}")
+    fun getScheduleByIdCashier(@Path("id_cashier") idCashier: Int): Call<ScheduleResponse>
+
+    @DELETE("delete-schedule/{id}")
+    fun deleteSchedule(@Path("id") id: Int): Call<GenericResponse>
+
+    @GET("get-cashier")
+    fun getCashiers(): Call<CashierResponse>
+
+    @GET("get-supplier")
+    fun getSuppliers(): Call<SupplierResponse>
+
+    @Multipart
+    @POST("create-supplier")
+    fun createSupplier(
+        @Part("name") name: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part profilePicture: MultipartBody.Part?
+    ): Call<CreateSupplierResponse>
+
+    @Multipart
+    @POST("update-supplier/{id}")
+    fun updateSupplier(
+        @Path("id") id: Int,
+        @Part("name") name: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part profilePicture: MultipartBody.Part?
+    ): Call<UpdateSupplierResponse>
+
+    @POST("search-supplier")
+    fun searchSupplier(@Body request: SearchSupplierRequest): Call<SupplierResponse>
+
+    @DELETE("delete-supplier/{id}")
+    fun deleteSupplier(@Path("id") id: Int): Call<GenericResponse>
+
+    @GET("recap-pembayaran-cashier/{id}")
+    fun getCashierPaymentRecap(@Path("id") cashierId: Int): Call<CashierPaymentRecapResponse>
+
+    @GET("get-daily-statistics")
+    fun getDailyStatistics(): Call<DailyStatisticsResponse>
+
+    @GET("get-weekly-statistics")
+    fun getWeeklyStatistics(): Call<WeeklyStatisticsResponse>
+
+    @GET("get-monthly-statistics")
+    fun getMonthlyStatistics(): Call<MonthlyStatisticsResponse>
+
+    @GET("export-daily-statistics")
+    fun exportDailyStatistics(): Call<ResponseBody>
+
+    @GET("export-weekly-statistics")
+    fun exportWeeklyStatistics(): Call<ResponseBody>
+
+    @GET("export-monthly-statistics")
+    fun exportMonthlyStatistics(): Call<ResponseBody>
+
+    @GET("get-all-attendance")
+    fun getAllAttendance(): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+
+    @POST("filter-by-date-attendance")
+    fun filterByDateAttendance(@Body request: DateFilterRequest): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+
+    @GET("get-attendance-by-absent/{status}")
+    fun getAttendanceByAbsent(@Path("status") status: Int): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+
+    @GET("export-attendance")
+    fun exportAttendance(): Call<ResponseBody>
+
+    @GET("get-log")
+    fun getAllLogs(): Call<LogResponse>
+
+    @POST("get-log-by-name")
+    fun getLogByName(@Body request: LogByNameRequest): Call<LogResponse>
+
+    @POST("filter-log-by-date")
+    fun filterLogByDate(@Body request: LogByDateRequest): Call<LogResponse>
 }
 
+// Model yang sudah ada (tidak diubah)
 data class LoginRequest(
     val username: String,
     val password: String
@@ -96,11 +259,312 @@ data class SingleMenuResponse(
     val message: String? = null
 )
 
+data class UpdateStockResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: MenuItem,
+    val message: String? = null
+)
+
+data class StockLogResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<StockLog>,
+    val message: String? = null
+)
+
+data class StockLog(
+    val id: Int,
+    val name: String,
+    val createdAt: String,
+    val activity: String,
+    val quantity: Int
+)
+
 data class GenericResponse(
     val success: Boolean,
-    val message: String?
+    val activity: String? = null,
+    val message: Any? = null, // Bisa string atau objek
+    val data: Any? = null
 )
 
 data class SearchRequest(
     val name: String
+)
+
+data class CreateReceiptRequest(
+    val id_menu: Map<String, Int>,
+    val payment_type: String,
+    val payment: Int
+)
+
+data class CreateReceiptResponse(
+    val success: Boolean,
+    val activity: String? = null,
+    val message: String? = null,
+    val data: ReceiptData? = null
+)
+
+data class ReceiptData(
+    val cashier_id: Int,
+    val payment_type: String,
+    val payment: Int,
+    val total: Int,
+    val returns: Int,
+    val updated_at: String,
+    val created_at: String,
+    val id: Int
+)
+
+// Model baru untuk ReceiptResponse
+data class ReceiptResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<Receipt>,
+    val message: String? = null
+)
+
+data class SpecificReceiptResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<TransactionDetail>,
+    val message: String? = null
+)
+
+data class TransactionDetail(
+    val order_id: Int,
+    val menu_name: String,
+    val supplier_name: String,
+    val amount: Int,
+    val price: Int,
+    val created_at: String
+)
+
+data class DeleteSpecificOrdersRequest(
+    val id_orders: List<Int>
+)
+
+data class Receipt(
+    val id: Int,
+    val payment_type: String,
+    val cashier_id: Int,
+    val total: Int,
+    val payment: Int,
+    val returns: Int,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class DeleteReceiptRequest(
+    val id_receipts: List<Int>
+)
+
+data class SearchReceiptRequest(
+    val cashier_name: String
+)
+
+data class SearchReceiptByDateRequest(
+    val start_date: String,
+    val end_date: String
+)
+
+data class AdminProfileResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: AdminProfileData
+)
+
+data class AdminProfileData(
+    val id: Int,
+    val name: String,
+    val role: String,
+    val profile_picture: String,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class CashierProfileResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: CashierProfileData
+)
+
+data class CashierProfileData(
+    val id: Int,
+    val name: String,
+    val username: String,
+    val no_telp: String,
+    val salary: Int,
+    val status: String,
+    val role: String,
+    val profile_picture: String,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class DeleteCashierRequest(
+    val id: Int
+)
+
+data class CreateScheduleRequest(
+    val id_shifts: Int,
+    val day: String
+)
+
+data class ScheduleResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<Schedule>
+)
+
+data class CashierResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<Employee>
+)
+
+data class SupplierResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<Supplier>
+)
+
+data class CreateSupplierRequest(
+    val name: String,
+    val username: String,
+    val no_telp: String,
+    val status: String
+)
+
+data class CreateSupplierResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: Supplier,
+    val message: String? = null
+)
+
+data class UpdateSupplierRequest(
+    val name: String,
+    val username: String,
+    val no_telp: String,
+    val status: String
+)
+
+data class UpdateSupplierResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: Supplier,
+    val message: String? = null
+)
+
+data class SearchSupplierRequest(
+    val query: String
+)
+
+data class CashierPaymentRecapResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: CashierPaymentRecapData
+)
+
+data class CashierPaymentRecapData(
+    val tunai: Int,
+    val qris: Int
+)
+
+data class DailyStatistics(
+    val id: Int,
+    val payment_type: String,
+    val cashier_id: Int,
+    val total: Int,
+    val payment: Int,
+    val returns: Int,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class DailyStatisticsResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: List<DailyStatistics>
+)
+
+data class WeeklyStatisticsResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: Map<String, List<DailyStatistics>> // week1, week2, week3, week4
+)
+
+data class MonthlyStatisticsResponse(
+    val success: Boolean,
+    val activity: String,
+    val data: Map<String, List<DailyStatistics>> // January, February, ..., December
+)
+
+data class AttendanceResponse(
+    val success: Boolean,
+    val activity: String,
+    val message: List<Attendance>
+)
+
+data class Attendance(
+    val employeeName: String,
+    val date: String,
+    val shift: String,
+    val time: String,
+    val attendance: String
+)
+
+data class AttendanceRecord(
+    val id: Int,
+    val attendance: Int, // 0 for Absent, 1 for Present
+    val id_schedules: Int,
+    val id_cashiers: Int,
+    val date: String,
+    val created_at: String,
+    val updated_at: String,
+    val day: String,
+    val name: String, // Nama kasir
+    val id_shift: Int
+)
+
+// Ubah respons di ApiService
+data class AttendanceApiResponse(
+    val success: Boolean,
+    val activity: String,
+    @SerializedName("message") val data: List<AttendanceRecord> // Ganti nama field dan tipe data
+)
+
+data class DateFilterRequest(
+    @SerializedName("date_awal") val date_awal: String,
+    @SerializedName("date_akhir") val date_akhir: String
+)
+
+data class LogResponse(
+    val success: Boolean,
+    val activity: String? = null,
+    val data: List<LogActivity>? = null, // Made nullable to handle empty or missing data
+    val message: String? = null
+)
+
+data class LogActivity(
+    val id: Int? = null, // Nullable to handle potential missing fields
+    @SerializedName("id_cashier") val idCashier: Int? = null,
+    @SerializedName("id_admin") val idAdmin: Int? = null,
+    val action: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null,
+    var user: String? = null,
+    var date: String? = null,
+    var time: String? = null,
+    var activity: String? = null
+)
+
+data class LogByNameRequest(
+    val name: String
+)
+
+data class LogByDateRequest(
+    @SerializedName("start_date") val startDate: String,
+    @SerializedName("end_date") val endDate: String
 )

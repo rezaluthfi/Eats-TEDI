@@ -34,14 +34,9 @@
         <item>Camilan</item>
     </string-array>
 
-    <!-- Data untuk dropdown filter nama supplier -->
-    <string-array name="supplier_name">
-        <item>Semua Pemasok</item>
-        <item>Dapoer Ayu</item>
-        <item>Warung Makan Bu Tuti</item>
-        <item>Warung Es Kelapa Muda</item>
-        <item>Warung Es Cincau</item>
-        <item>Warung Es Doger</item>
-        <item>Warung Es Teh</item>
+    <!-- Data untuk dropdown status supplier -->
+    <string-array name="supplier_status">
+        <item>active</item>
+        <item>inactive</item>
     </string-array>
 </resources>

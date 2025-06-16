@@ -1,3 +1,4 @@
+
 package com.example.eatstedi.model
 
 import com.google.gson.annotations.SerializedName
@@ -11,7 +12,7 @@ data class MenuItem(
     @SerializedName("supplier_name") val supplierName: String?,
     @SerializedName("food_type") val foodType: String,
     @SerializedName("price") private val priceRaw: String,
-    @SerializedName("stock") private val stockRaw: String,
+    @SerializedName("stock") private var stockRaw: String,
     @SerializedName("menu_picture") val menuPicture: String,
     var quantity: Int = 1
 ) {
@@ -19,9 +20,15 @@ data class MenuItem(
         get() = priceRaw.toIntOrNull() ?: priceRaw.replace("Rp", "").replace(".", "").toIntOrNull() ?: 0
 
     var stock: Int
-        get() = stockRaw.toIntOrNull() ?: stockRaw.replace("Rp", "").replace(".", "").toIntOrNull() ?: 0
+        get() {
+            val parsed = stockRaw.toIntOrNull() ?: stockRaw.replace("Rp", "").replace(".", "").toIntOrNull() ?: 0
+            if (stockRaw.contains("Rp") || stockRaw.contains(".")) {
+                android.util.Log.w("MenuItem", "Unexpected stock format: $stockRaw")
+            }
+            return parsed
+        }
         set(value) {
-            // Tidak perlu mengubah stockRaw karena hanya digunakan untuk deserialisasi
+            stockRaw = value.toString()
         }
 
     val formattedPrice: String
@@ -36,15 +43,12 @@ data class MenuItem(
         }
 
     val imageUrl: String
-        get() = if (menuPicture.startsWith("http")) {
-            menuPicture
-        } else {
-            "http://127.0.0.1:8000/storage/menu/$menuPicture"
-        }
+        get() = "http://103.127.132.30:8000/api/get-menu-photo/$id"
 
     val ownerName: String
-        get() = supplierName ?: when (idSupplier) {
-            1 -> "Warung Bu Tuti"
-            else -> "Pemasok $idSupplier"
-        }
+        get() = supplierName ?: "Pemasok Tidak Diketahui"
+
+    fun isValidForTransaction(): Boolean {
+        return stock > 0
+    }
 }

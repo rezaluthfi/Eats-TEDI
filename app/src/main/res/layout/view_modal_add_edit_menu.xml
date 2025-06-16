@@ -33,6 +33,7 @@
                     android:layout_height="150dp"
                     android:src="@drawable/image_menu"
                     android:layout_marginTop="40dp"
+                    android:scaleType="centerCrop"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -126,28 +127,6 @@
                     android:inputType="number" />
 
                 <TextView
-                    android:id="@+id/tv_menu_stock"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Stok"
-                    android:textSize="24sp"
-                    android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:textColor="@color/black"
-                    android:layout_marginTop="16dp" />
-
-                <EditText
-                    android:id="@+id/et_menu_stock"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Stok"
-                    android:background="@drawable/bg_modal"
-                    android:padding="16dp"
-                    android:layout_marginTop="8dp"
-                    android:textSize="16sp"
-                    android:textColor="@color/black"
-                    android:inputType="number" />
-
-                <TextView
                     android:id="@+id/tv_menu_category"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -161,14 +140,45 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_modal">
+                    android:orientation="horizontal">
 
-                    <Spinner
-                        android:id="@+id/spinner_menu_category"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/category_food"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:padding="16dp" />
+                        android:layout_weight="1"
+                        android:text="Makanan"
+                        android:gravity="center"
+                        android:padding="16dp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_outline"
+                        android:layout_marginEnd="8dp" />
 
+                    <TextView
+                        android:id="@+id/category_snack"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Camilan"
+                        android:gravity="center"
+                        android:padding="16dp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_outline"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/category_drink"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Minuman"
+                        android:gravity="center"
+                        android:padding="16dp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_outline" />
                 </LinearLayout>
             </LinearLayout>
 

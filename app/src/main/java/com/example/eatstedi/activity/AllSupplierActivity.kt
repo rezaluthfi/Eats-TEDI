@@ -5,92 +5,132 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.View
 import android.widget.TableRow
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.eatstedi.R
+import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.SearchSupplierRequest
+import com.example.eatstedi.api.service.SupplierResponse
 import com.example.eatstedi.databinding.ActivityAllSupplierBinding
 import com.example.eatstedi.model.Supplier
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.text.NumberFormat
+import java.util.Locale
 
 class AllSupplierActivity : AppCompatActivity() {
 
-    private val binding by lazy {
-        ActivityAllSupplierBinding.inflate(layoutInflater)
-    }
-
-    // Data supplier dummy
-    private val supplierList = listOf(
-        Supplier("Alpha", "Aktif", "alpha", "alpha@example.com", "081234567800", "Rp 20,000,000"),
-        Supplier("Beta", "Tidak Aktif", "beta", "beta@example.com", "081234567801", "Rp 15,000,000"),
-        Supplier("Gamma", "Aktif", "gamma", "gamma@example.com", "081234567802", "Rp 30,000,000"),
-        Supplier("Delta", "Aktif", "delta", "delta@example.com", "081234567803", "Rp 25,000,000"),
-        Supplier("Epsilon", "Tidak Aktif", "epsilon", "epsilon@example.com", "081234567804", "Rp 18,000,000"),
-        Supplier("Zeta", "Aktif", "zeta", "zeta@example.com", "081234567805", "Rp 22,000,000"),
-        Supplier("Eta", "Aktif", "eta", "eta@example.com", "081234567806", "Rp 26,000,000"),
-        Supplier("Theta", "Tidak Aktif", "theta", "theta@example.com", "081234567807", "Rp 19,000,000"),
-        Supplier("Iota", "Aktif", "iota", "iota@example.com", "081234567808", "Rp 28,000,000"),
-        Supplier("Kappa", "Aktif", "kappa", "kappa@example.com", "081234567809", "Rp 27,000,000"),
-        Supplier("Lambda", "Tidak Aktif", "lambda", "lambda@example.com", "081234567810", "Rp 21,000,000"),
-        Supplier("Mu", "Aktif", "mu", "mu@example.com", "081234567811", "Rp 29,000,000"),
-        Supplier("Nu", "Aktif", "nu", "nu@example.com", "081234567812", "Rp 31,000,000"),
-        Supplier("Xi", "Aktif", "xi", "xi@example.com", "081234567813", "Rp 32,000,000")
-    )
+    private lateinit var binding: ActivityAllSupplierBinding
+    private val supplierList = mutableListOf<Supplier>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        binding = ActivityAllSupplierBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Mengatur padding sesuai dengan insets sistem
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        // Tombol kembali ke MainActivity
-        binding.ivArrowBack.setOnClickListener {
-            val intent = Intent(this@AllSupplierActivity, MainActivity::class.java)
-            startActivity(intent)
-            finish()
-        }
-
-        // Tombol untuk menambah supplier (dummy)
-        binding.btnAddNewSupplier.setOnClickListener {
-            val intent = Intent(this@AllSupplierActivity, AddSupplierActivity::class.java)
-            startActivity(intent)
-        }
-
-        // Mengisi tabel dengan data supplier
-        addSupplierDataToTable(supplierList)
-
-        // Fitur pencarian otomatis tanpa menekan enter
-        binding.etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString()
-                filterSupplierTable(query)
+        with(binding) {
+            ivArrowBack.setOnClickListener {
+                val intent = Intent(this@AllSupplierActivity, MainActivity::class.java)
+                startActivity(intent)
+                finish()
             }
 
-            override fun afterTextChanged(s: Editable?) {}
+            btnAddNewSupplier.setOnClickListener {
+                val intent = Intent(this@AllSupplierActivity, AddSupplierActivity::class.java)
+                startActivity(intent)
+            }
+
+            etSearch.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val query = s.toString().trim()
+                    if (query.length >= 2) {
+                        searchSupplier(query)
+                    } else {
+                        fetchSuppliers()
+                    }
+                }
+
+                override fun afterTextChanged(s: Editable?) {}
+            })
+        }
+
+        fetchSuppliers()
+    }
+
+    private fun fetchSuppliers() {
+        val apiService = RetrofitClient.getInstance(this)
+        apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
+            override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body?.success == true) {
+                        supplierList.clear()
+                        supplierList.addAll(body.data)
+                        addSupplierDataToTable(supplierList)
+                        binding.tvNoData.visibility = if (supplierList.isEmpty()) View.VISIBLE else View.GONE
+                        binding.tableView.visibility = if (supplierList.isEmpty()) View.GONE else View.VISIBLE
+                        Log.d("AllSupplierActivity", "Suppliers fetched: ${supplierList.size} entries")
+                    } else {
+                        Toast.makeText(this@AllSupplierActivity, "Gagal mengambil data pemasok: ${body?.activity}", Toast.LENGTH_SHORT).show()
+                        Log.e("AllSupplierActivity", "Fetch suppliers error: ${response.errorBody()?.string()}")
+                    }
+                } else {
+                    Toast.makeText(this@AllSupplierActivity, "Gagal mengambil data pemasok", Toast.LENGTH_SHORT).show()
+                    Log.e("AllSupplierActivity", "Fetch suppliers error: ${response.errorBody()?.string()}")
+                }
+            }
+
+            override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
+                Toast.makeText(this@AllSupplierActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                Log.e("AllSupplierActivity", "Fetch suppliers failure: ${t.message}", t)
+            }
         })
     }
 
-    // Fungsi untuk menambahkan data supplier ke dalam TableLayout
+    private fun searchSupplier(query: String) {
+        val apiService = RetrofitClient.getInstance(this)
+        val request = SearchSupplierRequest(query)
+        apiService.searchSupplier(request).enqueue(object : Callback<SupplierResponse> {
+            override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    supplierList.clear()
+                    supplierList.addAll(response.body()?.data ?: emptyList())
+                    addSupplierDataToTable(supplierList)
+                    binding.tvNoData.visibility = if (supplierList.isEmpty()) View.VISIBLE else View.GONE
+                    binding.tableView.visibility = if (supplierList.isEmpty()) View.GONE else View.VISIBLE
+                } else {
+                    Toast.makeText(this@AllSupplierActivity, "Gagal mencari supplier", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
+                Toast.makeText(this@AllSupplierActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
     private fun addSupplierDataToTable(supplierList: List<Supplier>) {
-        val tableLayout = binding.tableView
+        binding.tableView.removeAllViews()
 
-        // Hapus semua baris yang ada jika diperlukan
-        tableLayout.removeAllViews()
-
-        // Menambahkan header untuk tabel
-        val headerRow = TableRow(this@AllSupplierActivity).apply {
+        val headerRow = TableRow(this).apply {
             setPadding(8, 16, 8, 16)
             setBackgroundColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.secondary))
         }
@@ -98,30 +138,27 @@ class AllSupplierActivity : AppCompatActivity() {
         headerRow.addView(createTextView("Nama Supplier", isHeader = true))
         headerRow.addView(createTextView("Status", isHeader = true))
         headerRow.addView(createTextView("Nama Pengguna", isHeader = true))
-        headerRow.addView(createTextView("Email", isHeader = true))
         headerRow.addView(createTextView("No. Telepon", isHeader = true))
         headerRow.addView(createTextView("Pemasukan", isHeader = true))
 
-        tableLayout.addView(headerRow)
+        binding.tableView.addView(headerRow)
 
-        // Menambahkan data supplier ke dalam tabel
+        val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
         for (supplier in supplierList) {
-            val row = TableRow(this@AllSupplierActivity).apply {
+            val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
                 setBackgroundColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.white))
             }
 
-            // Buat TextView untuk nama supplier yang dapat diklik
             val nameTextView = createTextView(supplier.name)
             nameTextView.setOnClickListener {
-                // Ketika nama diklik, buka ProfileSupplierActivity dan kirim data supplier
                 val intent = Intent(this@AllSupplierActivity, ProfileSupplierActivity::class.java).apply {
+                    putExtra("SUPPLIER_ID", supplier.id)
                     putExtra("SUPPLIER_NAME", supplier.name)
                     putExtra("SUPPLIER_STATUS", supplier.status)
                     putExtra("SUPPLIER_USERNAME", supplier.username)
-                    putExtra("SUPPLIER_EMAIL", supplier.email)
-                    putExtra("SUPPLIER_PHONE", supplier.phone)
-                    putExtra("SUPPLIER_INCOME", supplier.income)
+                    putExtra("SUPPLIER_PHONE", supplier.no_telp)
+                    putExtra("SUPPLIER_INCOME", "Rp ${numberFormat.format(supplier.income)}")
                 }
                 startActivity(intent)
             }
@@ -129,46 +166,22 @@ class AllSupplierActivity : AppCompatActivity() {
             row.addView(nameTextView)
             row.addView(createTextView(supplier.status))
             row.addView(createTextView(supplier.username))
-            row.addView(createTextView(supplier.email))
-            row.addView(createTextView(supplier.phone))
-            row.addView(createTextView(supplier.income))
+            row.addView(createTextView(supplier.no_telp))
+            row.addView(createTextView("Rp ${numberFormat.format(supplier.income)}"))
 
-            tableLayout.addView(row)
+            binding.tableView.addView(row)
         }
     }
 
-    // Fungsi untuk membuat TextView dengan gaya header atau konten biasa
     private fun createTextView(text: String, isHeader: Boolean = false): TextView {
-        return TextView(this@AllSupplierActivity).apply {
+        return TextView(this).apply {
             this.text = text
             textSize = if (isHeader) 18f else 16f
             setPadding(16, 8, 16, 8)
             textAlignment = View.TEXT_ALIGNMENT_CENTER
-            setTextColor(ContextCompat.getColor(this@AllSupplierActivity, if (isHeader) R.color.black else R.color.black))
+            setTextColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.black))
             setTypeface(null, if (isHeader) Typeface.BOLD else Typeface.NORMAL)
             layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
         }
-    }
-
-    // Fungsi untuk memfilter supplier berdasarkan input pencarian
-    private fun filterSupplierTable(query: String) {
-        val filteredList = supplierList.filter { supplier ->
-            supplier.name.contains(query, ignoreCase = true) ||
-                    supplier.username.contains(query, ignoreCase = true) ||
-                    supplier.email.contains(query, ignoreCase = true)
-        }
-
-        if (filteredList.isEmpty()) {
-            // Tampilkan pesan "tidak ada data" jika tidak ditemukan hasil pencarian
-            binding.tvNoData.visibility = View.VISIBLE
-            binding.tableView.visibility = View.GONE
-        } else {
-            // Sembunyikan pesan "tidak ada data" jika hasil pencarian ditemukan
-            binding.tvNoData.visibility = View.GONE
-            binding.tableView.visibility = View.VISIBLE
-        }
-
-        // Mengisi tabel dengan data yang difilter
-        addSupplierDataToTable(filteredList)
     }
 }

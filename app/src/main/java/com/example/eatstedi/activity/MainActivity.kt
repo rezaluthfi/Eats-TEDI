@@ -4,14 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide
 import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.AdminProfileResponse
+import com.example.eatstedi.api.service.CashierProfileResponse
 import com.example.eatstedi.api.service.LogoutResponse
 import com.example.eatstedi.databinding.ActivityMainBinding
 import com.example.eatstedi.fragment.DashboardFragment
@@ -35,38 +40,37 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(binding.root)
 
-        setupNavigationDrawer(savedInstanceState)
+        // Panggil fetchUserProfile untuk mendapatkan data dan kemudian setup UI
+        fetchUserProfile()
     }
 
     private fun setupNavigationDrawer(savedInstanceState: Bundle?) {
         with(binding) {
-            // Kunci drawer selalu terbuka untuk tablet
             drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_OPEN)
-
-            // Nonaktifkan overlay transparan
             drawerLayout.setScrimColor(resources.getColor(android.R.color.transparent, theme))
 
-            // Menampilkan DashboardFragment secara default saat aplikasi dibuka
             if (savedInstanceState == null) {
                 openFragment(DashboardFragment())
                 navigationView.setCheckedItem(R.id.nav_dashboard)
             }
 
-            // Mengatur warna item menu
-            navigationView.setItemTextColor(resources.getColorStateList(R.color.selector_menu_item_text_color))
+            navigationView.setItemTextColor(resources.getColorStateList(R.color.selector_menu_item_text_color, theme))
 
-            // Mengakses nav_header dari NavigationView
-            val headerView = navigationView.getHeaderView(0) // Mendapatkan View dari nav_header.xml
+            val headerView = navigationView.getHeaderView(0)
             val navHeader = headerView.findViewById<LinearLayout>(R.id.nav_header)
 
-            // Membuka ProfileAdminActivity saat nav_header diklik
             navHeader.setOnClickListener {
-                val intent = Intent(this@MainActivity, ProfileAdminActivity::class.java)
+                val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                val role = sharedPreferences.getString("user_role", "admin") ?: "admin"
+                val intent = if (role == "admin") {
+                    Intent(this@MainActivity, ProfileAdminActivity::class.java)
+                } else {
+                    Intent(this@MainActivity, ProfileEmployeeActivity::class.java)
+                }
                 startActivity(intent)
             }
 
             navigationView.setNavigationItemSelectedListener { menuItem ->
-                // Set item yang dipilih sebagai aktif
                 navigationView.setCheckedItem(menuItem.itemId)
 
                 when (menuItem.itemId) {
@@ -75,66 +79,149 @@ class MainActivity : AppCompatActivity() {
                     R.id.nav_history -> openFragment(HistoryFragment())
                     R.id.nav_recap -> openFragment(RecapFragment())
                     R.id.nav_log -> openFragment(LogFragment())
-                    R.id.nav_logout -> {
-                        logoutUser()
-                    }
+                    R.id.nav_logout -> logoutUser()
                 }
-                // Jangan tutup drawer ketika memilih item
                 true
             }
         }
     }
 
-    // Fungsi untuk membuka fragment
-    private fun openFragment(fragment: Fragment) {
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.replace(R.id.content_frame, fragment)
-        transaction.addToBackStack(null) // Optional: Menambahkan ke back stack
-        transaction.commit()
+    private fun setupMenuVisibilityForRole(role: String) {
+        val menu = binding.navigationView.menu
+        val logMenuItem = menu.findItem(R.id.nav_log)
+
+        if (role == "cashier") {
+            logMenuItem.isVisible = false
+        } else {
+            logMenuItem.isVisible = true
+        }
     }
 
-    private fun logoutUser() {
+    private fun fetchUserProfile() {
         val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
+        val currentRole = sharedPreferences.getString("user_role", "admin") ?: "admin"
 
+        val apiService = RetrofitClient.getInstance(this)
+
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // Pisahkan panggilan API menjadi dua blok terpisah
+        if (currentRole == "admin") {
+            apiService.getAdminProfile().enqueue(object : Callback<AdminProfileResponse> {
+                override fun onResponse(call: Call<AdminProfileResponse>, response: Response<AdminProfileResponse>) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        val adminData = response.body()!!.data
+                        // Simpan data
+                        sharedPreferences.edit().apply {
+                            putString("user_name", adminData.name)
+                            putString("user_role", adminData.role)
+                            putString("profile_picture", adminData.profile_picture)
+                            putInt("user_id", adminData.id)
+                            apply()
+                        }
+                        // Update UI setelah data disimpan
+                        updateNavHeader(adminData.name, adminData.profile_picture, "admin@kantin.com")
+                        setupMenuVisibilityForRole(adminData.role)
+                        setupNavigationDrawer(null) // Setup drawer setelah role diketahui
+                    } else {
+                        Toast.makeText(this@MainActivity, "Sesi tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+                        logoutUser(forceLogout = true)
+                    }
+                }
+
+                override fun onFailure(call: Call<AdminProfileResponse>, t: Throwable) {
+                    Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        } else { // 'cashier'
+            apiService.getCashierProfile().enqueue(object : Callback<CashierProfileResponse> {
+                override fun onResponse(call: Call<CashierProfileResponse>, response: Response<CashierProfileResponse>) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        val cashierData = response.body()!!.data
+                        // Simpan data
+                        sharedPreferences.edit().apply {
+                            putString("user_name", cashierData.name)
+                            putString("user_role", cashierData.role)
+                            putString("profile_picture", cashierData.profile_picture)
+                            putInt("user_id", cashierData.id)
+                            // Anda bisa menyimpan data tambahan jika perlu
+                            apply()
+                        }
+                        // Update UI setelah data disimpan
+                        updateNavHeader(cashierData.name, cashierData.profile_picture, "cashier@kantin.com")
+                        setupMenuVisibilityForRole(cashierData.role)
+                        setupNavigationDrawer(null) // Setup drawer setelah role diketahui
+                    } else {
+                        Toast.makeText(this@MainActivity, "Sesi tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+                        logoutUser(forceLogout = true)
+                    }
+                }
+
+                override fun onFailure(call: Call<CashierProfileResponse>, t: Throwable) {
+                    Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+    }
+
+    private fun updateNavHeader(name: String, profilePicture: String?, email: String) {
+        val headerView = binding.navigationView.getHeaderView(0)
+        val usernameTextView = headerView.findViewById<TextView>(R.id.username)
+        val emailTextView = headerView.findViewById<TextView>(R.id.email)
+        val profileImageView = headerView.findViewById<ImageView>(R.id.profile_image)
+
+        usernameTextView.text = name
+        emailTextView.text = email
+
+        if (!profilePicture.isNullOrEmpty()) {
+            Glide.with(this)
+                .load(profilePicture)
+                .placeholder(R.drawable.img_avatar)
+                .error(R.drawable.img_avatar)
+                .circleCrop()
+                .into(profileImageView)
+        } else {
+            profileImageView.setImageResource(R.drawable.img_avatar)
+        }
+    }
+
+    private fun openFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.content_frame, fragment)
+            .commit()
+    }
+
+    private fun logoutUser(forceLogout: Boolean = false) {
+        val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+
+        if (forceLogout) {
+            handleLogoutSuccess()
+            return
+        }
+
+        val token = sharedPreferences.getString("auth_token", null)
         if (token != null) {
             val apiService = RetrofitClient.getInstance(this)
             apiService.logout("Bearer $token").enqueue(object : Callback<LogoutResponse> {
                 override fun onResponse(call: Call<LogoutResponse>, response: Response<LogoutResponse>) {
-                    // Selalu hapus token lokal
-                    sharedPreferences.edit().remove("auth_token").apply()
-
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        Toast.makeText(this@MainActivity, "Logout berhasil", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Log.e("MainActivity", "Logout server gagal: ${response.errorBody()?.string()}")
-                        Toast.makeText(this@MainActivity, "Logout server gagal: ${response.body()?.message ?: response.message()}", Toast.LENGTH_LONG).show()
-                    }
-
-                    // Pindah ke LoginActivity
-                    val intent = Intent(this@MainActivity, LoginActivity::class.java)
-                    startActivity(intent)
-                    finish()
+                    handleLogoutSuccess()
                 }
 
                 override fun onFailure(call: Call<LogoutResponse>, t: Throwable) {
-                    // Hapus token lokal meskipun server gagal
-                    sharedPreferences.edit().remove("auth_token").apply()
-
-                    Log.e("MainActivity", "Logout gagal: ${t.message}", t)
-                    Toast.makeText(this@MainActivity, "Logout lokal berhasil, server error: ${t.message}", Toast.LENGTH_LONG).show()
-
-                    // Pindah ke LoginActivity
-                    val intent = Intent(this@MainActivity, LoginActivity::class.java)
-                    startActivity(intent)
-                    finish()
+                    handleLogoutSuccess()
                 }
             })
         } else {
-            Toast.makeText(this@MainActivity, "Tidak ada sesi aktif", Toast.LENGTH_SHORT).show()
-            val intent = Intent(this@MainActivity, LoginActivity::class.java)
-            startActivity(intent)
-            finish()
+            handleLogoutSuccess()
         }
+    }
+
+    private fun handleLogoutSuccess() {
+        val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        sharedPreferences.edit().clear().apply()
+        Toast.makeText(this@MainActivity, "Logout berhasil", Toast.LENGTH_SHORT).show()
+        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 }

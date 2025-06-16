@@ -2,5 +2,5 @@ package com.example.eatstedi.model
 
 data class SupplierPreview(
     val name: String,
-    val imageResId: Int // Referensi gambar di drawable
+    val imageUrl: String? // Ganti imageResId dengan imageUrl untuk mendukung URL dari API
 )

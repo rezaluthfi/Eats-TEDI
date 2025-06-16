@@ -9,12 +9,21 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TableRow
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.example.eatstedi.R
+import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.StockLog
+import com.example.eatstedi.api.service.UpdateStockResponse
+import com.example.eatstedi.api.service.StockLogResponse
 import com.example.eatstedi.databinding.ActivityManageStockMenuBinding
-import com.example.eatstedi.model.HistoryStock
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ManageStockMenuActivity : AppCompatActivity() {
 
@@ -28,25 +37,6 @@ class ManageStockMenuActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-
-        // Data dummy untuk riwayat perubahan stok
-        val historyList = listOf(
-            HistoryStock("John Doe", "05/12/2024", "14:35", 50, 45),
-            HistoryStock("Jane Smith", "04/12/2024", "15:00", 60, 55),
-            HistoryStock("Mike Johnson", "01/12/2024", "13:20", 70, 65),
-            HistoryStock("Emily Davis", "30/11/2024", "12:45", 80, 75),
-            HistoryStock("Daniel Brown", "29/11/2024", "11:56", 90, 85),
-            HistoryStock("Olivia Wilson", "28/11/2024", "10:30", 100, 95),
-            HistoryStock("James Martinez", "27/11/2024", "09:45", 110, 105),
-        )
-
-        // Tambahkan data ke dalam TableView
-        addHistoryChangeDataToTable(historyList)
-
-        // Tombol kembali ke MainActivity
-        binding.ivArrowBack.setOnClickListener {
-            finish()
-        }
 
         // Ambil data dari intent
         menuItemId = intent.getIntExtra("MENU_ITEM_ID", 0)
@@ -63,33 +53,27 @@ class ManageStockMenuActivity : AppCompatActivity() {
             .error(R.drawable.ic_launcher_background)
             .into(binding.ivImgMenu)
 
+        // Ambil data riwayat stok dari API
+        fetchStockLog(menuItemId)
+
+        // Tombol kembali ke MainActivity
+        binding.ivArrowBack.setOnClickListener {
+            finish()
+        }
+
         // Tombol simpan
         binding.btnSaveStock.setOnClickListener {
-            // Ambil data stok baru dari EditText, jumlah
-            val newStock = binding.etQuantity.text.toString().toIntOrNull() ?: 0
-            if (newStock != currentStock && newStock >= 0) {
-                // Tambahkan data riwayat perubahan stok ke tabel riwayat tanpa menghilangkan data yang sudah ada
-                val newHistory = HistoryStock(
-                    "Employee Name",
-                    "12/12/2024",
-                    "12:00",
-                    currentStock,
-                    newStock
-                )
-                addHistoryChangeDataToTable(listOf(newHistory) + historyList)
-
-                // Update stok saat ini
-                currentStock = newStock
-                binding.tvStock.text = newStock.toString() // Update tampilan stok di activity
-
-                // Kirim hasil kembali ke MenuFragment
-                val resultIntent = Intent().apply {
-                    putExtra("MENU_ITEM_ID", menuItemId) // Kirim ID menu
-                    putExtra("NEW_STOCK", newStock) // Kirim stok baru
-                }
-                setResult(RESULT_OK, resultIntent) // Set result OK
+            val newStock = binding.etQuantity.text.toString().toIntOrNull()
+            if (newStock == null || newStock < 0) {
+                Toast.makeText(this, "Please enter a valid stock quantity", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            finish() // Tutup activity
+            if (newStock != currentStock) {
+                updateMenuStock(menuItemId, newStock)
+            } else {
+                Toast.makeText(this, "No changes to stock", Toast.LENGTH_SHORT).show()
+                finish()
+            }
         }
 
         // Tombol hapus
@@ -99,9 +83,7 @@ class ManageStockMenuActivity : AppCompatActivity() {
 
         // Setup tombol plus dan minus
         setupQuantityButtons()
-
     }
-
 
     private fun setupQuantityButtons() {
         val btnPlus: Button = binding.btnPlus
@@ -130,50 +112,99 @@ class ManageStockMenuActivity : AppCompatActivity() {
         }
     }
 
-    private fun addHistoryChangeDataToTable(historyList: List<HistoryStock>) {
+    private fun fetchStockLog(menuId: Int) {
+        val call = RetrofitClient.getInstance(this).getStockLog(menuId)
+        call.enqueue(object : Callback<StockLogResponse> {
+            override fun onResponse(call: Call<StockLogResponse>, response: Response<StockLogResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val stockLogs = response.body()?.data ?: emptyList()
+                    addHistoryChangeDataToTable(stockLogs)
+                } else {
+                    Toast.makeText(this@ManageStockMenuActivity, "Failed to load stock log", Toast.LENGTH_SHORT).show()
+                    addHistoryChangeDataToTable(emptyList())
+                }
+            }
+
+            override fun onFailure(call: Call<StockLogResponse>, t: Throwable) {
+                Toast.makeText(this@ManageStockMenuActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                addHistoryChangeDataToTable(emptyList())
+            }
+        })
+    }
+
+    private fun updateMenuStock(menuId: Int, newStock: Int) {
+        val call = RetrofitClient.getInstance(this).updateMenuStock(menuId, mapOf("stock" to newStock.toString()))
+        call.enqueue(object : Callback<UpdateStockResponse> {
+            override fun onResponse(call: Call<UpdateStockResponse>, response: Response<UpdateStockResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    currentStock = newStock
+                    binding.tvStock.text = newStock.toString()
+                    fetchStockLog(menuId) // Refresh stock log
+                    Toast.makeText(this@ManageStockMenuActivity, "Stock updated successfully", Toast.LENGTH_SHORT).show()
+                    // Kirim hasil kembali ke MenuFragment
+                    val resultIntent = Intent().apply {
+                        putExtra("MENU_ITEM_ID", menuItemId)
+                        putExtra("NEW_STOCK", newStock)
+                    }
+                    setResult(RESULT_OK, resultIntent)
+                    finish()
+                } else {
+                    Toast.makeText(this@ManageStockMenuActivity, "Failed to update stock", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<UpdateStockResponse>, t: Throwable) {
+                Toast.makeText(this@ManageStockMenuActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun addHistoryChangeDataToTable(historyList: List<StockLog>) {
         val tableLayout = binding.tableView
 
-        // Hapus semua baris yang ada jika diperlukan
+        // Hapus semua baris yang ada
         tableLayout.removeAllViews()
 
         // Menambahkan header untuk tabel
         val headerRow = TableRow(this).apply {
             setPadding(8, 16, 8, 16)
-            setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity,
-                R.color.secondary
-            ))
+            setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity, R.color.secondary))
         }
 
-        // Menambahkan header kolom
+        // Menambahkan header kolom sesuai API
         headerRow.addView(createTextView("Nama Employee", isHeader = true))
         headerRow.addView(createTextView("Tanggal Update", isHeader = true))
-        headerRow.addView(createTextView("Waktu Update", isHeader = true))
-        headerRow.addView(createTextView("Stok Sebelum", isHeader = true))
-        headerRow.addView(createTextView("Stok Sesudah", isHeader = true))
+        headerRow.addView(createTextView("Aktivitas", isHeader = true))
+        headerRow.addView(createTextView("Jumlah", isHeader = true))
 
         tableLayout.addView(headerRow)
 
-        // Menambahkan data employee ke dalam tabel
+        // Menambahkan data ke dalam tabel
         for (history in historyList) {
             val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
-                setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity,
-                    R.color.white
-                ))
+                setBackgroundColor(ContextCompat.getColor(this@ManageStockMenuActivity, R.color.white))
+            }
+
+            // Format tanggal dari created_at
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
+            val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+            val parsedDate = try {
+                dateFormat.parse(history.createdAt)?.let { displayDateFormat.format(it) } ?: history.createdAt
+            } catch (e: Exception) {
+                history.createdAt
             }
 
             // Tambahkan TextView untuk setiap kolom data
             row.addView(createTextView(history.name))
-            row.addView(createTextView(history.updateDate))
-            row.addView(createTextView(history.updateTime))
-            row.addView(createTextView(history.stockBefore.toString()))
-            row.addView(createTextView(history.stockAfter.toString()))
+            row.addView(createTextView(parsedDate))
+            row.addView(createTextView(history.activity))
+            row.addView(createTextView(history.quantity.toString()))
 
             tableLayout.addView(row)
         }
     }
 
-    // Fungsi untuk membuat TextView dengan gaya header atau konten biasa
     private fun createTextView(text: String, isHeader: Boolean = false): TextView {
         return TextView(this).apply {
             this.text = text

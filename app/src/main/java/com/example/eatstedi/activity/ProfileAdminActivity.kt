@@ -1,6 +1,8 @@
 package com.example.eatstedi.activity
 
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -14,8 +16,6 @@ class ProfileAdminActivity : AppCompatActivity() {
         ActivityProfileAdminBinding.inflate(layoutInflater)
     }
 
-    private var isEditing = false // Menandakan apakah dalam mode edit
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -28,100 +28,72 @@ class ProfileAdminActivity : AppCompatActivity() {
 
         with(binding) {
             ivArrowBack.setOnClickListener {
-                finish() // Kembali ke aktivitas sebelumnya
+                finish()
             }
 
             btnCancel.setOnClickListener {
-                finish() // Kembali ke aktivitas sebelumnya
+                finish()
             }
 
-            // Set editable false
-            setEditTextEnabled(false)
-
-            // Set user data
+            // Set data user dari SharedPreferences
             setUserData()
 
-            btnEdit.setOnClickListener {
-                if (isEditing) {
-                    // Simpan perubahan
-                    saveUserData()
-                    // Kembali ke mode tidak edit
-                    setEditTextEnabled(false)
-                    btnEdit.text = "Edit"
-                } else {
-                    // Masuk ke mode edit
-                    setEditTextEnabled(true)
-                    btnEdit.text = "Simpan"
-                }
-                isEditing = !isEditing // Toggle mode editing
-            }
+            // Nonaktifkan input field
+            disableInputFields()
 
-            // Tambahkan listener untuk setiap EditText
-            setEditTextClickListener()
-        }
-    }
-
-    private fun setEditTextClickListener() {
-        with(binding) {
-            etName.setOnClickListener { showToastIfNotEditing() }
-            etEmail.setOnClickListener { showToastIfNotEditing() }
-            etAddress.setOnClickListener { showToastIfNotEditing() }
-            etUsername.setOnClickListener { showToastIfNotEditing() }
-            etPhoneNumber.setOnClickListener { showToastIfNotEditing() }
-            etPassword.setOnClickListener { showToastIfNotEditing() }
-        }
-    }
-
-    private fun showToastIfNotEditing() {
-        if (!isEditing) {
-            Toast.makeText(this, "Aktifkan mode edit terlebih dahulu", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun setEditTextEnabled(enabled: Boolean) {
-        with(binding) {
-            etName.isFocusable = enabled
-            etName.isFocusableInTouchMode = enabled
-            etEmail.isFocusable = enabled
-            etEmail.isFocusableInTouchMode = enabled
-            etAddress.isFocusable = enabled
-            etAddress.isFocusableInTouchMode = enabled
-            etUsername.isFocusable = enabled
-            etUsername.isFocusableInTouchMode = enabled
-            etPhoneNumber.isFocusable = enabled
-            etPhoneNumber.isFocusableInTouchMode = enabled
-            etPassword.isFocusable = enabled
-            etPassword.isFocusableInTouchMode = enabled
+            // Nonaktifkan mode edit karena tidak ada endpoint update
+            btnEdit.visibility = View.GONE // Sembunyikan tombol edit untuk saat ini
         }
     }
 
     private fun setUserData() {
-        // Set user data
-        binding.etName.setText("Reza Luthfi Akbar")
-        binding.etEmail.setText("hello.rezaluthfi@gmail.com")
-        binding.etAddress.setText("Jl. Kaliurang KM 5,5")
-        binding.etUsername.setText("rezaluthf_")
-        binding.etPhoneNumber.setText("081234567890")
-        binding.etPassword.setText("password")
+        val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
+        val adminName = sharedPreferences.getString("user_name", "AdminKantin") ?: "AdminKantin"
+        val username = sharedPreferences.getString("username", "adminkantin") ?: "adminkantin"
+        val phoneNumber = sharedPreferences.getString("no_telp", "081234567890") ?: "081234567890"
+        val email = sharedPreferences.getString("email", "admin@kantin.com") ?: "admin@kantin.com"
+        val address = sharedPreferences.getString("address", "Jl. Kaliurang KM 5,5") ?: "Jl. Kaliurang KM 5,5"
+        val password = sharedPreferences.getString("password", "password") ?: "password"
+
+        with(binding) {
+            tvAdminName.text = adminName
+            etName.setText(adminName)
+            etUsername.setText(username)
+            etPhoneNumber.setText(phoneNumber)
+            etEmail.setText(email)
+            etAddress.setText(address)
+            etPassword.setText(password)
+
+            // Log untuk debugging
+            Log.d("ProfileAdminActivity", "Displayed Name: $adminName, Role: ${sharedPreferences.getString("user_role", "unknown")}")
+        }
     }
 
-    private fun saveUserData() {
-        // Ambil data dari EditText
-        val nameProfile = binding.etName.text.toString()
-        nameProfile.let {
-            binding.tvAdminName.text = it
+    private fun disableInputFields() {
+        with(binding) {
+            etName.isEnabled = false
+            etName.isFocusable = false
+            etName.isFocusableInTouchMode = false
+
+            etUsername.isEnabled = false
+            etUsername.isFocusable = false
+            etUsername.isFocusableInTouchMode = false
+
+            etPhoneNumber.isEnabled = false
+            etPhoneNumber.isFocusable = false
+            etPhoneNumber.isFocusableInTouchMode = false
+
+            etEmail.isEnabled = false
+            etEmail.isFocusable = false
+            etEmail.isFocusableInTouchMode = false
+
+            etAddress.isEnabled = false
+            etAddress.isFocusable = false
+            etAddress.isFocusableInTouchMode = false
+
+            etPassword.isEnabled = false
+            etPassword.isFocusable = false
+            etPassword.isFocusableInTouchMode = false
         }
-        val name = binding.etName.text.toString()
-        val email = binding.etEmail.text.toString()
-        val address = binding.etAddress.text.toString()
-        val username = binding.etUsername.text.toString()
-        val phoneNumber = binding.etPhoneNumber.text.toString()
-        val password = binding.etPassword.text.toString()
-
-        // Log untuk melihat data yang disimpan
-        println("User Data Saved: Name: $name, Email: $email, Address: $address, Username: $username, Phone: $phoneNumber, Password: $password")
-
-        // Tampilkan toast untuk memberi tahu pengguna bahwa data telah diperbarui
-        Toast.makeText(this, "Data berhasil diperbarui", Toast.LENGTH_SHORT).show()
     }
 }
