@@ -62,10 +62,24 @@ class MainActivity : AppCompatActivity() {
             navHeader.setOnClickListener {
                 val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                 val role = sharedPreferences.getString("user_role", "admin") ?: "admin"
+                val userId = sharedPreferences.getInt("user_id", 0)
+                val userName = sharedPreferences.getString("user_name", "") ?: ""
+                val username = sharedPreferences.getString("user_username", "")
+                val phone = sharedPreferences.getString("user_phone", "")
+                val salary = sharedPreferences.getInt("user_salary", 0)
+                val status = sharedPreferences.getString("user_status", "")
+
                 val intent = if (role == "admin") {
                     Intent(this@MainActivity, ProfileAdminActivity::class.java)
                 } else {
-                    Intent(this@MainActivity, ProfileEmployeeActivity::class.java)
+                    Intent(this@MainActivity, ProfileEmployeeActivity::class.java).apply {
+                        putExtra("EMPLOYEE_ID", userId)
+                        putExtra("EMPLOYEE_NAME", userName)
+                        putExtra("EMPLOYEE_USERNAME", username)
+                        putExtra("EMPLOYEE_PHONE", phone)
+                        putExtra("EMPLOYEE_SALARY", salary)
+                        putExtra("EMPLOYEE_STATUS", status)
+                    }
                 }
                 startActivity(intent)
             }
@@ -103,8 +117,6 @@ class MainActivity : AppCompatActivity() {
 
         val apiService = RetrofitClient.getInstance(this)
 
-        // --- PERBAIKAN UTAMA DI SINI ---
-        // Pisahkan panggilan API menjadi dua blok terpisah
         if (currentRole == "admin") {
             apiService.getAdminProfile().enqueue(object : Callback<AdminProfileResponse> {
                 override fun onResponse(call: Call<AdminProfileResponse>, response: Response<AdminProfileResponse>) {
@@ -114,12 +126,11 @@ class MainActivity : AppCompatActivity() {
                         sharedPreferences.edit().apply {
                             putString("user_name", adminData.name)
                             putString("user_role", adminData.role)
-                            putString("profile_picture", adminData.profile_picture)
                             putInt("user_id", adminData.id)
                             apply()
                         }
                         // Update UI setelah data disimpan
-                        updateNavHeader(adminData.name, adminData.profile_picture, "admin@kantin.com")
+                        updateNavHeader(adminData.name, adminData.id, "admin@kantin.com")
                         setupMenuVisibilityForRole(adminData.role)
                         setupNavigationDrawer(null) // Setup drawer setelah role diketahui
                     } else {
@@ -141,13 +152,15 @@ class MainActivity : AppCompatActivity() {
                         sharedPreferences.edit().apply {
                             putString("user_name", cashierData.name)
                             putString("user_role", cashierData.role)
-                            putString("profile_picture", cashierData.profile_picture)
                             putInt("user_id", cashierData.id)
-                            // Anda bisa menyimpan data tambahan jika perlu
+                            putString("user_username", cashierData.username)
+                            putString("user_phone", cashierData.no_telp)
+                            putInt("user_salary", cashierData.salary)
+                            putString("user_status", cashierData.status)
                             apply()
                         }
                         // Update UI setelah data disimpan
-                        updateNavHeader(cashierData.name, cashierData.profile_picture, "cashier@kantin.com")
+                        updateNavHeader(cashierData.name, cashierData.id, "cashier@kantin.com")
                         setupMenuVisibilityForRole(cashierData.role)
                         setupNavigationDrawer(null) // Setup drawer setelah role diketahui
                     } else {
@@ -163,7 +176,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateNavHeader(name: String, profilePicture: String?, email: String) {
+    private fun updateNavHeader(name: String, userId: Int, email: String) {
         val headerView = binding.navigationView.getHeaderView(0)
         val usernameTextView = headerView.findViewById<TextView>(R.id.username)
         val emailTextView = headerView.findViewById<TextView>(R.id.email)
@@ -172,16 +185,41 @@ class MainActivity : AppCompatActivity() {
         usernameTextView.text = name
         emailTextView.text = email
 
-        if (!profilePicture.isNullOrEmpty()) {
-            Glide.with(this)
-                .load(profilePicture)
-                .placeholder(R.drawable.img_avatar)
-                .error(R.drawable.img_avatar)
-                .circleCrop()
-                .into(profileImageView)
-        } else {
-            profileImageView.setImageResource(R.drawable.img_avatar)
-        }
+        // Load profile picture menggunakan endpoint get-cashier-photo-profile
+        val apiService = RetrofitClient.getInstance(this)
+        apiService.getCashierPhotoProfile(userId).enqueue(object : Callback<okhttp3.ResponseBody> {
+            override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
+                if (response.isSuccessful && response.body() != null) {
+                    try {
+                        // Konversi ResponseBody ke ByteArray
+                        val imageBytes = response.body()!!.bytes()
+
+                        // Load ByteArray ke ImageView menggunakan Glide
+                        Glide.with(this@MainActivity)
+                            .load(imageBytes)
+                            .placeholder(R.drawable.img_avatar)
+                            .error(R.drawable.img_avatar)
+                            .circleCrop()
+                            .into(profileImageView)
+
+                        Log.d("MainActivity", "Profile picture loaded successfully")
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error converting ResponseBody to bytes: ${e.message}", e)
+                        profileImageView.setImageResource(R.drawable.img_avatar)
+                    }
+                } else {
+                    // Jika gagal, gunakan gambar default
+                    profileImageView.setImageResource(R.drawable.img_avatar)
+                    Log.w("MainActivity", "Failed to load profile picture: ${response.code()} - ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
+                // Jika error jaringan, gunakan gambar default
+                profileImageView.setImageResource(R.drawable.img_avatar)
+                Log.e("MainActivity", "Error loading profile picture: ${t.message}", t)
+            }
+        })
     }
 
     private fun openFragment(fragment: Fragment) {

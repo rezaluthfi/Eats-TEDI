@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -42,7 +43,7 @@ class ProfileEmployeeActivity : AppCompatActivity() {
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             selectedImageUri = it
-            // Hanya tampilkan pratinjau jika pengguna adalah kasir sendiri
+            // Hanya tampilkan pratinjau dan minta password jika pengguna adalah kasir sendiri
             val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
             val loggedInUserId = sharedPreferences.getInt("user_id", 0)
             if (cashierId == loggedInUserId) {
@@ -50,7 +51,7 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                     .load(it)
                     .circleCrop()
                     .into(binding.imgMenu)
-                uploadProfilePicture()
+                showPasswordDialog()
             } else {
                 Toast.makeText(this, "Hanya kasir sendiri yang dapat mengubah foto profil", Toast.LENGTH_SHORT).show()
             }
@@ -108,8 +109,8 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                 val name = intent.getStringExtra("EMPLOYEE_NAME") ?: "Cashier"
                 val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: "cashier"
                 val phone = intent.getStringExtra("EMPLOYEE_PHONE") ?: "N/A"
-                val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0).toString()
-                val email = "cashier@kantin.com" // Placeholder
+                val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0)
+                val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: "N/A"
 
                 val scheduleIntent = if (isAdmin) {
                     Intent(this@ProfileEmployeeActivity, AddScheduleEmployeeActivity::class.java)
@@ -119,9 +120,9 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                     putExtra("EMPLOYEE_ID", cashierId)
                     putExtra("EMPLOYEE_NAME", name)
                     putExtra("EMPLOYEE_USERNAME", username)
-                    putExtra("EMPLOYEE_EMAIL", email)
                     putExtra("EMPLOYEE_PHONE", phone)
                     putExtra("EMPLOYEE_SALARY", salary)
+                    putExtra("EMPLOYEE_STATUS", status)
                 }
                 startActivity(scheduleIntent)
             }
@@ -162,41 +163,61 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: "N/A"
         val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0)
         val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: "N/A"
-        val profilePicture = intent.getStringExtra("EMPLOYEE_PROFILE_PICTURE") ?: ""
 
         with(binding) {
             tvEmployeeName.text = name
-            etName.setText(name)
             etUsername.setText(username)
             etPhoneNumber.setText(noTelp)
             etStatus.setText(status)
-            etEmail.setText("cashier@kantin.com") // Placeholder
-            etAddress.setText("Yogyakarta") // Placeholder
+            etSalary.setText(salary.toString())
 
-            // Load profile picture menggunakan Glide
-            if (profilePicture.isNotEmpty() && profilePicture != "path" && profilePicture.startsWith("http")) {
-                Glide.with(this@ProfileEmployeeActivity)
-                    .load(profilePicture)
-                    .placeholder(R.drawable.img_avatar)
-                    .error(R.drawable.img_avatar)
-                    .circleCrop()
-                    .into(imgMenu)
-            } else {
-                imgMenu.setImageResource(R.drawable.img_avatar)
-                Log.w("ProfileEmployeeActivity", "Invalid profile picture URL: $profilePicture")
+            // Load profile picture menggunakan endpoint get-cashier-photo-profile
+            loadProfilePicture()
+        }
+
+        // Log untuk debugging
+        Log.d("ProfileEmployeeActivity", "Displayed Name: $name, ID: $cashierId, Username: $username, Phone: $noTelp, Salary: $salary, Status: $status")
+    }
+
+    private fun loadProfilePicture() {
+        val apiService = RetrofitClient.getInstance(this)
+        apiService.getCashierPhotoProfile(cashierId).enqueue(object : Callback<okhttp3.ResponseBody> {
+            override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
+                if (response.isSuccessful && response.body() != null) {
+                    try {
+                        // Konversi ResponseBody ke ByteArray
+                        val imageBytes = response.body()!!.bytes()
+
+                        // Load ByteArray ke ImageView menggunakan Glide
+                        Glide.with(this@ProfileEmployeeActivity)
+                            .load(imageBytes)
+                            .placeholder(R.drawable.img_avatar)
+                            .error(R.drawable.img_avatar)
+                            .circleCrop()
+                            .into(binding.imgMenu)
+
+                        Log.d("ProfileEmployeeActivity", "Profile picture loaded successfully")
+                    } catch (e: Exception) {
+                        Log.e("ProfileEmployeeActivity", "Error converting ResponseBody to bytes: ${e.message}", e)
+                        binding.imgMenu.setImageResource(R.drawable.img_avatar)
+                    }
+                } else {
+                    // Jika gagal, gunakan gambar default
+                    binding.imgMenu.setImageResource(R.drawable.img_avatar)
+                    Log.w("ProfileEmployeeActivity", "Failed to load profile picture: ${response.code()} - ${response.message()}")
+                }
             }
 
-            // Log untuk debugging
-            Log.d("ProfileEmployeeActivity", "Displayed Name: $name, ID: $cashierId")
-        }
+            override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
+                // Jika error jaringan, gunakan gambar default
+                binding.imgMenu.setImageResource(R.drawable.img_avatar)
+                Log.e("ProfileEmployeeActivity", "Error loading profile picture: ${t.message}", t)
+            }
+        })
     }
 
     private fun disableInputFields() {
         with(binding) {
-            etName.isEnabled = false
-            etName.isFocusable = false
-            etName.isFocusableInTouchMode = false
-
             etUsername.isEnabled = false
             etUsername.isFocusable = false
             etUsername.isFocusableInTouchMode = false
@@ -209,13 +230,9 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             etStatus.isFocusable = false
             etStatus.isFocusableInTouchMode = false
 
-            etEmail.isEnabled = false
-            etEmail.isFocusable = false
-            etEmail.isFocusableInTouchMode = false
-
-            etAddress.isEnabled = false
-            etAddress.isFocusable = false
-            etAddress.isFocusableInTouchMode = false
+            etSalary.isEnabled = false
+            etSalary.isFocusable = false
+            etSalary.isFocusableInTouchMode = false
         }
     }
 
@@ -236,7 +253,41 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         pickImageLauncher.launch("image/*")
     }
 
-    private fun uploadProfilePicture() {
+    private fun showPasswordDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.view_dialog_password, null)
+        val builder = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+
+        val alertDialog = builder.create()
+
+        // Get references to the EditText and buttons
+        val etPassword = dialogView.findViewById<EditText>(R.id.et_password)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btn_cancel)
+        val btnConfirm = dialogView.findViewById<Button>(R.id.btn_confirm)
+
+        // Handle Cancel button
+        btnCancel.setOnClickListener {
+            selectedImageUri = null // Reset selected image
+            binding.imgMenu.setImageResource(R.drawable.img_avatar) // Reset preview
+            alertDialog.dismiss()
+        }
+
+        // Handle Confirm button
+        btnConfirm.setOnClickListener {
+            val password = etPassword.text.toString().trim()
+            if (password.isEmpty()) {
+                etPassword.error = "Password tidak boleh kosong"
+            } else {
+                alertDialog.dismiss()
+                doUploadProfilePicture(password)
+            }
+        }
+
+        alertDialog.show()
+    }
+
+    private fun doUploadProfilePicture(password: String) {
         if (selectedImageUri == null) {
             Toast.makeText(this, "Gambar tidak dipilih", Toast.LENGTH_SHORT).show()
             return
@@ -267,8 +318,36 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
         val profilePicturePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
 
-        // Buat RequestBody untuk id_cashier
+        // Ambil data dari Intent untuk field yang diperlukan
+        val name = intent.getStringExtra("EMPLOYEE_NAME") ?: run {
+            Toast.makeText(this, "Nama tidak tersedia", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: run {
+            Toast.makeText(this, "Nama pengguna tidak tersedia", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: run {
+            Toast.makeText(this, "No. telepon tidak tersedia", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0).toString()
+        val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: run {
+            Toast.makeText(this, "Status tidak tersedia", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Buat RequestBody untuk semua field
         val idCashierRequestBody = cashierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val nameRequestBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
+        val usernameRequestBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
+        val noTelpRequestBody = noTelp.toRequestBody("text/plain".toMediaTypeOrNull())
+        val salaryRequestBody = salary.toRequestBody("text/plain".toMediaTypeOrNull())
+        val statusRequestBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
+        val passwordRequestBody = password.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        // Log data yang akan dikirim untuk debugging
+        Log.d("ProfileEmployeeActivity", "Uploading: id_cashier=$cashierId, name=$name, username=$username, no_telp=$noTelp, salary=$salary, status=$status, password=****")
 
         // Panggil API untuk upload
         val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
@@ -281,45 +360,29 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         }
 
         val apiService = RetrofitClient.getInstance(this)
-        apiService.updateCashierProfile(idCashierRequestBody, profilePicturePart).enqueue(object : Callback<GenericResponse> {
+        apiService.updateCashierProfile(
+            idCashier = idCashierRequestBody,
+            name = nameRequestBody,
+            username = usernameRequestBody,
+            noTelp = noTelpRequestBody,
+            salary = salaryRequestBody,
+            status = statusRequestBody,
+            password = passwordRequestBody,
+            profilePicture = profilePicturePart
+        ).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     Toast.makeText(this@ProfileEmployeeActivity, "Foto profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-
-                    // Perbarui UI dengan URL baru
-                    val newProfilePictureUrl = try {
-                        val messageStr = response.body()?.message?.toString()
-                        if (!messageStr.isNullOrEmpty() && messageStr.contains("profile_picture_url")) {
-                            val urlPattern = """"profile_picture_url"\s*:\s*"([^"]+)"""".toRegex()
-                            val matchResult = urlPattern.find(messageStr)
-                            matchResult?.groupValues?.get(1) ?: messageStr
-                        } else {
-                            null
-                        }
-                    } catch (e: Exception) {
-                        Log.e("ProfileEmployeeActivity", "Error parsing profile picture URL: ${e.message}")
-                        null
-                    }
-
-                    if (!newProfilePictureUrl.isNullOrEmpty()) {
-                        Glide.with(this@ProfileEmployeeActivity)
-                            .load(newProfilePictureUrl)
-                            .placeholder(R.drawable.img_avatar)
-                            .error(R.drawable.img_avatar)
-                            .circleCrop()
-                            .into(binding.imgMenu)
-                        intent.putExtra("EMPLOYEE_PROFILE_PICTURE", newProfilePictureUrl)
-                    } else {
-                        Log.w("ProfileEmployeeActivity", "No valid profile picture URL in response")
-                    }
+                    // Reload foto profil menggunakan endpoint get-cashier-photo-profile
+                    loadProfilePicture()
                 } else {
-                    val errorMessage = response.body()?.message?.toString() ?: "Unknown error"
+                    val errorMessage = response.body()?.message?.toString() ?: response.errorBody()?.string() ?: "Unknown error"
                     if (response.code() == 401 || errorMessage.contains("Unauthorized", true)) {
                         Toast.makeText(this@ProfileEmployeeActivity, "Hanya kasir sendiri yang dapat mengubah foto profil", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal mengunggah foto: $errorMessage", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal mengunggah foto: $errorMessage", Toast.LENGTH_LONG).show()
                     }
-                    Log.e("ProfileEmployeeActivity", "Upload error: ${response.errorBody()?.string()}")
+                    Log.e("ProfileEmployeeActivity", "Upload error: $errorMessage")
                 }
             }
 

@@ -43,7 +43,7 @@ data class MenuItem(
         }
 
     val imageUrl: String
-        get() = "http://103.127.132.30:8000/api/get-menu-photo/$id"
+        get() = "http://10.0.2.2:8000/api/get-menu-photo/$id"
 
     val ownerName: String
         get() = supplierName ?: "Pemasok Tidak Diketahui"

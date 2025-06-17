@@ -200,8 +200,10 @@ class RecapDetailActivity : AppCompatActivity() {
 
         val request = DeleteSpecificOrdersRequest(id_orders = selectedOrderIds)
         val apiService = RetrofitClient.getInstance(this)
+        Log.d("RecapDetailActivity", "Sending DELETE request to /api/delete-specific-orders with order IDs: $selectedOrderIds, Payload: $request")
         apiService.deleteSpecificOrders(request).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                Log.d("RecapDetailActivity", "Response code: ${response.code()}, Body: ${response.body()?.toString()}, Error: ${response.errorBody()?.string()}")
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body?.success == true) {

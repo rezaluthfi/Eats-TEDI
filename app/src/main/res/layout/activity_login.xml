@@ -106,19 +106,37 @@
                     android:padding="16dp"
                     android:textSize="@dimen/text_size_input" />
 
-                <EditText
-                    android:id="@+id/et_password"
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:background="@drawable/bg_modal"
-                    android:drawableEnd="@drawable/icon_eye_closed"
-                    android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:hint="Password"
-                    android:inputType="textPassword"
-                    android:padding="16dp"
-                    android:textSize="@dimen/text_size_input" />
+                    android:background="@drawable/bg_modal">
 
+                    <EditText
+                        android:id="@+id/et_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:background="@android:color/transparent"
+                        android:fontFamily="@font/noto_sans_gujarati_regular"
+                        android:hint="Password"
+                        android:inputType="textPassword"
+                        android:padding="16dp"
+                        android:paddingEnd="48dp"
+                        android:textSize="@dimen/text_size_input" />
+
+                    <ImageView
+                        android:id="@+id/iv_toggle_password"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginEnd="16dp"
+                        android:src="@drawable/icon_eye_closed"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp" />
+
+                </RelativeLayout>
                 <FrameLayout
                     android:id="@+id/btn_login"
                     android:layout_width="match_parent"

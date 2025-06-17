@@ -16,7 +16,7 @@ interface ApiService {
     @POST("login")
     fun login(@Body loginRequest: LoginRequest): Call<LoginResponse>
 
-    //Register new cashier/employee
+    // Register new cashier/employee
     @Multipart
     @POST("register")
     fun registerEmployee(
@@ -84,16 +84,14 @@ interface ApiService {
     @POST("logout")
     fun logout(@Header("Authorization") token: String): Call<LogoutResponse>
 
-    // Endpoint untuk rekap transaksi
     @GET("get-receipts")
     fun getReceipts(): Call<ReceiptResponse>
 
-    // Endpoint baru untuk get-specific-receipt
     @GET("get-specific-receipt/{id}")
     fun getSpecificReceipt(@Path("id") id: Int): Call<SpecificReceiptResponse>
 
-    // Endpoint baru untuk delete-specific-orders
-    @POST("delete-specific-orders")
+
+    @HTTP(method = "DELETE", path = "delete-specific-orders", hasBody = true)
     fun deleteSpecificOrders(@Body request: DeleteSpecificOrdersRequest): Call<GenericResponse>
 
     @POST("search-receipts")
@@ -102,7 +100,6 @@ interface ApiService {
     @POST("search-receipts-by-date")
     fun searchReceiptsByDate(@Body request: SearchReceiptByDateRequest): Call<ReceiptResponse>
 
-    // Ubah dari @DELETE ke @HTTP untuk mendukung body
     @HTTP(method = "DELETE", path = "delete-receipts", hasBody = true)
     fun deleteReceipts(@Body request: DeleteReceiptRequest): Call<GenericResponse>
 
@@ -115,14 +112,25 @@ interface ApiService {
     @GET("get-cashier-profile")
     fun getCashierProfile(): Call<CashierProfileResponse>
 
+    @GET("get-supplier-photo-profile/{supplier_id}")
+    fun getSupplierPhotoProfile(@Path("supplier_id") supplierId: Int): Call<ResponseBody>
+
     @Multipart
     @POST("update-cashier-profile")
     fun updateCashierProfile(
         @Part("id_cashier") idCashier: RequestBody,
-        @Part profilePicture: MultipartBody.Part
+        @Part("name") name: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
+        @Part("salary") salary: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part profilePicture: MultipartBody.Part?
     ): Call<GenericResponse>
 
-    // Endpoint untuk menghapus cashier (metode DELETE dengan path parameter)
+    @GET("get-cashier-photo-profile/{cashier_id}")
+    fun getCashierPhotoProfile(@Path("cashier_id") cashierId: Int): Call<ResponseBody>
+
     @DELETE("delete-cashier/{id}")
     fun deleteCashier(@Path("id") id: Int, @Header("Authorization") token: String): Call<GenericResponse>
 
@@ -196,13 +204,13 @@ interface ApiService {
     fun exportMonthlyStatistics(): Call<ResponseBody>
 
     @GET("get-all-attendance")
-    fun getAllAttendance(): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+    fun getAllAttendance(): Call<AttendanceApiResponse>
 
     @POST("filter-by-date-attendance")
-    fun filterByDateAttendance(@Body request: DateFilterRequest): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+    fun filterByDateAttendance(@Body request: DateFilterRequest): Call<AttendanceApiResponse>
 
     @GET("get-attendance-by-absent/{status}")
-    fun getAttendanceByAbsent(@Path("status") status: Int): Call<AttendanceApiResponse> // Gunakan response wrapper baru
+    fun getAttendanceByAbsent(@Path("status") status: Int): Call<AttendanceApiResponse>
 
     @GET("export-attendance")
     fun exportAttendance(): Call<ResponseBody>
@@ -284,7 +292,7 @@ data class StockLog(
 data class GenericResponse(
     val success: Boolean,
     val activity: String? = null,
-    val message: Any? = null, // Bisa string atau objek
+    val message: Any? = null,
     val data: Any? = null
 )
 
@@ -316,7 +324,6 @@ data class ReceiptData(
     val id: Int
 )
 
-// Model baru untuk ReceiptResponse
 data class ReceiptResponse(
     val success: Boolean,
     val activity: String,
@@ -492,13 +499,13 @@ data class DailyStatisticsResponse(
 data class WeeklyStatisticsResponse(
     val success: Boolean,
     val activity: String,
-    val data: Map<String, List<DailyStatistics>> // week1, week2, week3, week4
+    val data: Map<String, List<DailyStatistics>>
 )
 
 data class MonthlyStatisticsResponse(
     val success: Boolean,
     val activity: String,
-    val data: Map<String, List<DailyStatistics>> // January, February, ..., December
+    val data: Map<String, List<DailyStatistics>>
 )
 
 data class AttendanceResponse(
@@ -517,22 +524,21 @@ data class Attendance(
 
 data class AttendanceRecord(
     val id: Int,
-    val attendance: Int, // 0 for Absent, 1 for Present
+    val attendance: Int,
     val id_schedules: Int,
     val id_cashiers: Int,
     val date: String,
     val created_at: String,
     val updated_at: String,
     val day: String,
-    val name: String, // Nama kasir
+    val name: String,
     val id_shift: Int
 )
 
-// Ubah respons di ApiService
 data class AttendanceApiResponse(
     val success: Boolean,
     val activity: String,
-    @SerializedName("message") val data: List<AttendanceRecord> // Ganti nama field dan tipe data
+    @SerializedName("message") val data: List<AttendanceRecord>
 )
 
 data class DateFilterRequest(
@@ -543,12 +549,12 @@ data class DateFilterRequest(
 data class LogResponse(
     val success: Boolean,
     val activity: String? = null,
-    val data: List<LogActivity>? = null, // Made nullable to handle empty or missing data
+    val data: List<LogActivity>? = null,
     val message: String? = null
 )
 
 data class LogActivity(
-    val id: Int? = null, // Nullable to handle potential missing fields
+    val id: Int? = null,
     @SerializedName("id_cashier") val idCashier: Int? = null,
     @SerializedName("id_admin") val idAdmin: Int? = null,
     val action: String? = null,

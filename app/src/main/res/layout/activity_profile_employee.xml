@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activity.ProfileAdminActivity">
+    tools:context=".activity.ProfileEmployeeActivity">
 
     <ImageView
         android:id="@+id/iv_arrow_back"
@@ -14,27 +14,22 @@
         android:layout_margin="24dp"
         android:src="@drawable/icon_arrow_back"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <ScrollView
-        android:layout_width="800dp"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:scrollbars="none"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/iv_arrow_back"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
-            android:layout_width="800dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="32dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/iv_arrow_back">
+            android:padding="32dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -75,11 +70,10 @@
                     android:id="@+id/tv_employee_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Demi Wikinison"
+                    android:text="Cashier Name"
                     android:textSize="40sp"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:textColor="@color/black"
-                    />
+                    android:textColor="@color/black" />
 
                 <View
                     android:layout_width="match_parent"
@@ -106,8 +100,7 @@
                         android:paddingVertical="8dp"
                         android:paddingHorizontal="24dp"
                         android:layout_marginEnd="16dp"
-                        android:textColor="@color/white"
-                        />
+                        android:textColor="@color/white" />
 
                     <TextView
                         android:id="@+id/tv_delete"
@@ -121,8 +114,7 @@
                         android:paddingVertical="8dp"
                         android:paddingHorizontal="24dp"
                         android:layout_marginEnd="16dp"
-                        android:textColor="@color/white"
-                        />
+                        android:textColor="@color/white" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -131,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="32dp" >
+                android:layout_marginTop="32dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -139,77 +131,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start" >
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Nama"
-                        android:textSize="24sp"
-                        android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
-
-                    <EditText
-                        android:id="@+id/et_name"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Demi Wikinison"
-                        android:fontFamily="@font/noto_sans_gujarati_regular"
-                        android:textColor="@color/black"
-                        android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="16dp"
-                    android:orientation="vertical"
-                    android:gravity="start" >
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="No. Telepon"
-                        android:textSize="24sp"
-                        android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
-
-                    <EditText
-                        android:id="@+id/et_phone_number"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="0812345678"
-                        android:fontFamily="@font/noto_sans_gujarati_regular"
-                        android:textColor="@color/black"
-                        android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp" >
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="16dp"
-                    android:orientation="vertical"
-                    android:gravity="start" >
+                    android:gravity="start">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -217,20 +139,18 @@
                         android:text="Nama Pengguna"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
+                        android:textColor="@color/black" />
 
                     <EditText
                         android:id="@+id/et_username"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi838"
+                        android:text="cashier"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
+                        android:padding="16dp" />
 
                 </LinearLayout>
 
@@ -240,28 +160,26 @@
                     android:layout_weight="1"
                     android:layout_marginStart="16dp"
                     android:orientation="vertical"
-                    android:gravity="start" >
+                    android:gravity="start">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Alamat"
+                        android:text="No. Telepon"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
+                        android:textColor="@color/black" />
 
                     <EditText
-                        android:id="@+id/et_address"
+                        android:id="@+id/et_phone_number"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Yogyakarta"
+                        android:text="N/A"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
+                        android:padding="16dp" />
 
                 </LinearLayout>
 
@@ -271,7 +189,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="16dp" >
+                android:layout_marginTop="16dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -279,28 +197,26 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start" >
+                    android:gravity="start">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Email"
+                        android:text="Gaji"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
+                        android:textColor="@color/black" />
 
                     <EditText
-                        android:id="@+id/et_email"
+                        android:id="@+id/et_salary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi838@kita.com"
+                        android:text="0"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
+                        android:padding="16dp" />
 
                 </LinearLayout>
 
@@ -310,7 +226,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="16dp"
                     android:orientation="vertical"
-                    android:gravity="start" >
+                    android:gravity="start">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -318,20 +234,18 @@
                         android:text="Status"
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
-                        android:textColor="@color/black"
-                        />
+                        android:textColor="@color/black" />
 
                     <EditText
                         android:id="@+id/et_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="demi123"
+                        android:text="N/A"
                         android:fontFamily="@font/noto_sans_gujarati_regular"
                         android:textColor="@color/black"
                         android:background="@drawable/bg_input"
-                        android:padding="16dp"
-                        />
+                        android:padding="16dp" />
 
                 </LinearLayout>
 

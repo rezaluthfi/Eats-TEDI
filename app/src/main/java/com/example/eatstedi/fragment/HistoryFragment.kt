@@ -67,12 +67,14 @@ class HistoryFragment : Fragment() {
         setupDatePickers()
         setupClearSearchButton()
         setupExportButton()
-        setupPagination() // Panggil fungsi setup paginasi
+        setupPagination()
 
+        // Set filter Total sebagai aktif secara default dan perbarui UI
+        updateActiveFilter("Total")
         fetchAllAttendance()
     }
 
-    // --- FUNGSI PAGINASI BARU ---
+    // --- FUNGSI PAGINASI ---
 
     private fun setupPagination() {
         binding.btnPrevPage.setOnClickListener {
@@ -267,8 +269,6 @@ class HistoryFragment : Fragment() {
     }
 
     private fun updateActiveFilter(filter: String) {
-        if (activeFilter == filter && startDate == null) return
-
         activeFilter = filter
 
         _binding?.let { binding ->
