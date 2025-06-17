@@ -188,15 +188,26 @@ class DashboardFragment : Fragment() {
         apiService.getCashierPaymentRecap(cashierId).enqueue(object : Callback<CashierPaymentRecapResponse> {
             override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
                 if (!isAdded || _binding == null) return
+
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val recapData = response.body()!!.data
-                    setupPieChartForCashier(recapData.tunai.toFloat(), recapData.qris.toFloat())
+                    val paymentDataList = response.body()!!.data
+
+                    // Hitung frekuensi transaksi cash dan qris
+                    val cashCount = paymentDataList.count { it.payment_type.lowercase() == "cash" }.toFloat()
+                    val qrisCount = paymentDataList.count { it.payment_type.lowercase() == "qris" }.toFloat()
+
+                    Log.d("DashboardFragment", "Cash Transactions: $cashCount, QRIS Transactions: $qrisCount")
+                    setupPieChartForCashier(cashCount, qrisCount)
+
                 } else {
+                    Log.e("DashboardFragment", "Response not successful or body is null")
                     handleApiError(response, "Gagal mengambil rekap pembayaran")
                     setupPieChartForCashier(0f, 0f)
                 }
             }
+
             override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
+                Log.e("DashboardFragment", "API call failed", t)
                 handleApiFailure(t)
                 setupPieChartForCashier(0f, 0f)
             }
@@ -487,10 +498,10 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    private fun setupPieChartForCashier(cashTotal: Float, qrisTotal: Float) {
+    private fun setupPieChartForCashier(cashCount: Float, qrisCount: Float) {
         _binding?.let { binding ->
             val pieChart = binding.piechartPayments
-            val totalTransactions = cashTotal + qrisTotal
+            val totalTransactions = cashCount + qrisCount
 
             if (totalTransactions == 0f) {
                 val entries = listOf(
@@ -534,12 +545,12 @@ class DashboardFragment : Fragment() {
                 return@let
             }
 
-            val cashPercentage = (cashTotal / totalTransactions) * 100
-            val qrisPercentage = (qrisTotal / totalTransactions) * 100
+            val cashPercentage = (cashCount / totalTransactions) * 100
+            val qrisPercentage = (qrisCount / totalTransactions) * 100
 
             val entries = mutableListOf<PieEntry>()
-            if (cashTotal > 0) entries.add(PieEntry(cashTotal, "Tunai"))
-            if (qrisTotal > 0) entries.add(PieEntry(qrisTotal, "QRIS"))
+            if (cashCount > 0) entries.add(PieEntry(cashCount, "Tunai"))
+            if (qrisCount > 0) entries.add(PieEntry(qrisCount, "QRIS"))
 
             val dataSet = PieDataSet(entries, "Metode Pembayaran").apply {
                 colors = listOf(Color.parseColor("#FFB74D"), Color.parseColor("#64B5F6"))
@@ -558,7 +569,7 @@ class DashboardFragment : Fragment() {
             val data = PieData(dataSet).apply {
                 setValueFormatter(object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
-                        return if (value == cashTotal) {
+                        return if (value == cashCount) {
                             "Tunai: ${value.toInt()} (${String.format("%.1f", cashPercentage)}%)"
                         } else {
                             "QRIS: ${value.toInt()} (${String.format("%.1f", qrisPercentage)}%)"

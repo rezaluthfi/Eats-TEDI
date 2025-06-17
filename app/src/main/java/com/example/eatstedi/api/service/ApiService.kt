@@ -471,7 +471,23 @@ data class SearchSupplierRequest(
 data class CashierPaymentRecapResponse(
     val success: Boolean,
     val activity: String,
-    val data: CashierPaymentRecapData
+    val data: List<CashierPaymentData> // Ubah dari object menjadi List
+)
+
+data class CashierPaymentData(
+    val id: Int,
+    val payment_type: String,
+    val cashier_id: Int,
+    val total: Int,
+    val payment: Int,
+    val returns: Int,
+    val created_at: String,
+    val updated_at: String
+)
+
+data class ProcessedCashierRecap(
+    val tunai: Int,
+    val qris: Int
 )
 
 data class CashierPaymentRecapData(
