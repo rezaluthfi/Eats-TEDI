@@ -7,8 +7,10 @@ import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.eatstedi.activity.ManageStockMenuActivity
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.eatstedi.R
+import com.example.eatstedi.activity.ManageStockMenuActivity
 import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.model.MenuItem
 import android.util.Log
@@ -42,8 +44,12 @@ class MenuAdapter(
 
             Glide.with(holder.itemView.context)
                 .load(menuItem.imageUrl)
-                .placeholder(R.drawable.image_menu)
-                .error(R.drawable.ic_launcher_background)
+                .apply(RequestOptions()
+                    .placeholder(R.drawable.image_menu)
+                    .error(R.drawable.ic_launcher_background)
+                    .circleCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.ALL))
+                .circleCrop()
                 .into(ivMenuImage)
 
             // Hanya izinkan klik untuk menambah ke order jika role adalah cashier

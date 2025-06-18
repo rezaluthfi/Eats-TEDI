@@ -25,6 +25,7 @@ import com.example.eatstedi.fragment.LogFragment
 import com.example.eatstedi.fragment.MenuFragment
 import com.example.eatstedi.fragment.RecapFragment
 import com.example.eatstedi.login.LoginActivity
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -35,12 +36,15 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
+    private var validatedUserRole: String? = null
+    private var validatedUserId: Int? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(binding.root)
 
-        // Panggil fetchUserProfile untuk mendapatkan data dan kemudian setup UI
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] onCreate: Memulai validasi profil.")
         fetchUserProfile()
     }
 
@@ -100,83 +104,125 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupMenuVisibilityForRole(role: String) {
+    private fun setupMenuVisibilityForRole(role: String?) {
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] setupMenuVisibilityForRole: Mengatur menu untuk role: $role")
         val menu = binding.navigationView.menu
         val logMenuItem = menu.findItem(R.id.nav_log)
-
-        if (role == "cashier") {
-            logMenuItem.isVisible = false
-        } else {
-            logMenuItem.isVisible = true
-        }
+        logMenuItem.isVisible = role == "admin"
     }
 
     private fun fetchUserProfile() {
         val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        val currentRole = sharedPreferences.getString("user_role", "admin") ?: "admin"
+        val role = sharedPreferences.getString("user_role", null)
+        val token = sharedPreferences.getString("auth_token", null)
+
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Initial role from SharedPreferences: $role")
+
+        if (token == null || role == null) {
+            Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: No token or role found, forcing logout")
+            Toast.makeText(this, "Sesi tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+            logoutUser(forceLogout = true)
+            return
+        }
 
         val apiService = RetrofitClient.getInstance(this)
 
-        if (currentRole == "admin") {
-            apiService.getAdminProfile().enqueue(object : Callback<AdminProfileResponse> {
-                override fun onResponse(call: Call<AdminProfileResponse>, response: Response<AdminProfileResponse>) {
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        val adminData = response.body()!!.data
-                        // Simpan data
-                        sharedPreferences.edit().apply {
-                            putString("user_name", adminData.name)
-                            putString("user_role", adminData.role)
-                            putInt("user_id", adminData.id)
-                            apply()
+        when (role) {
+            "cashier" -> {
+                apiService.getCashierProfile().enqueue(object : Callback<CashierProfileResponse> {
+                    override fun onResponse(call: Call<CashierProfileResponse>, response: Response<CashierProfileResponse>) {
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            Log.d("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Profil KASIR berhasil didapat.")
+                            val cashierData = response.body()!!.data
+
+                            validatedUserRole = "cashier"
+                            validatedUserId = cashierData.id
+                            Log.d("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Variabel diset ke role=$validatedUserRole, id=$validatedUserId")
+
+                            saveUserData("cashier", cashierData.id, cashierData.name, cashierData.username, cashierData.no_telp, cashierData.salary, cashierData.status)
+                            setupUIForUser("cashier", cashierData.name, cashierData.id)
+                        } else {
+                            Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Profil KASIR gagal, kode: ${response.code()}, error: ${response.errorBody()?.string()}")
+                            Toast.makeText(this@MainActivity, "Gagal memvalidasi profil kasir, silakan login kembali", Toast.LENGTH_LONG).show()
+                            logoutUser(forceLogout = true)
                         }
-                        // Update UI setelah data disimpan
-                        updateNavHeader(adminData.name, adminData.id, "admin@kantin.com")
-                        setupMenuVisibilityForRole(adminData.role)
-                        setupNavigationDrawer(null) // Setup drawer setelah role diketahui
-                    } else {
-                        Toast.makeText(this@MainActivity, "Sesi tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+                    }
+
+                    override fun onFailure(call: Call<CashierProfileResponse>, t: Throwable) {
+                        Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Panggilan KASIR gagal (network): ${t.message}", t)
+                        Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
                         logoutUser(forceLogout = true)
                     }
-                }
+                })
+            }
+            "admin" -> {
+                apiService.getAdminProfile().enqueue(object : Callback<AdminProfileResponse> {
+                    override fun onResponse(call: Call<AdminProfileResponse>, response: Response<AdminProfileResponse>) {
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            Log.d("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Profil ADMIN berhasil didapat.")
+                            val adminData = response.body()!!.data
 
-                override fun onFailure(call: Call<AdminProfileResponse>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-        } else { // 'cashier'
-            apiService.getCashierProfile().enqueue(object : Callback<CashierProfileResponse> {
-                override fun onResponse(call: Call<CashierProfileResponse>, response: Response<CashierProfileResponse>) {
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        val cashierData = response.body()!!.data
-                        // Simpan data
-                        sharedPreferences.edit().apply {
-                            putString("user_name", cashierData.name)
-                            putString("user_role", cashierData.role)
-                            putInt("user_id", cashierData.id)
-                            putString("user_username", cashierData.username)
-                            putString("user_phone", cashierData.no_telp)
-                            putInt("user_salary", cashierData.salary)
-                            putString("user_status", cashierData.status)
-                            apply()
+                            validatedUserRole = "admin"
+                            validatedUserId = adminData.id
+                            Log.d("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Variabel diset ke role=$validatedUserRole, id=$validatedUserId")
+
+                            saveUserData("admin", adminData.id, adminData.name)
+                            setupUIForUser("admin", adminData.name, adminData.id)
+                        } else {
+                            Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Profil ADMIN gagal, kode: ${response.code()}, error: ${response.errorBody()?.string()}")
+                            Toast.makeText(this@MainActivity, "Gagal memvalidasi profil admin, silakan login kembali", Toast.LENGTH_LONG).show()
+                            logoutUser(forceLogout = true)
                         }
-                        // Update UI setelah data disimpan
-                        updateNavHeader(cashierData.name, cashierData.id, "cashier@kantin.com")
-                        setupMenuVisibilityForRole(cashierData.role)
-                        setupNavigationDrawer(null) // Setup drawer setelah role diketahui
-                    } else {
-                        Toast.makeText(this@MainActivity, "Sesi tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+                    }
+
+                    override fun onFailure(call: Call<AdminProfileResponse>, t: Throwable) {
+                        Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Panggilan ADMIN gagal (network): ${t.message}", t)
+                        Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
                         logoutUser(forceLogout = true)
                     }
-                }
-
-                override fun onFailure(call: Call<CashierProfileResponse>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+                })
+            }
+            else -> {
+                Log.e("DEBUG_PASTI_BISA", "[MainActivity] fetchUserProfile: Role tidak dikenali: $role, forcing logout")
+                Toast.makeText(this, "Role tidak valid, silakan login kembali", Toast.LENGTH_LONG).show()
+                logoutUser(forceLogout = true)
+            }
         }
     }
 
-    private fun updateNavHeader(name: String, userId: Int, email: String) {
+    private fun saveUserData(
+        role: String,
+        id: Int,
+        name: String,
+        username: String? = null,
+        phone: String? = null,
+        salary: Int? = null,
+        status: String? = null
+    ) {
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] saveUserData: Menyimpan ke SharedPreferences role=$role, id=$id")
+        val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        sharedPreferences.edit().apply {
+            putString("user_role", role)
+            putInt("user_id", id)
+            putString("user_name", name)
+            if (role == "cashier") {
+                putString("user_username", username)
+                putString("user_phone", phone)
+                putInt("user_salary", salary ?: 0)
+                putString("user_status", status)
+            }
+            apply()
+        }
+    }
+
+    private fun setupUIForUser(role: String, name: String, userId: Int) {
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] setupUIForUser: Memulai setup UI untuk role=$role")
+        updateNavHeader(name, userId, if (role == "admin") "admin@kantin.com" else "cashier@kantin.com", role)
+        setupMenuVisibilityForRole(role)
+        setupNavigationDrawer(null)
+    }
+
+    private fun updateNavHeader(name: String, userId: Int, email: String, role: String) {
         val headerView = binding.navigationView.getHeaderView(0)
         val usernameTextView = headerView.findViewById<TextView>(R.id.username)
         val emailTextView = headerView.findViewById<TextView>(R.id.email)
@@ -185,41 +231,42 @@ class MainActivity : AppCompatActivity() {
         usernameTextView.text = name
         emailTextView.text = email
 
-        // Load profile picture menggunakan endpoint get-cashier-photo-profile
-        val apiService = RetrofitClient.getInstance(this)
-        apiService.getCashierPhotoProfile(userId).enqueue(object : Callback<okhttp3.ResponseBody> {
-            override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
-                if (response.isSuccessful && response.body() != null) {
-                    try {
-                        // Konversi ResponseBody ke ByteArray
-                        val imageBytes = response.body()!!.bytes()
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Memuat foto profil untuk role=$role, userId=$userId")
 
-                        // Load ByteArray ke ImageView menggunakan Glide
-                        Glide.with(this@MainActivity)
-                            .load(imageBytes)
-                            .placeholder(R.drawable.img_avatar)
-                            .error(R.drawable.img_avatar)
-                            .circleCrop()
-                            .into(profileImageView)
-
-                        Log.d("MainActivity", "Profile picture loaded successfully")
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "Error converting ResponseBody to bytes: ${e.message}", e)
+        if (role == "cashier") {
+            val apiService = RetrofitClient.getInstance(this)
+            apiService.getCashierPhotoProfile(userId).enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                    if (response.isSuccessful && response.body() != null) {
+                        try {
+                            val imageBytes = response.body()!!.bytes()
+                            Glide.with(this@MainActivity)
+                                .load(imageBytes)
+                                .placeholder(R.drawable.img_avatar)
+                                .error(R.drawable.img_avatar)
+                                .circleCrop()
+                                .into(profileImageView)
+                            Log.d("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Foto profil kasir berhasil dimuat")
+                        } catch (e: Exception) {
+                            Log.e("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Error memuat bytes gambar: ${e.message}", e)
+                            profileImageView.setImageResource(R.drawable.img_avatar)
+                        }
+                    } else {
+                        Log.w("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Gagal memuat foto profil kasir, kode: ${response.code()}, error: ${response.message()}")
                         profileImageView.setImageResource(R.drawable.img_avatar)
                     }
-                } else {
-                    // Jika gagal, gunakan gambar default
-                    profileImageView.setImageResource(R.drawable.img_avatar)
-                    Log.w("MainActivity", "Failed to load profile picture: ${response.code()} - ${response.message()}")
                 }
-            }
 
-            override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
-                // Jika error jaringan, gunakan gambar default
-                profileImageView.setImageResource(R.drawable.img_avatar)
-                Log.e("MainActivity", "Error loading profile picture: ${t.message}", t)
-            }
-        })
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    Log.e("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Gagal memuat foto profil kasir (network): ${t.message}", t)
+                    profileImageView.setImageResource(R.drawable.img_avatar)
+                }
+            })
+        } else {
+            // Fallback untuk admin karena tidak ada endpoint getAdminPhotoProfile
+            Log.d("DEBUG_PASTI_BISA", "[MainActivity] updateNavHeader: Tidak ada endpoint foto profil untuk admin, menggunakan default")
+            profileImageView.setImageResource(R.drawable.img_avatar)
+        }
     }
 
     private fun openFragment(fragment: Fragment) {
@@ -255,9 +302,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleLogoutSuccess() {
         val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-        sharedPreferences.edit().clear().apply()
-        Toast.makeText(this@MainActivity, "Logout berhasil", Toast.LENGTH_SHORT).show()
-        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+        sharedPreferences.edit().clear().commit()
+        Log.d("DEBUG_PASTI_BISA", "[MainActivity] handleLogoutSuccess: SharedPreferences cleared")
+        Toast.makeText(this, "Logout berhasil", Toast.LENGTH_SHORT).show()
+        val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()

@@ -305,19 +305,27 @@ class LoginActivity : AppCompatActivity() {
 
     private fun saveUserSession(token: String, user: com.example.eatstedi.api.service.User) {
         try {
+            val validRoles = listOf("admin", "cashier")
+            if (user.role.isNullOrBlank() || !validRoles.contains(user.role)) {
+                Log.e(TAG, "Invalid user role: ${user.role}")
+                showError("Role pengguna tidak valid dari server")
+                clearUserSession()
+                return
+            }
+
             val sharedPreferences = getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE)
             val editor = sharedPreferences.edit()
 
             editor.putString(KEY_AUTH_TOKEN, token)
-            editor.putString(KEY_USER_ROLE, user.role ?: "")
+            editor.putString(KEY_USER_ROLE, user.role)
             editor.putString(KEY_USER_NAME, user.name ?: "")
             editor.putInt(KEY_USER_ID, user.id)
             editor.putString(KEY_PROFILE_PICTURE, user.profile_picture ?: "")
 
-            val success = editor.commit() // Use commit() for immediate write
+            val success = editor.commit()
 
             if (success) {
-                Log.d(TAG, "User session saved successfully")
+                Log.d(TAG, "User session saved successfully: role=${user.role}, id=${user.id}, name=${user.name}")
             } else {
                 Log.e(TAG, "Failed to save user session")
                 showError("Gagal menyimpan data login")

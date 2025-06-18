@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.eatstedi.R
 import com.example.eatstedi.adapter.MenuAdapter
@@ -554,10 +555,12 @@ class MenuFragment : Fragment() {
 
         Glide.with(this)
             .load(menuItem.imageUrl)
-            .apply(RequestOptions.circleCropTransform())
+            .apply(RequestOptions()
+                .placeholder(R.drawable.image_menu)
+                .error(R.drawable.ic_launcher_background)
+                .circleCrop()
+                .diskCacheStrategy(DiskCacheStrategy.ALL))
             .circleCrop()
-            .placeholder(R.drawable.image_menu)
-            .error(R.color.white)
             .into(dialogBinding.imgMenu)
 
         dialogBinding.btnCameraMenu.setOnClickListener { checkStoragePermission() }
@@ -1219,7 +1222,7 @@ class MenuFragment : Fragment() {
         Log.d("MenuFragment", "showMenuDialog: Adding new menu")
         dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
 
-        dialogBinding.imgMenu.setImageResource(R.color.white)
+        dialogBinding.imgMenu.setImageResource(R.drawable.image_menu) // Set placeholder awal
 
         fetchSuppliersForDialog { suppliers ->
             Log.d("MenuFragment", "Suppliers for dialog: ${suppliers.map { "${it.first} -> ${it.second}"} }")

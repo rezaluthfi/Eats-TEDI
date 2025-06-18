@@ -35,6 +35,8 @@ import com.example.eatstedi.databinding.ViewItemEmployeeBinding
 import com.example.eatstedi.databinding.ViewItemSupplierBinding
 import com.example.eatstedi.model.*
 import com.github.mikephil.charting.charts.HorizontalBarChart
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
@@ -134,9 +136,6 @@ class DashboardFragment : Fragment() {
             binding.tvViewAllSupplier.setOnClickListener {
                 startActivity(Intent(requireContext(), AllSupplierActivity::class.java))
             }
-            binding.tvDownloadPayments.setOnClickListener {
-                Toast.makeText(requireContext(), "Fitur Download belum didukung", Toast.LENGTH_SHORT).show()
-            }
             binding.tvDownloadDaily.setOnClickListener { handleDownload("daily") }
             binding.tvDownloadWeekly.setOnClickListener { handleDownload("weekly") }
             binding.tvDownloadMonthly.setOnClickListener { handleDownload("monthly") }
@@ -148,12 +147,51 @@ class DashboardFragment : Fragment() {
         if (userRole == "admin") {
             fetchCashiers()
             fetchSuppliers()
+            // Panggil data rekap mingguan KHUSUS untuk Pie Chart
+            fetchWeeklyRecapForAdminPieChart()
+            // Panggil data statistik untuk Horizontal Bar Charts
             fetchDailyStatisticsForAdmin()
             fetchWeeklyStatistics()
             fetchMonthlyStatistics()
         } else if (userRole == "cashier" && userId != -1) {
             fetchCashierPaymentRecap(userId)
         }
+    }
+
+    /**
+     * Fungsi baru untuk mengambil rekap pembayaran mingguan
+     * dan menggunakannya untuk mengisi Pie Chart Admin.
+     */
+    private fun fetchWeeklyRecapForAdminPieChart() {
+        val apiService = RetrofitClient.getInstance(requireContext())
+        // Pastikan endpoint ini sudah ditambahkan di ApiService.kt
+        apiService.getWeeklyPaymentRecap().enqueue(object : Callback<CashierPaymentRecapResponse> {
+            override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
+                if (!isAdded || _binding == null) return
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val weeklyRecapData = response.body()!!.data
+
+                    val cashCount = weeklyRecapData.count { it.payment_type.lowercase() == "cash" }.toFloat()
+                    val qrisCount = weeklyRecapData.count { it.payment_type.lowercase() == "qris" }.toFloat()
+
+                    Log.d("DashboardFragment", "Weekly Recap -> Cash: $cashCount, QRIS: $qrisCount")
+                    // Panggil fungsi setup pie chart dengan data yang sudah dihitung
+                    setupPieChartForAdmin(cashCount, qrisCount)
+                } else {
+                    handleApiError(response, "Gagal mengambil rekap mingguan")
+                    // Tampilkan chart kosong jika gagal
+                    setupPieChartForAdmin(0f, 0f)
+                }
+            }
+
+            override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
+                if (!isAdded) return
+                handleApiFailure(t)
+                // Tampilkan chart kosong jika gagal
+                setupPieChartForAdmin(0f, 0f)
+            }
+        })
     }
 
     private fun fetchSchedulesForRole() {
@@ -191,12 +229,10 @@ class DashboardFragment : Fragment() {
 
                 if (response.isSuccessful && response.body()?.success == true) {
                     val paymentDataList = response.body()!!.data
-
-                    // Hitung frekuensi transaksi cash dan qris
                     val cashCount = paymentDataList.count { it.payment_type.lowercase() == "cash" }.toFloat()
                     val qrisCount = paymentDataList.count { it.payment_type.lowercase() == "qris" }.toFloat()
 
-                    Log.d("DashboardFragment", "Cash Transactions: $cashCount, QRIS Transactions: $qrisCount")
+                    Log.d("DashboardFragment", "Cashier Recap -> Cash: $cashCount, QRIS: $qrisCount")
                     setupPieChartForCashier(cashCount, qrisCount)
 
                 } else {
@@ -264,8 +300,9 @@ class DashboardFragment : Fragment() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     dailyStatsForAdmin.clear()
                     dailyStatsForAdmin.addAll(response.body()!!.data)
-                    setupPieChartForAdmin()
-                    setupHorizontalBarCharts()
+                    // Panggilan ke Pie Chart DIHAPUS dari sini
+                    // setupPieChartForAdmin() // <-- DIHAPUS
+                    setupHorizontalBarCharts() // <-- Biarkan ini untuk mengisi bar chart harian
                 } else {
                     handleApiError(response, "Gagal mengambil statistik harian")
                 }
@@ -390,52 +427,14 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    private fun setupPieChartForAdmin() {
+    private fun setupPieChartForAdmin(totalCashTransactions: Float, totalQRISTransactions: Float) {
         _binding?.let { binding ->
             val pieChart = binding.piechartPayments
-            val totalCashTransactions = dailyStatsForAdmin.count { it.payment_type == "cash" }.toFloat()
-            val totalQRISTransactions = dailyStatsForAdmin.count { it.payment_type == "qris" }.toFloat()
             val totalTransactions = totalCashTransactions + totalQRISTransactions
 
             if (totalTransactions == 0f) {
-                val entries = listOf(
-                    PieEntry(1f, "Tunai"),
-                    PieEntry(1f, "QRIS")
-                )
-                val dataSet = PieDataSet(entries, "Metode Pembayaran").apply {
-                    colors = listOf(Color.parseColor("#FFB74D"), Color.parseColor("#64B5F6"))
-                    sliceSpace = 5f
-                    selectionShift = 10f
-                    valueTextColor = Color.BLACK
-                    valueTextSize = 16f
-                }
-                val data = PieData(dataSet).apply {
-                    setValueFormatter(object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String = "Tidak ada data"
-                    })
-                }
-                pieChart.apply {
-                    this.data = data
-                    description.isEnabled = false
-                    setDrawHoleEnabled(true)
-                    setHoleColor(Color.WHITE)
-                    setTransparentCircleRadius(80f)
-                    setHoleRadius(20f)
-                    setUsePercentValues(false)
-                    legend.isEnabled = true
-                    legend.textColor = Color.BLACK
-                    legend.textSize = 12f
-                    legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-                    legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-                    legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
-                    legend.yOffset = 12f
-                    legend.formSize = 10f
-                    legend.formToTextSpace = 10f
-                    legend.xEntrySpace = 15f
-                    setExtraOffsets(8f, 8f, 8f, 20f)
-                    invalidate()
-                    animateY(1800)
-                }
+                // ... (Logika untuk menampilkan "Tidak ada data" tetap sama)
+                setupEmptyPieChart(pieChart)
                 return@let
             }
 
@@ -464,6 +463,7 @@ class DashboardFragment : Fragment() {
             val data = PieData(dataSet).apply {
                 setValueFormatter(object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
+                        // Perbaikan logika agar label persen benar
                         return if (value == totalCashTransactions) {
                             "Tunai: ${value.toInt()} (${String.format("%.1f", cashPercentage)}%)"
                         } else {
@@ -475,6 +475,7 @@ class DashboardFragment : Fragment() {
 
             pieChart.apply {
                 this.data = data
+                // ... (Konfigurasi PieChart tetap sama)
                 description.isEnabled = false
                 setDrawHoleEnabled(true)
                 setHoleColor(Color.WHITE)
@@ -484,9 +485,9 @@ class DashboardFragment : Fragment() {
                 legend.isEnabled = true
                 legend.textColor = Color.BLACK
                 legend.textSize = 12f
-                legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-                legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-                legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+                legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
+                legend.horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
+                legend.orientation = Legend.LegendOrientation.HORIZONTAL
                 legend.yOffset = 12f
                 legend.formSize = 10f
                 legend.formToTextSpace = 10f
@@ -504,44 +505,7 @@ class DashboardFragment : Fragment() {
             val totalTransactions = cashCount + qrisCount
 
             if (totalTransactions == 0f) {
-                val entries = listOf(
-                    PieEntry(1f, "Tunai"),
-                    PieEntry(1f, "QRIS")
-                )
-                val dataSet = PieDataSet(entries, "Metode Pembayaran").apply {
-                    colors = listOf(Color.parseColor("#FFB74D"), Color.parseColor("#64B5F6"))
-                    sliceSpace = 5f
-                    selectionShift = 10f
-                    valueTextColor = Color.BLACK
-                    valueTextSize = 16f
-                }
-                val data = PieData(dataSet).apply {
-                    setValueFormatter(object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String = "Tidak ada data"
-                    })
-                }
-                pieChart.apply {
-                    this.data = data
-                    description.isEnabled = false
-                    setDrawHoleEnabled(true)
-                    setHoleColor(Color.WHITE)
-                    setTransparentCircleRadius(80f)
-                    setHoleRadius(20f)
-                    setUsePercentValues(false)
-                    legend.isEnabled = true
-                    legend.textColor = Color.BLACK
-                    legend.textSize = 12f
-                    legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-                    legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-                    legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
-                    legend.yOffset = 12f
-                    legend.formSize = 10f
-                    legend.formToTextSpace = 10f
-                    legend.xEntrySpace = 15f
-                    setExtraOffsets(8f, 8f, 8f, 20f)
-                    invalidate()
-                    animateY(1800)
-                }
+                setupEmptyPieChart(pieChart)
                 return@let
             }
 
@@ -589,9 +553,9 @@ class DashboardFragment : Fragment() {
                 legend.isEnabled = true
                 legend.textColor = Color.BLACK
                 legend.textSize = 12f
-                legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-                legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-                legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+                legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
+                legend.horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
+                legend.orientation = Legend.LegendOrientation.HORIZONTAL
                 legend.yOffset = 12f
                 legend.formSize = 10f
                 legend.formToTextSpace = 10f
@@ -600,6 +564,29 @@ class DashboardFragment : Fragment() {
                 invalidate()
                 animateY(1000)
             }
+        }
+    }
+
+    private fun setupEmptyPieChart(pieChart: PieChart) {
+        val entries = listOf(PieEntry(1f, "Tidak ada data"))
+        val dataSet = PieDataSet(entries, "").apply {
+            colors = listOf(Color.LTGRAY)
+            valueTextColor = Color.BLACK
+            valueTextSize = 16f
+        }
+        val data = PieData(dataSet).apply {
+            setValueFormatter(object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String = "Tidak ada data"
+            })
+        }
+        pieChart.apply {
+            this.data = data
+            description.isEnabled = false
+            legend.isEnabled = false
+            setDrawEntryLabels(false)
+            isRotationEnabled = false
+            isHighlightPerTapEnabled = false
+            invalidate()
         }
     }
 
@@ -734,8 +721,8 @@ class DashboardFragment : Fragment() {
             setDoubleTapToZoomEnabled(true)
             setScaleYEnabled(false)
             setFitBars(true)
-            legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-            legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
+            legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
+            legend.horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
             legend.textColor = Color.BLACK
             legend.textSize = 14f
             notifyDataSetChanged()

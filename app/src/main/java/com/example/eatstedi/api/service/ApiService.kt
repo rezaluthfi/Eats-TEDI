@@ -182,9 +182,6 @@ interface ApiService {
     @DELETE("delete-supplier/{id}")
     fun deleteSupplier(@Path("id") id: Int): Call<GenericResponse>
 
-    @GET("recap-pembayaran-cashier/{id}")
-    fun getCashierPaymentRecap(@Path("id") cashierId: Int): Call<CashierPaymentRecapResponse>
-
     @GET("get-daily-statistics")
     fun getDailyStatistics(): Call<DailyStatisticsResponse>
 
@@ -193,6 +190,12 @@ interface ApiService {
 
     @GET("get-monthly-statistics")
     fun getMonthlyStatistics(): Call<MonthlyStatisticsResponse>
+
+    @GET("recap-pembayaran-cashier/{id}")
+    fun getCashierPaymentRecap(@Path("id") cashierId: Int): Call<CashierPaymentRecapResponse>
+
+    @GET("recap-pembayaran-weekly")
+    fun getWeeklyPaymentRecap(): Call<CashierPaymentRecapResponse>
 
     @GET("export-daily-statistics")
     fun exportDailyStatistics(): Call<ResponseBody>
@@ -214,6 +217,24 @@ interface ApiService {
 
     @GET("export-attendance")
     fun exportAttendance(): Call<ResponseBody>
+
+    @GET("get-attendance-by-cashier/{id}")
+    fun getAttendanceByCashier(@Path("id") cashierId: Int): Call<AttendanceApiResponse>
+
+    @POST("filter-attendance-by-date-cashier/{id}")
+    fun filterAttendanceByDateCashier(
+        @Path("id") cashierId: Int,
+        @Body request: DateFilterRequest
+    ): Call<AttendanceApiResponse>
+
+    @GET("get-attendance-by-absent-cashier/{id}/{status}")
+    fun getAttendanceByAbsentCashier(
+        @Path("id") cashierId: Int,
+        @Path("status") status: Boolean
+    ): Call<AttendanceApiResponse>
+
+    @GET("export-attendance-cashier/{id}")
+    fun exportAttendanceCashier(@Path("id") cashierId: Int): Call<ResponseBody>
 
     @GET("get-log")
     fun getAllLogs(): Call<LogResponse>
@@ -284,7 +305,7 @@ data class StockLogResponse(
 data class StockLog(
     val id: Int,
     val name: String,
-    val createdAt: String,
+    @SerializedName("created_at") val createdAt: String,
     val activity: String,
     val quantity: Int
 )

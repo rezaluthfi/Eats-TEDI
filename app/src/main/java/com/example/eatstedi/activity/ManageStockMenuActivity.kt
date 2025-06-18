@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -187,12 +188,23 @@ class ManageStockMenuActivity : AppCompatActivity() {
             }
 
             // Format tanggal dari created_at
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("UTC") // Set zona waktu ke UTC
+            }
             val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val parsedDate = try {
-                dateFormat.parse(history.createdAt)?.let { displayDateFormat.format(it) } ?: history.createdAt
-            } catch (e: Exception) {
-                history.createdAt
+            val parsedDate = if (history.createdAt.isNullOrEmpty()) {
+                Log.d("StockLog", "createdAt is null or empty for id: ${history.id}")
+                "N/A" // Fallback jika createdAt null atau kosong
+            } else {
+                try {
+                    Log.d("StockLog", "Raw createdAt: ${history.createdAt}")
+                    dateFormat.parse(history.createdAt)?.let { date ->
+                        displayDateFormat.format(date)
+                    } ?: history.createdAt
+                } catch (e: Exception) {
+                    Log.e("StockLog", "Error parsing date: ${history.createdAt}, Error: ${e.message}")
+                    history.createdAt // Fallback ke string asli jika parsing gagal
+                }
             }
 
             // Tambahkan TextView untuk setiap kolom data

@@ -218,6 +218,7 @@
             android:orientation="vertical" >
 
             <TextView
+                android:id="@+id/tv_keuangan"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Keuangan"
@@ -225,21 +226,12 @@
                 android:textColor="@color/black"
                 android:fontFamily="@font/noto_sans_gujarati_bold"/>
 
-            <TextView
-                android:id="@+id/tv_download_payments"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Download"
-                android:textSize="16sp"
-                android:layout_alignParentEnd="true"
-                android:textColor="@color/black" />
-
             <com.github.mikephil.charting.charts.PieChart
                 android:id="@+id/piechart_payments"
                 android:layout_width="match_parent"
                 android:layout_height="350dp"
                 android:layout_marginTop="16dp"
-                android:layout_below="@+id/tv_download_payments"/>
+                android:layout_below="@+id/tv_keuangan"/>
 
         </RelativeLayout>
 
