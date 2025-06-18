@@ -700,12 +700,25 @@ class MenuFragment : Fragment() {
     private fun deleteMenu(menuItem: MenuItem) {
         apiService.deleteMenu(menuItem.id).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                // Cek apakah fragment masih ada
+                if (!isAdded) return
+
                 if (response.isSuccessful && response.body()?.success == true) {
+                    // Hapus dari daftar menu utama
                     originalMenuList.remove(menuItem)
-                    filteredMenuList = originalMenuList
+                    // Pastikan filteredMenuList juga diperbarui dengan benar
+                    filteredMenuList = originalMenuList.filter { it.id != menuItem.id }
                     menuAdapter.updateList(filteredMenuList)
-                    selectedMenuItems.remove(menuItem)
-                    orderAdapter.notifyDataSetChanged()
+
+                    // Hanya lakukan operasi terkait pesanan jika rolenya adalah cashier
+                    if (userRole?.lowercase() == "cashier") {
+                        selectedMenuItems.remove(menuItem)
+                        // Cek juga apakah orderAdapter sudah diinisialisasi sebelum digunakan
+                        if (::orderAdapter.isInitialized) {
+                            orderAdapter.notifyDataSetChanged()
+                        }
+                    }
+
                     updateVisibility()
                     Toast.makeText(requireContext(), "Berhasil menghapus menu", Toast.LENGTH_SHORT).show()
                 } else {
@@ -714,6 +727,8 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                // Cek apakah fragment masih ada
+                if (!isAdded) return
                 handleNetworkError(t, "Error deleting menu")
             }
         })
