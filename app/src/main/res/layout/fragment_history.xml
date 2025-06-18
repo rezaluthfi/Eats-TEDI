@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".fragment.HistoryFragment">
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:fillViewport="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/paginationLayout"
-        android:fillViewport="true">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -24,7 +26,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:paddingHorizontal="16dp" >
+                android:paddingHorizontal="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -39,7 +41,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:layout_gravity="center_vertical"
-                    android:orientation="horizontal"  >
+                    android:orientation="horizontal">
 
                     <Button
                         android:id="@+id/btn_start_date"
@@ -88,7 +90,6 @@
                         android:visibility="gone"/>
 
                 </LinearLayout>
-
             </LinearLayout>
 
             <LinearLayout
@@ -99,7 +100,7 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginStart="16dp"
                 android:gravity="center_vertical">
-                <!-- Summary boxes (Total, Hadir, Tidak Hadir) -->
+
                 <LinearLayout
                     android:id="@+id/ll_summary_total"
                     android:layout_width="155dp"
@@ -128,7 +129,7 @@
                         android:textColor="@color/black"
                         android:fontFamily="@font/noto_sans_gujarati_bold"/>
                 </LinearLayout>
-                <!-- ... Present ... -->
+
                 <LinearLayout
                     android:id="@+id/ll_summary_present"
                     android:layout_width="155dp"
@@ -158,7 +159,7 @@
                         android:textColor="@color/black"
                         android:fontFamily="@font/noto_sans_gujarati_bold"/>
                 </LinearLayout>
-                <!-- ... Absent ... -->
+
                 <LinearLayout
                     android:id="@+id/ll_summary_absent"
                     android:layout_width="155dp"
@@ -189,6 +190,152 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Shimmer Placeholder for Table -->
+            <com.facebook.shimmer.ShimmerFrameLayout
+                android:id="@+id/shimmer_table"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_marginTop="16dp"
+                android:padding="16dp"
+                app:shimmer_duration="1000"
+                app:shimmer_auto_start="true">
+
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:stretchColumns="*">
+
+                    <!-- Placeholder Header Row -->
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                    </TableRow>
+
+                    <!-- Placeholder Data Rows (3 rows to approximate 20 items/page) -->
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                    </TableRow>
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                    </TableRow>
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                    </TableRow>
+                </TableLayout>
+            </com.facebook.shimmer.ShimmerFrameLayout>
+
             <TextView
                 android:id="@+id/tv_no_data"
                 android:layout_width="wrap_content"
@@ -201,56 +348,102 @@
                 android:fontFamily="@font/noto_sans_gujarati_regular"
                 android:visibility="gone" />
 
-            <TableLayout
-                android:id="@+id/attendanceTableView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:layout_marginTop="16dp" />
-
-            <!-- BAGIAN PAGINATION BARU -->
             <LinearLayout
-                android:id="@+id/paginationLayout"
+                android:id="@+id/content_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:paddingVertical="8dp"
-                android:paddingHorizontal="16dp"
-                app:layout_constraintBottom_toBottomOf="parent">
+                android:orientation="vertical">
 
-                <Button
-                    android:id="@+id/btnPrevPage"
-                    android:layout_width="wrap_content"
+                <TableLayout
+                    android:id="@+id/attendanceTableView"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Sebelumnya"
-                    android:textSize="16sp"
-                    android:textColor="@color/white"
-                    android:background="@drawable/bg_btn_secondary"
-                    app:backgroundTint="@null"/>
-
-                <TextView
-                    android:id="@+id/tvPageInfo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:textSize="16sp"
-                    android:textColor="@color/black"
-                    android:text="Halaman 1/1"/>
-
-                <Button
-                    android:id="@+id/btnNextPage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Selanjutnya"
-                    android:textSize="16sp"
-                    android:textColor="@color/white"
-                    android:background="@drawable/bg_btn_secondary"
-                    app:backgroundTint="@null"/>
+                    android:padding="16dp"
+                    android:layout_marginTop="16dp"
+                    android:stretchColumns="*">
+                </TableLayout>
             </LinearLayout>
-
         </LinearLayout>
-
     </ScrollView>
 
+    <!-- Pagination Layout (Moved outside ScrollView) -->
+    <LinearLayout
+        android:id="@+id/paginationLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingVertical="8dp"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/btnPrevPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sebelumnya"
+            android:textSize="16sp"
+            android:textColor="@color/white"
+            android:background="@drawable/bg_btn_secondary"
+            app:backgroundTint="@null"/>
+
+        <TextView
+            android:id="@+id/tvPageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:textSize="16sp"
+            android:textColor="@color/black"
+            android:text="Halaman 1/1"/>
+
+        <Button
+            android:id="@+id/btnNextPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Selanjutnya"
+            android:textSize="16sp"
+            android:textColor="@color/white"
+            android:background="@drawable/bg_btn_secondary"
+            app:backgroundTint="@null"/>
+    </LinearLayout>
+
+    <!-- Shimmer Placeholder for Pagination -->
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmer_pagination"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:paddingVertical="8dp"
+        android:paddingHorizontal="16dp"
+        app:shimmer_duration="1000"
+        app:shimmer_auto_start="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="100dp"
+                android:layout_height="40dp"
+                android:background="#E0E0E0" />
+
+            <View
+                android:layout_width="80dp"
+                android:layout_height="20dp"
+                android:layout_marginHorizontal="24dp"
+                android:background="#E0E0E0" />
+
+            <View
+                android:layout_width="100dp"
+                android:layout_height="40dp"
+                android:background="#E0E0E0" />
+        </LinearLayout>
+    </com.facebook.shimmer.ShimmerFrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

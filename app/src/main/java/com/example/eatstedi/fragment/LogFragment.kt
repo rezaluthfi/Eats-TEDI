@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.eatstedi.adapter.LogActivityAdapter
 import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.ApiService
 import com.example.eatstedi.api.service.LogByDateRequest
 import com.example.eatstedi.api.service.LogByNameRequest
 import com.example.eatstedi.api.service.LogResponse
@@ -23,20 +24,19 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
 
 class LogFragment : Fragment() {
 
     private var _binding: FragmentLogBinding? = null
+    // Akses aman untuk menghindari NPE, hanya digunakan saat view pasti ada.
     private val binding get() = _binding!!
-    private lateinit var originalLogActivities: List<ModelLogActivity>
-    private lateinit var adapter: LogActivityAdapter
 
-    // Pagination parameters
-    private val pageSize = 20
-    private var currentPage = 0
-    private var isLastPage = false
-    private var isLoading = false
+    private lateinit var apiService: ApiService
+    private lateinit var adapter: LogActivityAdapter
+    private var originalLogActivities: List<ModelLogActivity> = emptyList()
     private var filteredLogs = listOf<ModelLogActivity>()
 
     private var startDate: Calendar? = null
@@ -44,7 +44,17 @@ class LogFragment : Fragment() {
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+    private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+
+    // Pagination parameters
+    private val pageSize = 20
+    private var currentPage = 0
+    private var isLastPage = false
+    private var isLoading = false
+
+    // --- Lifecycle Methods ---
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -57,317 +67,106 @@ class LogFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize ApiService using RetrofitClient
-        val apiService = RetrofitClient.getInstance(requireContext())
+        apiService = RetrofitClient.getInstance(requireContext())
+        setupRecyclerView()
+        setupUI()
+        showShimmer()
+        fetchLogs()
+    }
 
-        // Set up RecyclerView
-        adapter = LogActivityAdapter(mutableListOf())
-        binding.rvLogActivity.layoutManager = LinearLayoutManager(context)
-        binding.rvLogActivity.adapter = adapter
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 
-        setupPagination()
+    // --- Shimmer Control ---
+
+    private fun showShimmer() {
+        // Menggunakan _binding?.let memastikan tidak ada akses jika view sudah hancur.
+        _binding?.let {
+            it.shimmerRecycler.visibility = View.VISIBLE
+            it.shimmerPagination.visibility = View.VISIBLE
+            it.contentContainer.visibility = View.GONE
+            it.paginationLayout.visibility = View.GONE
+            it.tvNoData.visibility = View.GONE
+            it.shimmerRecycler.startShimmer()
+            it.shimmerPagination.startShimmer()
+        }
+    }
+
+    private fun hideShimmer() {
+        // Perbaikan utama: Menggunakan _binding?.let untuk semua operasi UI.
+        _binding?.let {
+            it.shimmerRecycler.stopShimmer()
+            it.shimmerPagination.stopShimmer()
+            it.shimmerRecycler.visibility = View.GONE
+            it.shimmerPagination.visibility = View.GONE
+            it.contentContainer.visibility = View.VISIBLE
+        }
+    }
+
+    // --- UI Setup ---
+
+    private fun setupUI() {
         setupSearchFilter()
         setupDateFilter()
-
-        // Load initial data
-        fetchLogs(apiService)
+        setupPagination()
     }
 
-    private fun fetchLogs(apiService: com.example.eatstedi.api.service.ApiService) {
-        isLoading = true
-        showLoading(true)
-        apiService.getAllLogs().enqueue(object : Callback<LogResponse> {
-            override fun onResponse(call: Call<LogResponse>, response: Response<LogResponse>) {
-                isLoading = false
-                showLoading(false)
-                if (response.isSuccessful && response.body()?.success == true) {
-                    Log.d("LogFragment", "API Response: ${response.body()}")
-                    val logs = response.body()!!.data.orEmpty() // Handle null data
-                    originalLogActivities = processLogData(logs)
-                    filteredLogs = originalLogActivities
-                    loadItems()
-                    updateUiState()
-                } else {
-                    Log.e("LogFragment", "API Error: ${response.code()} - ${response.errorBody()?.string()}")
-                    Toast.makeText(context, "Failed to fetch logs: ${response.message()}", Toast.LENGTH_SHORT).show()
-                    showNoData()
-                }
-            }
-
-            override fun onFailure(call: Call<LogResponse>, t: Throwable) {
-                isLoading = false
-                showLoading(false)
-                Log.e("LogFragment", "Network Error: ${t.message}", t)
-                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                showNoData()
-            }
-        })
-    }
-
-    private fun filterLogs(apiService: com.example.eatstedi.api.service.ApiService) {
-        val query = binding.etSearch.text.toString().trim().lowercase(Locale.getDefault())
-
-        if (query.isEmpty() && startDate == null && endDate == null) {
-            filteredLogs = originalLogActivities
-            resetPagination()
-            loadItems()
-            updateUiState()
-            return
-        }
-
-        isLoading = true
-        showLoading(true)
-        if (query.isNotEmpty()) {
-            // Search by name
-            apiService.getLogByName(LogByNameRequest(query)).enqueue(object : Callback<LogResponse> {
-                override fun onResponse(call: Call<LogResponse>, response: Response<LogResponse>) {
-                    handleFilterResponse(response)
-                }
-
-                override fun onFailure(call: Call<LogResponse>, t: Throwable) {
-                    handleFilterError(t)
-                }
-            })
-        } else if (startDate != null && endDate != null) {
-            // Filter by date
-            val start = apiDateFormat.format(startDate!!.time)
-            val end = apiDateFormat.format(endDate!!.time)
-            apiService.filterLogByDate(LogByDateRequest(start, end)).enqueue(object : Callback<LogResponse> {
-                override fun onResponse(call: Call<LogResponse>, response: Response<LogResponse>) {
-                    handleFilterResponse(response)
-                }
-
-                override fun onFailure(call: Call<LogResponse>, t: Throwable) {
-                    handleFilterError(t)
-                }
-            })
-        }
-    }
-
-    private fun handleFilterResponse(response: Response<LogResponse>) {
-        isLoading = false
-        showLoading(false)
-        if (response.isSuccessful && response.body()?.success == true) {
-            Log.d("LogFragment", "Filter Response: ${response.body()}")
-            val logs = response.body()!!.data.orEmpty() // Handle null data
-            filteredLogs = processLogData(logs)
-            if (filteredLogs.isEmpty()) {
-                Toast.makeText(context, "No logs found", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Log.e("LogFragment", "Filter Error: ${response.code()} - ${response.errorBody()?.string()}")
-            filteredLogs = emptyList()
-            Toast.makeText(context, "No logs found", Toast.LENGTH_SHORT).show()
-        }
-        resetPagination()
-        loadItems()
-        updateUiState()
-    }
-
-    private fun handleFilterError(t: Throwable) {
-        isLoading = false
-        showLoading(false)
-        Log.e("LogFragment", "Filter Network Error: ${t.message}", t)
-        Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-        filteredLogs = emptyList()
-        resetPagination()
-        loadItems()
-        updateUiState()
-    }
-
-    private fun processLogData(logs: List<com.example.eatstedi.api.service.LogActivity>): List<ModelLogActivity> {
-        val logList = logs.mapNotNull { log ->
-            try {
-                if (log.createdAt == null || log.action == null) {
-                    Log.w("LogFragment", "Skipping log with null createdAt or action: $log")
-                    return@mapNotNull null
-                }
-                val date = isoFormat.parse(log.createdAt)
-                if (date != null) {
-                    val user = when {
-                        log.idCashier != null -> fetchCashierName(log.idCashier)
-                        log.idAdmin != null -> fetchAdminName(log.idAdmin)
-                        else -> "Unknown"
-                    }
-                    Pair(
-                        date, // Store date for sorting
-                        ModelLogActivity(
-                            user = user,
-                            activity = log.action,
-                            time = timeFormat.format(date),
-                            date = dateFormat.format(date)
-                        )
-                    )
-                } else {
-                    Log.w("LogFragment", "Invalid date format for log: $log")
-                    null
-                }
-            } catch (e: Exception) {
-                Log.w("LogFragment", "Error parsing log: $log", e)
-                null // Skip malformed entries
-            }
-        }
-        // Sort by date in descending order (most recent first)
-        return logList.sortedByDescending { it.first }.map { it.second }
-    }
-
-    private fun fetchCashierName(id: Int): String {
-        // Placeholder: Implement actual API call to get cashier name
-        return "Cashier $id"
-    }
-
-    private fun fetchAdminName(id: Int): String {
-        // Placeholder: Implement actual API call to get admin name
-        return "Admin $id"
-    }
-
-    private fun setupPagination() {
-        binding.rvLogActivity.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                val visibleItemCount = layoutManager.childCount
-                val totalItemCount = layoutManager.itemCount
-                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                if (!isLoading && !isLastPage && (visibleItemCount + firstVisibleItemPosition) >= totalItemCount
-                    && firstVisibleItemPosition >= 0 && totalItemCount >= pageSize
-                ) {
-                    loadMoreItems()
-                }
-            }
-        })
-
-        binding.btnPrevPage.setOnClickListener {
-            if (currentPage > 0) {
-                currentPage--
-                loadItems()
-                updatePaginationControls()
-            }
-        }
-
-        binding.btnNextPage.setOnClickListener {
-            if (!isLastPage) {
-                currentPage++
-                loadItems()
-                updatePaginationControls()
-            }
-        }
-
-        updatePaginationControls()
-    }
-
-    private fun updatePaginationControls() {
-        // Perbaikan: Bungkus semua akses ke binding.
-        _binding?.let { binding ->
-            val totalPages = (filteredLogs.size + pageSize - 1) / pageSize
-            binding.tvPageInfo.text = "Halaman ${currentPage + 1}/$totalPages"
-            binding.btnPrevPage.isEnabled = currentPage > 0
-            binding.btnNextPage.isEnabled = !isLastPage
-            binding.btnPrevPage.alpha = if (currentPage > 0) 1.0f else 0.5f
-            binding.btnNextPage.alpha = if (!isLastPage) 1.0f else 0.5f
-        }
-    }
-
-    private fun loadMoreItems() {
-        isLoading = true
-        val startPosition = currentPage * pageSize
-        if (startPosition >= filteredLogs.size) {
-            isLastPage = true
-            isLoading = false
-            return
-        }
-
-        val endPosition = minOf(startPosition + pageSize, filteredLogs.size)
-        val pageItems = filteredLogs.subList(startPosition, endPosition)
-        adapter.updateData(pageItems)
-        isLoading = false
-        isLastPage = endPosition >= filteredLogs.size
-        updatePaginationControls()
-    }
-
-    private fun loadItems() {
-        // Perbaikan: Pastikan view masih ada sebelum berinteraksi dengan adapter/UI.
-        _binding?.let {
-            adapter.clearItems()
-            val startPosition = currentPage * pageSize
-            val endPosition = minOf(startPosition + pageSize, filteredLogs.size)
-
-            if (startPosition < filteredLogs.size) {
-                val pageItems = filteredLogs.subList(startPosition, endPosition)
-                adapter.updateData(pageItems)
-            }
-
-            isLastPage = (currentPage + 1) * pageSize >= filteredLogs.size
-            updatePaginationControls() // Panggilan ini sekarang aman
+    private fun setupRecyclerView() {
+        adapter = LogActivityAdapter(mutableListOf())
+        _binding?.rvLogActivity?.let {
+            it.layoutManager = LinearLayoutManager(context)
+            it.adapter = adapter
         }
     }
 
     private fun setupSearchFilter() {
-        binding.etSearch.addTextChangedListener(object : TextWatcher {
+        _binding?.etSearch?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterLogs(RetrofitClient.getInstance(requireContext()))
+                filterLogs()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
-
-        binding.ivClearSearch.setOnClickListener {
-            clearFilters()
-        }
+        _binding?.ivClearSearch?.setOnClickListener { clearFilters() }
     }
 
     private fun setupDateFilter() {
-        binding.btnStartDate.setOnClickListener {
-            showDatePicker(isStartDate = true) { date ->
-                startDate = date
-                binding.btnStartDate.text = dateFormat.format(date.time)
-                filterLogs(RetrofitClient.getInstance(requireContext()))
+        _binding?.let { binding ->
+            binding.btnStartDate.setOnClickListener {
+                showDatePicker(isStartDate = true) { date ->
+                    startDate = date
+                    // Cek _binding lagi sebelum akses
+                    _binding?.btnStartDate?.text = dateFormat.format(date.time)
+                    filterLogs()
+                }
             }
-        }
-
-        binding.btnEndDate.setOnClickListener {
-            showDatePicker(isStartDate = false) { date ->
-                endDate = date
-                binding.btnEndDate.text = dateFormat.format(date.time)
-                filterLogs(RetrofitClient.getInstance(requireContext()))
+            binding.btnEndDate.setOnClickListener {
+                showDatePicker(isStartDate = false) { date ->
+                    endDate = date
+                    _binding?.btnEndDate?.text = dateFormat.format(date.time)
+                    filterLogs()
+                }
             }
         }
     }
 
     private fun showDatePicker(isStartDate: Boolean, onDateSelected: (Calendar) -> Unit) {
+        if (!isAdded) return // Guard
         val calendar = Calendar.getInstance()
         DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
-                val selectedDate = Calendar.getInstance().apply {
-                    set(year, month, dayOfMonth)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
+                val selectedDate = Calendar.getInstance().apply { set(year, month, dayOfMonth, 0, 0, 0) }
+                if (isStartDate && endDate != null && selectedDate.after(endDate)) {
+                    showToast("Tanggal mulai tidak boleh setelah tanggal selesai!")
+                    return@DatePickerDialog
                 }
-
-                if (isStartDate) {
-                    if (endDate != null && selectedDate.after(endDate)) {
-                        Toast.makeText(
-                            requireContext(),
-                            "Tanggal mulai tidak boleh setelah tanggal selesai!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        return@DatePickerDialog
-                    }
-                } else {
-                    if (startDate != null && selectedDate.before(startDate)) {
-                        Toast.makeText(
-                            requireContext(),
-                            "Tanggal selesai tidak boleh sebelum tanggal mulai!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        return@DatePickerDialog
-                    }
+                if (!isStartDate && startDate != null && selectedDate.before(startDate)) {
+                    showToast("Tanggal selesai tidak boleh sebelum tanggal mulai!")
+                    return@DatePickerDialog
                 }
-
                 onDateSelected(selectedDate)
             },
             calendar.get(Calendar.YEAR),
@@ -376,63 +175,250 @@ class LogFragment : Fragment() {
         ).show()
     }
 
-    private fun resetPagination() {
+    // --- Data Fetching ---
+
+    private fun fetchLogs() {
+        if (isLoading) return
+        isLoading = true
+        showShimmer()
+        apiService.getAllLogs().enqueue(object : Callback<LogResponse> {
+            override fun onResponse(call: Call<LogResponse>, response: Response<LogResponse>) {
+                // Perbaikan: Pindahkan semua logika UI ke dalam blok aman
+                _binding?.let {
+                    isLoading = false
+                    hideShimmer()
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        originalLogActivities = processLogData(body.data.orEmpty())
+                        filteredLogs = originalLogActivities
+                        resetAndLoadItems()
+                    } else {
+                        showToast("Gagal mengambil log: ${response.message()}")
+                        showNoData()
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<LogResponse>, t: Throwable) {
+                // Perbaikan: Pindahkan semua logika UI ke dalam blok aman
+                _binding?.let {
+                    isLoading = false
+                    hideShimmer()
+                    showToast("Error jaringan: ${t.message}")
+                    showNoData()
+                }
+            }
+        })
+    }
+
+    private fun filterLogs() {
+        // Akses binding di awal dan simpan dalam variabel lokal
+        val query = _binding?.etSearch?.text.toString().trim().lowercase(Locale.getDefault())
+
+        if (query.isNullOrEmpty() && startDate == null && endDate == null) {
+            filteredLogs = originalLogActivities
+            resetAndLoadItems()
+            return
+        }
+
+        if (isLoading) return
+        isLoading = true
+        showShimmer()
+
+        val callback = object : Callback<LogResponse> {
+            override fun onResponse(call: Call<LogResponse>, response: Response<LogResponse>) {
+                // Cek _binding di sini, karena ini adalah titik masuk utama dari callback
+                _binding?.let { handleFilterResponse(response) }
+            }
+            override fun onFailure(call: Call<LogResponse>, t: Throwable) {
+                _binding?.let { handleFilterError(t) }
+            }
+        }
+
+        when {
+            !query.isNullOrEmpty() -> apiService.getLogByName(LogByNameRequest(query)).enqueue(callback)
+            startDate != null && endDate != null -> {
+                val start = apiDateFormat.format(startDate!!.time)
+                val end = apiDateFormat.format(endDate!!.time)
+                apiService.filterLogByDate(LogByDateRequest(start, end)).enqueue(callback)
+            }
+            else -> {
+                isLoading = false
+                hideShimmer()
+                filteredLogs = originalLogActivities
+                resetAndLoadItems()
+            }
+        }
+    }
+
+    private fun handleFilterResponse(response: Response<LogResponse>) {
+        isLoading = false
+        hideShimmer()
+        val body = response.body()
+        if (response.isSuccessful && body?.success == true) {
+            filteredLogs = processLogData(body.data.orEmpty())
+            if (filteredLogs.isEmpty()) showToast("Tidak ada log ditemukan")
+        } else {
+            filteredLogs = emptyList()
+            showToast("Tidak ada log ditemukan")
+        }
+        resetAndLoadItems()
+    }
+
+    private fun handleFilterError(t: Throwable) {
+        isLoading = false
+        hideShimmer()
+        showToast("Error jaringan: ${t.message}")
+        filteredLogs = emptyList()
+        resetAndLoadItems()
+    }
+
+    private fun processLogData(logs: List<com.example.eatstedi.api.service.LogActivity>): List<ModelLogActivity> {
+        return logs.mapNotNull { log ->
+            try {
+                if (log.createdAt == null || log.action == null) return@mapNotNull null
+                val date = isoFormat.parse(log.createdAt) ?: return@mapNotNull null
+
+                val user = when {
+                    log.idCashier != null -> "Kasir ID: ${log.idCashier}"
+                    log.idAdmin != null -> "Admin ID: ${log.idAdmin}"
+                    else -> "Pengguna Tidak Dikenal"
+                }
+
+                Pair(
+                    date,
+                    ModelLogActivity(
+                        user = user,
+                        activity = log.action,
+                        time = timeFormat.format(date),
+                        date = dateFormat.format(date)
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e("LogFragment", "Error parsing log: $log", e)
+                null
+            }
+        }.sortedByDescending { it.first }.map { it.second }
+    }
+
+    // --- Pagination ---
+
+    private fun setupPagination() {
+        _binding?.let { binding ->
+            binding.rvLogActivity.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                    val visibleItemCount = layoutManager.childCount
+                    val totalItemCount = layoutManager.itemCount
+                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                    if (!isLoading && !isLastPage && (visibleItemCount + firstVisibleItemPosition) >= totalItemCount
+                        && firstVisibleItemPosition >= 0 && totalItemCount >= pageSize) {
+                        loadMoreItems()
+                    }
+                }
+            })
+
+            binding.btnPrevPage.setOnClickListener {
+                if (currentPage > 0) {
+                    currentPage--
+                    loadItems()
+                }
+            }
+            binding.btnNextPage.setOnClickListener {
+                if (!isLastPage) {
+                    currentPage++
+                    loadItems()
+                }
+            }
+        }
+        updatePaginationControls()
+    }
+
+    private fun updatePaginationControls() {
+        _binding?.let {
+            val totalPages = if (filteredLogs.isEmpty()) 1 else (filteredLogs.size + pageSize - 1) / pageSize
+            it.tvPageInfo.text = "Halaman ${currentPage + 1}/$totalPages"
+            it.btnPrevPage.isEnabled = currentPage > 0
+            it.btnNextPage.isEnabled = !isLastPage
+            it.btnPrevPage.alpha = if (it.btnPrevPage.isEnabled) 1.0f else 0.5f
+            it.btnNextPage.alpha = if (it.btnNextPage.isEnabled) 1.0f else 0.5f
+        }
+    }
+
+    private fun loadMoreItems() {
+        currentPage++
+        loadItems(true)
+    }
+
+    private fun loadItems(isAppending: Boolean = false) {
+        if (!isAppending) adapter.clearItems()
+
+        val startPosition = currentPage * pageSize
+        if (startPosition >= filteredLogs.size) {
+            isLastPage = true
+            updatePaginationControls()
+            return
+        }
+
+        val endPosition = minOf(startPosition + pageSize, filteredLogs.size)
+        val pageItems = filteredLogs.subList(startPosition, endPosition)
+
+        if (isAppending) adapter.addItems(pageItems) else adapter.updateData(pageItems)
+
+        isLastPage = endPosition >= filteredLogs.size
+        updatePaginationControls()
+    }
+
+    private fun resetAndLoadItems() {
         currentPage = 0
         isLastPage = false
+        loadItems()
+        updateUiState()
+    }
+
+    // --- UI State Management ---
+
+    private fun updateUiState() {
+        _binding?.let {
+            val isEmpty = filteredLogs.isEmpty()
+            it.tvNoData.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            it.rvLogActivity.visibility = if (isEmpty) View.GONE else View.VISIBLE
+            it.paginationLayout.visibility = if (isEmpty) View.GONE else View.VISIBLE
+
+            val isFilterActive = it.etSearch.text.isNotEmpty() || startDate != null || endDate != null
+            it.ivClearSearch.visibility = if (isFilterActive) View.VISIBLE else View.GONE
+        }
     }
 
     private fun showNoData() {
-        // Perbaikan: Bungkus semua perubahan visibilitas.
-        _binding?.let { binding ->
-            binding.tvNoData.visibility = View.VISIBLE
-            binding.rvLogActivity.visibility = View.GONE
-            binding.paginationLayout.visibility = View.GONE
+        _binding?.let {
+            it.tvNoData.visibility = View.VISIBLE
+            it.rvLogActivity.visibility = View.GONE
+            it.paginationLayout.visibility = View.GONE
         }
     }
 
-    private fun updateUiState() {
-        // Perbaikan: Bungkus seluruh logika state UI.
-        _binding?.let { binding ->
-            if (filteredLogs.isEmpty()) {
-                showNoData() // Panggilan ini sudah aman
-            } else {
-                binding.tvNoData.visibility = View.GONE
-                binding.rvLogActivity.visibility = View.VISIBLE
-                binding.paginationLayout.visibility = View.VISIBLE
-            }
-            binding.ivClearSearch.visibility = if (binding.etSearch.text.isNotEmpty() || startDate != null || endDate != null) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-        }
-    }
-
-    private fun showLoading(isLoading: Boolean) {
-        // Perbaikan: Amankan akses ke progress bar.
-        _binding?.let { binding ->
-            // Add a ProgressBar in fragment_log.xml and reference it here
-            // binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-    }
+    // --- Filters ---
 
     private fun clearFilters() {
-        // Perbaikan: Bungkus akses ke view.
-        _binding?.let { binding ->
-            binding.etSearch.text.clear()
+        _binding?.let {
+            it.etSearch.text.clear()
             startDate = null
             endDate = null
-            binding.btnStartDate.text = "dd/mm/yyyy"
-            binding.btnEndDate.text = "dd/mm/yyyy"
+            it.btnStartDate.text = "dd/mm/yyyy"
+            it.btnEndDate.text = "dd/mm/yyyy"
             filteredLogs = originalLogActivities
-            resetPagination()
-            loadItems()
-            updateUiState()
+            resetAndLoadItems()
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    // --- Utility ---
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        if (isAdded) { // Guard
+            Toast.makeText(context, message, duration).show()
+        }
     }
 }

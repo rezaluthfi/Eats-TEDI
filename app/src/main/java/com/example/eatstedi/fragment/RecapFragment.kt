@@ -2,8 +2,8 @@ package com.example.eatstedi.fragment
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
-import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 class RecapFragment : Fragment() {
 
     private var _binding: FragmentRecapBinding? = null
@@ -53,283 +54,219 @@ class RecapFragment : Fragment() {
 
     private var isCheckboxVisible = false
     private val checkBoxList = mutableListOf<CheckBox>()
-
     private var currentPage = 1
     private val itemsPerPage = 20
+    private var allReceipts = listOf<Receipt>() // Simpan semua data asli
     private var currentDisplayedData = listOf<Receipt>()
     private var totalPages = 1
     private var cashierList: List<Employee> = emptyList()
 
+    // --- Lifecycle Methods ---
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentRecapBinding.inflate(inflater, container, false)
         return binding.root
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         apiService = RetrofitClient.getInstance(requireContext())
+        setupUI()
+        showShimmer()
+        fetchCashiers { fetchReceipts() }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    // --- Shimmer Control ---
+
+    private fun showShimmer() {
+        _binding?.let {
+            it.shimmerTable.visibility = View.VISIBLE
+            it.shimmerPagination.visibility = View.VISIBLE
+            it.contentContainer.visibility = View.GONE
+            it.paginationLayout.visibility = View.GONE
+            it.tvNoData.visibility = View.GONE
+            it.shimmerTable.startShimmer()
+            it.shimmerPagination.startShimmer()
+        }
+    }
+
+    private fun hideShimmer() {
+        _binding?.let {
+            it.shimmerTable.stopShimmer()
+            it.shimmerPagination.stopShimmer()
+            it.shimmerTable.visibility = View.GONE
+            it.shimmerPagination.visibility = View.GONE
+            it.contentContainer.visibility = View.VISIBLE
+        }
+    }
+
+    // --- UI Setup ---
+
+    private fun setupUI() {
         setupDateFilter()
-        setupPagination()
-
-        fetchCashiers {
-            fetchReceipts()
-        }
-
         setupSearchListener()
+        setupPagination()
+        setupSearchBarInteractions()
+        setupCheckboxToggle()
+        setupDeleteButton()
+        setupDownloadButton()
+    }
 
-        binding.etSearch.setOnClickListener {
-            if (binding.btnStartDate.visibility == View.VISIBLE) {
-                binding.btnStartDate.visibility = View.GONE
-                binding.btnEndDate.visibility = View.GONE
-                binding.ivActiveCheckbox.visibility = View.GONE
-                binding.ivDownload.visibility = View.GONE
-                binding.ivClearSearch.visibility = View.GONE
-
-                val params = binding.etSearch.layoutParams
-                params.width = resources.getDimensionPixelSize(R.dimen.search_expanded_width)
-                binding.etSearch.layoutParams = params
-
-                binding.etSearch.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-                binding.etSearch.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-                binding.etSearch.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_search, 0, 0, 0)
-            }
-        }
-
-        binding.root.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                if (!isTouchInsideEditText(event)) {
-                    resetSearchView()
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupSearchBarInteractions() {
+        _binding?.let { binding ->
+            binding.etSearch.setOnClickListener {
+                if (binding.btnStartDate.visibility == View.VISIBLE) {
+                    hideHeaderControls()
+                    expandSearchBar()
                 }
             }
-            false
-        }
-
-        binding.etSearch.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                resetSearchView()
+            binding.root.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN && !isTouchInsideEditText(event)) {
+                    resetSearchView()
+                }
+                false
+            }
+            binding.etSearch.setOnFocusChangeListener { _, hasFocus ->
+                if (!hasFocus) resetSearchView()
             }
         }
+    }
 
-        binding.ivActiveCheckbox.setOnClickListener {
+    private fun hideHeaderControls() {
+        _binding?.let {
+            it.btnStartDate.visibility = View.GONE
+            it.btnEndDate.visibility = View.GONE
+            it.ivActiveCheckbox.visibility = View.GONE
+            it.ivDownload.visibility = View.GONE
+            it.ivClearSearch.visibility = View.GONE
+        }
+    }
+
+    private fun expandSearchBar() {
+        _binding?.let {
+            val params = it.etSearch.layoutParams
+            params.width = resources.getDimensionPixelSize(R.dimen.search_expanded_width)
+            it.etSearch.layoutParams = params
+            it.etSearch.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            it.etSearch.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            it.etSearch.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_search, 0, 0, 0)
+        }
+    }
+
+    private fun setupCheckboxToggle() {
+        _binding?.ivActiveCheckbox?.setOnClickListener {
             isCheckboxVisible = !isCheckboxVisible
             displayTransactions(getPageItems())
             toggleDeleteButtonVisibility()
         }
-
-        binding.ivDelete.setOnClickListener {
-            deleteSelectedItems()
-        }
-
-        binding.ivDownload.setOnClickListener {
-            exportReceipts()
-        }
     }
+
+    private fun setupDeleteButton() {
+        _binding?.ivDelete?.setOnClickListener { deleteSelectedItems() }
+    }
+
+    private fun setupDownloadButton() {
+        _binding?.ivDownload?.setOnClickListener { exportReceipts() }
+    }
+
+    // --- Data Fetching ---
 
     private fun fetchCashiers(onComplete: () -> Unit) {
         apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
             override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
+                if (!isAdded) return // Guard
                 if (response.isSuccessful && response.body()?.success == true) {
                     cashierList = response.body()?.data ?: emptyList()
-                    Log.d("RecapFragment", "Fetched ${cashierList.size} cashiers: ${cashierList.map { "${it.id} -> ${it.name}" }}")
                 } else {
                     cashierList = emptyList()
-                    Log.e("RecapFragment", "Failed to fetch cashiers: ${response.errorBody()?.string()}")
-                    Toast.makeText(requireContext(), "Gagal mengambil daftar kasir", Toast.LENGTH_SHORT).show()
+                    showToast("Gagal mengambil daftar kasir")
                 }
                 onComplete()
             }
-
             override fun onFailure(call: Call<CashierResponse>, t: Throwable) {
+                if (!isAdded) return // Guard
                 cashierList = emptyList()
-                Log.e("RecapFragment", "Error fetching cashiers: ${t.message}", t)
-                Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                showToast("Error jaringan: Gagal mengambil kasir")
                 onComplete()
             }
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun setupPagination() {
-        binding.btnPrevPage.setOnClickListener {
-            if (currentPage > 1) {
-                currentPage--
-                updatePageDisplay()
-                displayTransactions(getPageItems())
+    private fun fetchReceipts() {
+        showShimmer()
+        apiService.getReceipts().enqueue(object : Callback<ReceiptResponse> {
+            override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                val body = response.body()
+                if (response.isSuccessful && body?.success == true) {
+                    allReceipts = body.data ?: emptyList()
+                    filterAndDisplayTransactions(allReceipts)
+                } else {
+                    showToast("Gagal mengambil transaksi: ${body?.message}")
+                    filterAndDisplayTransactions(emptyList())
+                }
             }
-        }
-
-        binding.btnNextPage.setOnClickListener {
-            if (currentPage < totalPages) {
-                currentPage++
-                updatePageDisplay()
-                displayTransactions(getPageItems())
+            override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                showToast("Error jaringan: ${t.message}")
+                filterAndDisplayTransactions(emptyList())
             }
-        }
+        })
     }
 
-    private fun updatePageDisplay() {
-        _binding?.let { binding -> // Menggunakan 'binding' dari 'let' block
-            // Hitung total halaman, pastikan tidak 0 jika data kosong
-            totalPages = if (currentDisplayedData.isEmpty()) 1 else (currentDisplayedData.size + itemsPerPage - 1) / itemsPerPage
-
-            // Tampilkan teks halaman
-            binding.tvPageInfo.text = "Halaman $currentPage / $totalPages"
-
-            // Cek kondisi untuk tombol "Sebelumnya"
-            val canGoPrev = currentPage > 1
-            binding.btnPrevPage.isEnabled = canGoPrev
-            binding.btnPrevPage.alpha = if (canGoPrev) 1.0f else 0.5f // <--- TAMBAHKAN BARIS INI
-
-            // Cek kondisi untuk tombol "Selanjutnya"
-            val canGoNext = currentPage < totalPages
-            binding.btnNextPage.isEnabled = canGoNext
-            binding.btnNextPage.alpha = if (canGoNext) 1.0f else 0.5f // <--- TAMBAHKAN BARIS INI
-        }
-    }
-
-    private fun calculateTotalPages(dataSize: Int): Int {
-        return if (dataSize == 0) 1 else (dataSize + itemsPerPage - 1) / itemsPerPage
-    }
-
-    private fun getPageItems(): List<Receipt> {
-        val startIndex = (currentPage - 1) * itemsPerPage
-        val endIndex = minOf(startIndex + itemsPerPage, currentDisplayedData.size)
-        return if (currentDisplayedData.isEmpty()) {
-            emptyList()
-        } else if (startIndex >= currentDisplayedData.size) {
-            currentPage = maxOf(1, totalPages)
-            getPageItems()
-        } else {
-            currentDisplayedData.subList(startIndex, endIndex)
-        }
-    }
-
-    private fun deleteSelectedItems() {
-        val checkedIndices = checkBoxList.mapIndexedNotNull { index, checkBox ->
-            if (checkBox.isChecked) index else null
-        }
-
-        if (checkedIndices.isNotEmpty()) {
-            val pageItems = getPageItems()
-            val actualIndices = checkedIndices.map { (currentPage - 1) * itemsPerPage + it }
-            val idsToDelete = actualIndices.mapNotNull { currentDisplayedData.getOrNull(it)?.id }
-
-            if (idsToDelete.isNotEmpty()) {
-                val request = DeleteReceiptRequest(idsToDelete)
-                apiService.deleteReceipts(request).enqueue(object : Callback<GenericResponse> {
-                    override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                        if (response.isSuccessful && response.body()?.success == true) {
-                            Toast.makeText(requireContext(), "Berhasil menghapus transaksi", Toast.LENGTH_SHORT).show()
-                            fetchReceipts()
-                        } else {
-                            Toast.makeText(requireContext(), "Gagal menghapus transaksi: ${response.body()?.message}", Toast.LENGTH_SHORT).show()
-                            Log.e("RecapFragment", "Delete error: ${response.errorBody()?.string()}")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                        Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                        Log.e("RecapFragment", "Delete failure: ${t.message}", t)
-                    }
-                })
-            }
-
-            isCheckboxVisible = false
-            toggleDeleteButtonVisibility()
-        }
-    }
-
-    private fun isTouchInsideEditText(event: MotionEvent): Boolean {
-        val location = IntArray(2)
-        binding.etSearch.getLocationOnScreen(location)
-        val x = event.rawX
-        val y = event.rawY
-        val etSearchLeft = location[0]
-        val etSearchTop = location[1]
-        val etSearchRight = etSearchLeft + binding.etSearch.width
-        val etSearchBottom = etSearchTop + binding.etSearch.height
-        return x >= etSearchLeft && x <= etSearchRight && y >= etSearchTop && y <= etSearchBottom
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun resetSearchView() {
-        // Perbaikan: Bungkus semua manipulasi search view.
-        _binding?.let { binding ->
-            binding.etSearch.text.clear()
-            val params = binding.etSearch.layoutParams
-            params.width = resources.getDimensionPixelSize(R.dimen.search_collapsed_width)
-            binding.etSearch.layoutParams = params
-
-            isCheckboxVisible = false
-            checkBoxList.forEach { it.visibility = View.GONE }
-
-            binding.btnStartDate.visibility = View.VISIBLE
-            binding.btnEndDate.visibility = View.VISIBLE
-            binding.ivActiveCheckbox.visibility = View.VISIBLE
-            binding.ivDownload.visibility = View.VISIBLE
-            binding.ivClearSearch.visibility = View.GONE
-            binding.etSearch.visibility = View.VISIBLE
-
-            filterAndDisplayTransactions(currentDisplayedData)
-
-            binding.etSearch.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-            binding.etSearch.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-            binding.etSearch.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.icon_search, 0, 0)
-            binding.etSearch.clearFocus()
-
-            toggleDeleteButtonVisibility()
-        }
-    }
+    // --- Date Filtering ---
 
     private fun setupDateFilter() {
-        binding.btnStartDate.setOnClickListener {
-            showDatePicker(isStartDate = true) { date ->
-                startDate = date
-                binding.btnStartDate.text = dateFormat.format(date.time)
-                filterTransactions()
+        _binding?.let { binding ->
+            binding.btnStartDate.setOnClickListener {
+                showDatePicker(isStartDate = true) { date ->
+                    startDate = date
+                    binding.btnStartDate.text = dateFormat.format(date.time)
+                    filterTransactionsByDate()
+                }
             }
-        }
-
-        binding.btnEndDate.setOnClickListener {
-            showDatePicker(isStartDate = false) { date ->
-                endDate = date
-                binding.btnEndDate.text = dateFormat.format(date.time)
-                filterTransactions()
+            binding.btnEndDate.setOnClickListener {
+                showDatePicker(isStartDate = false) { date ->
+                    endDate = date
+                    binding.btnEndDate.text = dateFormat.format(date.time)
+                    filterTransactionsByDate()
+                }
             }
-        }
-
-        binding.ivClearSearch.setOnClickListener {
-            clearFilters()
+            binding.ivClearSearch.setOnClickListener { clearFilters() }
         }
     }
 
     private fun showDatePicker(isStartDate: Boolean, onDateSelected: (Calendar) -> Unit) {
+        if (!isAdded) return // Guard
         val calendar = Calendar.getInstance()
         DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
                 val selectedDate = Calendar.getInstance().apply {
                     set(year, month, dayOfMonth)
+                    stripTime()
                 }
-
-                if (isStartDate) {
-                    if (endDate != null && selectedDate.after(endDate)) {
-                        Toast.makeText(requireContext(), "Tanggal mulai tidak boleh setelah tanggal selesai!", Toast.LENGTH_SHORT).show()
-                        return@DatePickerDialog
-                    }
-                } else {
-                    if (startDate != null && selectedDate.before(startDate)) {
-                        Toast.makeText(requireContext(), "Tanggal selesai tidak boleh sebelum tanggal mulai!", Toast.LENGTH_SHORT).show()
-                        return@DatePickerDialog
-                    }
+                if (isStartDate && endDate != null && selectedDate.after(endDate)) {
+                    showToast("Tanggal mulai tidak boleh setelah tanggal selesai!")
+                    return@DatePickerDialog
                 }
-
+                if (!isStartDate && startDate != null && selectedDate.before(startDate)) {
+                    showToast("Tanggal selesai tidak boleh sebelum tanggal mulai!")
+                    return@DatePickerDialog
+                }
                 onDateSelected(selectedDate)
             },
             calendar.get(Calendar.YEAR),
@@ -339,185 +276,199 @@ class RecapFragment : Fragment() {
     }
 
     private fun Calendar.stripTime(): Calendar {
-        this.set(Calendar.HOUR_OF_DAY, 0)
-        this.set(Calendar.MINUTE, 0)
-        this.set(Calendar.SECOND, 0)
-        this.set(Calendar.MILLISECOND, 0)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
         return this
     }
 
-    private fun filterTransactions() {
-        if (startDate != null && endDate != null) {
-            val startDateStr = apiDateFormat.format(startDate!!.time)
-            val endDateStr = apiDateFormat.format(endDate!!.time)
-            val request = SearchReceiptByDateRequest(startDateStr, endDateStr)
-            apiService.searchReceiptsByDate(request).enqueue(object : Callback<ReceiptResponse> {
-                @RequiresApi(Build.VERSION_CODES.O)
-                override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
-                    if (response.isSuccessful) {
-                        val body = response.body()
-                        if (body?.success == true) {
-                            currentPage = 1
-                            filterAndDisplayTransactions(body.data ?: emptyList())
-                            binding.ivClearSearch.visibility = View.VISIBLE
-                        } else {
-                            Toast.makeText(requireContext(), "Gagal memfilter tanggal: ${body?.message}", Toast.LENGTH_SHORT).show()
-                            Log.e("RecapFragment", "Filter date error: ${response.errorBody()?.string()}")
-                        }
-                    } else {
-                        Toast.makeText(requireContext(), "Gagal memfilter tanggal", Toast.LENGTH_SHORT).show()
-                        Log.e("RecapFragment", "Filter date error: ${response.errorBody()?.string()}")
-                    }
-                }
-
-                override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
-                    Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                    Log.e("RecapFragment", "Filter date failure: ${t.message}", t)
-                }
-            })
-        } else {
-            fetchReceipts()
+    private fun filterTransactionsByDate() {
+        val safeStartDate = startDate
+        val safeEndDate = endDate
+        if (safeStartDate == null || safeEndDate == null) {
+            return
         }
+        showShimmer()
+        val request = SearchReceiptByDateRequest(
+            apiDateFormat.format(safeStartDate.time),
+            apiDateFormat.format(safeEndDate.time)
+        )
+        apiService.searchReceiptsByDate(request).enqueue(object : Callback<ReceiptResponse> {
+            override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                val body = response.body()
+                if (response.isSuccessful && body?.success == true) {
+                    allReceipts = body.data ?: emptyList()
+                    filterAndDisplayTransactions(allReceipts)
+                    _binding?.ivClearSearch?.visibility = View.VISIBLE
+                } else {
+                    showToast("Gagal memfilter tanggal: ${body?.message}")
+                    filterAndDisplayTransactions(emptyList())
+                }
+            }
+            override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                showToast("Error jaringan: ${t.message}")
+                filterAndDisplayTransactions(emptyList())
+            }
+        })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    private fun clearFilters() {
+        startDate = null
+        endDate = null
+        _binding?.let {
+            it.btnStartDate.text = "dd/mm/yyyy"
+            it.btnEndDate.text = "dd/mm/yyyy"
+            it.ivClearSearch.visibility = View.GONE
+            it.etSearch.text.clear()
+        }
+        fetchReceipts()
+    }
+
+    // --- Search ---
+
     private fun setupSearchListener() {
-        binding.etSearch.addTextChangedListener { text ->
+        _binding?.etSearch?.addTextChangedListener { text ->
             val query = text.toString().trim()
             if (query.isNotEmpty()) {
-                Log.d("RecapFragment", "Search triggered with query: '$query'")
-
-                binding.btnStartDate.visibility = View.GONE
-                binding.btnEndDate.visibility = View.GONE
-                binding.ivActiveCheckbox.visibility = View.GONE
-                binding.ivDownload.visibility = View.GONE
-                binding.ivClearSearch.visibility = View.GONE
-
-                isCheckboxVisible = false
-                checkBoxList.forEach { it.visibility = View.GONE }
-
-                val request = SearchReceiptRequest(query)
-                Log.d("RecapFragment", "SearchReceiptRequest created: $request")
-
-                apiService.searchReceipts(request).enqueue(object : Callback<ReceiptResponse> {
-                    override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
-                        Log.d("RecapFragment", "Search Response - Code: ${response.code()}, URL: ${call.request().url}")
-
-                        when (response.code()) {
-                            200 -> {
-                                val body = response.body()
-                                if (body?.success == true) {
-                                    Log.d("RecapFragment", "Search successful, data count: ${body.data.size}")
-                                    currentPage = 1
-                                    filterAndDisplayTransactions(body.data)
-                                } else {
-                                    Log.w("RecapFragment", "Search response not successful: ${body?.message}")
-                                    val errorMessage = body?.message ?: "Response tidak berhasil"
-                                    Toast.makeText(requireContext(), "Pencarian gagal: $errorMessage", Toast.LENGTH_SHORT).show()
-                                    filterAndDisplayTransactions(emptyList())
-                                }
-                            }
-                            404 -> {
-                                Log.e("RecapFragment", "404 - Endpoint not found: ${call.request().url}")
-                                Toast.makeText(requireContext(),
-                                    "Endpoint tidak ditemukan. URL: ${call.request().url}\nPastikan server Laravel memiliki route untuk search-receipts",
-                                    Toast.LENGTH_LONG).show()
-                                filterAndDisplayTransactions(emptyList())
-                            }
-                            401 -> {
-                                Log.e("RecapFragment", "401 - Unauthorized")
-                                Toast.makeText(requireContext(), "Tidak memiliki akses. Token mungkin expired", Toast.LENGTH_SHORT).show()
-                                filterAndDisplayTransactions(emptyList())
-                            }
-                            500 -> {
-                                val errorBody = response.errorBody()?.string()
-                                Log.e("RecapFragment", "500 - Server Error: $errorBody")
-                                Toast.makeText(requireContext(), "Server error. Cek log Laravel", Toast.LENGTH_SHORT).show()
-                                filterAndDisplayTransactions(emptyList())
-                            }
-                            else -> {
-                                val errorBody = response.errorBody()?.string()
-                                Log.e("RecapFragment", "HTTP ${response.code()}: $errorBody")
-                                Toast.makeText(requireContext(), "HTTP Error ${response.code()}: ${response.message()}", Toast.LENGTH_SHORT).show()
-                                filterAndDisplayTransactions(emptyList())
-                            }
-                        }
-                    }
-
-                    override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
-                        Log.e("RecapFragment", "Search network failure", t)
-
-                        val errorMessage = when {
-                            t is java.net.UnknownHostException -> "Tidak dapat resolve hostname. Cek koneksi internet atau alamat server"
-                            t is java.net.ConnectException -> "Tidak dapat connect ke server. Pastikan server berjalan di http://10.0.2.2:8000"
-                            t is java.net.SocketTimeoutException -> "Timeout connecting to server"
-                            t.message?.contains("CLEARTEXT communication") == true -> "HTTP tidak diizinkan. Gunakan HTTPS atau tambahkan android:usesCleartextTraffic=\"true\""
-                            else -> "Network error: ${t.message}"
-                        }
-
-                        Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
-                        filterAndDisplayTransactions(emptyList())
-                    }
-                })
-            } else {
+                searchTransactions(query)
+            } else if(!_binding?.etSearch!!.isFocused) {
+                // Jika query kosong dan tidak sedang difokus, reset
                 resetSearchView()
             }
         }
     }
 
-    private fun fetchReceipts() {
-        apiService.getReceipts().enqueue(object : Callback<ReceiptResponse> {
-            @RequiresApi(Build.VERSION_CODES.O)
+    private fun searchTransactions(query: String) {
+        showShimmer()
+        apiService.searchReceipts(SearchReceiptRequest(query)).enqueue(object : Callback<ReceiptResponse> {
             override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body?.success == true) {
-                        currentPage = 1
-                        filterAndDisplayTransactions(body.data ?: emptyList())
-                    } else {
-                        Toast.makeText(requireContext(), "Gagal mengambil transaksi: ${body?.message}", Toast.LENGTH_SHORT).show()
-                        Log.e("RecapFragment", "Fetch error: ${response.errorBody()?.string()}")
-                    }
+                if (!isAdded || _binding == null) return
+                hideShimmer()
+                val body = response.body()
+                if (response.isSuccessful && body?.success == true) {
+                    filterAndDisplayTransactions(body.data ?: emptyList())
                 } else {
-                    Toast.makeText(requireContext(), "Gagal mengambil transaksi", Toast.LENGTH_SHORT).show()
-                    Log.e("RecapFragment", "Fetch error: ${response.errorBody()?.string()}")
+                    showToast("Pencarian gagal: ${body?.message}")
+                    filterAndDisplayTransactions(emptyList())
                 }
             }
-
             override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
-                Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                Log.e("RecapFragment", "Fetch failure: ${t.message}", t)
+                if (!isAdded || _binding == null) return
+                hideShimmer()
+                showToast("Error jaringan saat mencari: ${t.message}")
+                filterAndDisplayTransactions(emptyList())
             }
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun filterAndDisplayTransactions(receiptsToDisplay: List<Receipt>) {
-        // Perbaikan: Bungkus logika yang berinteraksi dengan view.
+    private fun resetSearchView() {
         _binding?.let { binding ->
-            currentDisplayedData = receiptsToDisplay
-            totalPages = calculateTotalPages(receiptsToDisplay.size)
-            currentPage = minOf(currentPage, totalPages)
+            binding.etSearch.text.clear()
+            val params = binding.etSearch.layoutParams
+            params.width = resources.getDimensionPixelSize(R.dimen.search_collapsed_width)
+            binding.etSearch.layoutParams = params
 
-            // Panggilan ini sekarang aman karena di dalam blok 'let'.
-            updatePageDisplay()
-            displayTransactions(getPageItems())
+            binding.btnStartDate.visibility = View.VISIBLE
+            binding.btnEndDate.visibility = View.VISIBLE
+            binding.ivActiveCheckbox.visibility = View.VISIBLE
+            binding.ivDownload.visibility = View.VISIBLE
+            binding.etSearch.visibility = View.VISIBLE
+            binding.etSearch.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            binding.etSearch.setHintTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            binding.etSearch.setCompoundDrawablesWithIntrinsicBounds(R.drawable.icon_search, 0, 0, 0)
+            binding.etSearch.clearFocus()
 
-            if (receiptsToDisplay.isEmpty()) {
-                binding.tvNoData.visibility = View.VISIBLE
-                binding.tableView.visibility = View.GONE
-                binding.paginationLayout.visibility = View.GONE
+            // Jika filter tanggal aktif, jangan fetch semua, tapi tampilkan hasil filter terakhir
+            if (startDate != null && endDate != null) {
+                filterAndDisplayTransactions(currentDisplayedData) // tampilkan hasil filter terakhir
             } else {
-                binding.tvNoData.visibility = View.GONE
-                binding.tableView.visibility = View.VISIBLE
-                binding.paginationLayout.visibility = View.VISIBLE
+                filterAndDisplayTransactions(allReceipts) // tampilkan semua data
+            }
+            toggleDeleteButtonVisibility()
+        }
+    }
+
+    private fun isTouchInsideEditText(event: MotionEvent): Boolean {
+        val et = _binding?.etSearch ?: return false
+        val location = IntArray(2)
+        et.getLocationOnScreen(location)
+        val x = event.rawX
+        val y = event.rawY
+        val etLeft = location[0]
+        val etTop = location[1]
+        val etRight = etLeft + et.width
+        val etBottom = etTop + et.height
+        return x >= etLeft && x <= etRight && y >= etTop && y <= etBottom
+    }
+
+    // --- Pagination ---
+
+    private fun setupPagination() {
+        _binding?.let { binding ->
+            binding.btnPrevPage.setOnClickListener {
+                if (currentPage > 1) {
+                    currentPage--
+                    updatePageDisplay()
+                    displayTransactions(getPageItems())
+                }
+            }
+            binding.btnNextPage.setOnClickListener {
+                if (currentPage < totalPages) {
+                    currentPage++
+                    updatePageDisplay()
+                    displayTransactions(getPageItems())
+                }
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    private fun updatePageDisplay() {
+        _binding?.let {
+            totalPages = if (currentDisplayedData.isEmpty()) 1 else (currentDisplayedData.size + itemsPerPage - 1) / itemsPerPage
+            it.tvPageInfo.text = "Halaman $currentPage / $totalPages"
+            it.btnPrevPage.isEnabled = currentPage > 1
+            it.btnPrevPage.alpha = if (it.btnPrevPage.isEnabled) 1.0f else 0.5f
+            it.btnNextPage.isEnabled = currentPage < totalPages
+            it.btnNextPage.alpha = if (it.btnNextPage.isEnabled) 1.0f else 0.5f
+        }
+    }
+
+    private fun getPageItems(): List<Receipt> {
+        val startIndex = (currentPage - 1) * itemsPerPage
+        if (startIndex >= currentDisplayedData.size) return emptyList()
+        val endIndex = minOf(startIndex + itemsPerPage, currentDisplayedData.size)
+        return currentDisplayedData.subList(startIndex, endIndex)
+    }
+
+    // --- Display Logic ---
+
+    private fun filterAndDisplayTransactions(receiptsToDisplay: List<Receipt>) {
+        currentDisplayedData = receiptsToDisplay
+        totalPages = calculateTotalPages(receiptsToDisplay.size)
+        currentPage = 1 // Selalu reset ke halaman pertama setelah filter/pencarian
+
+        updatePageDisplay()
+        displayTransactions(getPageItems())
+
+        _binding?.let {
+            val isEmpty = receiptsToDisplay.isEmpty()
+            it.tvNoData.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            it.tableView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+            it.paginationLayout.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun calculateTotalPages(dataSize: Int): Int {
+        return if (dataSize == 0) 1 else (dataSize + itemsPerPage - 1) / itemsPerPage
+    }
+
     private fun displayTransactions(receiptsToDisplay: List<Receipt>) {
-        // Perbaikan: Bungkus semua manipulasi tabel dan view.
+        if (!isAdded) return // Guard
         _binding?.let { binding ->
             binding.tableView.removeAllViews()
             checkBoxList.clear()
@@ -525,13 +476,7 @@ class RecapFragment : Fragment() {
             val headerRow = TableRow(context).apply {
                 setPadding(16, 16, 16, 16)
                 setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.secondary))
-
-                if (isCheckboxVisible) {
-                    addView(TextView(context).apply {
-                        layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
-                    })
-                }
-
+                if (isCheckboxVisible) addView(TextView(context)) // Placeholder for checkbox
                 addView(createTextView("Nama Karyawan", isHeader = true))
                 addView(createTextView("Tanggal", isHeader = true))
                 addView(createTextView("Tipe Pembayaran", isHeader = true))
@@ -540,172 +485,170 @@ class RecapFragment : Fragment() {
             }
             binding.tableView.addView(headerRow)
 
-            for ((index, receipt) in receiptsToDisplay.withIndex()) {
-                val cashierName = getCashierName(receipt.cashier_id)
-                Log.d("RecapFragment", "Displaying receipt ID ${receipt.id}, Cashier ID ${receipt.cashier_id}, Cashier Name: $cashierName")
-
+            receiptsToDisplay.forEachIndexed { index, receipt ->
                 val row = TableRow(context).apply {
                     setPadding(16, 16, 16, 16)
-                    setBackgroundColor(
-                        if (index % 2 == 0) ContextCompat.getColor(requireContext(), R.color.white)
-                        else ContextCompat.getColor(requireContext(), R.color.secondary)
-                    )
-
-                    if (isCheckboxVisible) {
-                        val checkBox = CheckBox(context).apply {
-                            visibility = View.VISIBLE
-                            setOnCheckedChangeListener { _, _ -> toggleDeleteButtonVisibility() }
+                    val bgColor = if (index % 2 == 0) R.color.white else R.color.secondary
+                    setBackgroundColor(ContextCompat.getColor(requireContext(), bgColor))
+                    setOnClickListener {
+                        val intent = Intent(requireContext(), RecapDetailActivity::class.java).apply {
+                            putExtra("receiptId", receipt.id)
                         }
-                        checkBoxList.add(checkBox)
-                        addView(checkBox)
+                        startActivity(intent)
                     }
-
-                    val employeeNameView = createTextView(cashierName).apply {
-                        setOnClickListener {
-                            val intent = Intent(requireContext(), RecapDetailActivity::class.java).apply {
-                                putExtra("receiptId", receipt.id)
-                            }
-                            startActivity(intent)
-                        }
-                    }
-
-                    addView(employeeNameView)
-                    addView(createTextView(formatWibDate(receipt.created_at)))
-                    addView(createTextView(receipt.payment_type.replaceFirstChar { it.uppercase() }))
-                    addView(createTextView("Rp${formatPrice(receipt.total)}"))
-                    addView(createTextView("Rp${formatPrice(receipt.returns)}"))
                 }
+
+                if (isCheckboxVisible) {
+                    val checkBox = CheckBox(context).apply { setOnCheckedChangeListener { _, _ -> toggleDeleteButtonVisibility() } }
+                    checkBoxList.add(checkBox)
+                    row.addView(checkBox)
+                }
+
+                row.addView(createTextView(getCashierName(receipt.cashier_id)))
+                row.addView(createTextView(formatWibDateTime(receipt.created_at)))
+                row.addView(createTextView(receipt.payment_type.replaceFirstChar { it.uppercase() }))
+                row.addView(createTextView("Rp${formatPrice(receipt.total)}"))
+                row.addView(createTextView("Rp${formatPrice(receipt.returns)}"))
                 binding.tableView.addView(row)
             }
-
-            // Panggilan ini juga sekarang aman.
             toggleDeleteButtonVisibility()
         }
     }
 
-    private fun getCashierName(cashierId: Int): String {
-        val cashier = cashierList.find { it.id == cashierId }
-        return cashier?.name ?: run {
-            Log.w("RecapFragment", "Cashier ID $cashierId not found in cashierList")
-            "Kasir Tidak Diketahui"
+    private fun createTextView(text: String, isHeader: Boolean = false): TextView {
+        return TextView(requireContext()).apply {
+            this.text = text
+            textSize = if (isHeader) 16f else 14f
+            setPadding(16, 8, 16, 8)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+            setTypeface(null, if (isHeader) Typeface.BOLD else Typeface.NORMAL)
+            layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
         }
+    }
+
+    private fun getCashierName(cashierId: Int): String {
+        return cashierList.find { it.id == cashierId }?.name ?: "Kasir Tidak Dikenal"
     }
 
     private fun toggleDeleteButtonVisibility() {
-        // Perbaikan: Bungkus semua perubahan visibilitas view.
         _binding?.let { binding ->
-            val isAnyChecked = checkBoxList.any { it.isChecked }
+            val anyChecked = checkBoxList.any { it.isChecked }
+            binding.ivDelete.visibility = if (anyChecked) View.VISIBLE else View.GONE
 
-            if (isAnyChecked) {
-                binding.ivDelete.visibility = View.VISIBLE
-                binding.ivClearSearch.visibility = View.GONE
-                binding.ivDownload.visibility = View.GONE
-                binding.btnStartDate.visibility = View.GONE
-                binding.btnEndDate.visibility = View.GONE
+            if (anyChecked) {
+                hideHeaderControls()
                 binding.etSearch.visibility = View.GONE
                 binding.paginationLayout.visibility = View.GONE
-            } else {
-                binding.ivDelete.visibility = View.GONE
-                if (binding.etSearch.text.toString().isEmpty()) {
-                    binding.ivDownload.visibility = View.VISIBLE
-                    binding.btnStartDate.visibility = View.VISIBLE
-                    binding.btnEndDate.visibility = View.VISIBLE
-                    binding.etSearch.visibility = View.VISIBLE
-                    if (currentDisplayedData.isNotEmpty()) {
-                        binding.paginationLayout.visibility = View.VISIBLE
-                    }
+            } else if (_binding?.etSearch?.text.toString().trim().isEmpty()){
+                binding.ivDownload.visibility = View.VISIBLE
+                binding.btnStartDate.visibility = View.VISIBLE
+                binding.btnEndDate.visibility = View.VISIBLE
+                binding.etSearch.visibility = View.VISIBLE
+                if (currentDisplayedData.isNotEmpty()) {
+                    binding.paginationLayout.visibility = View.VISIBLE
                 }
             }
         }
     }
 
-    private fun createTextView(text: String, isHeader: Boolean = false): TextView {
-        return TextView(context).apply {
-            this.text = text
-            textSize = if (isHeader) 18f else 16f
-            setPadding(16, 8, 16, 8)
-            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-            setTypeface(null, if (isHeader) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+    // --- Deletion ---
 
-            layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f).apply {
-                width = 0
-                weight = 1f
-            }
+    private fun deleteSelectedItems() {
+        val checkedIndices = checkBoxList.mapIndexedNotNull { index, checkBox -> if (checkBox.isChecked) index else null }
+        if (checkedIndices.isEmpty()) {
+            isCheckboxVisible = false
+            toggleDeleteButtonVisibility()
+            displayTransactions(getPageItems())
+            return
         }
-    }
 
-    private fun clearFilters() {
-        _binding?.let { binding ->
-            startDate = null
-            endDate = null
-            binding.btnStartDate.text = "dd/mm/yyyy"
-            binding.btnEndDate.text = "dd/mm/yyyy"
-            currentPage = 1
-            fetchReceipts()
-            binding.ivClearSearch.visibility = View.GONE
-            binding.etSearch.text.clear()
+        showShimmer()
+        val pagedItems = getPageItems()
+        val idsToDelete = checkedIndices.mapNotNull { pagedItems.getOrNull(it)?.id }
+        if (idsToDelete.isEmpty()) {
+            hideShimmer()
+            return
         }
-    }
 
-    private fun formatPrice(price: Int): String {
-        val numberFormat = java.text.NumberFormat.getInstance(Locale("id", "ID"))
-        return numberFormat.format(price)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun formatWibDate(utcDateStr: String): String {
-        return try {
-            val utcDateTime = LocalDateTime.parse(utcDateStr, DateTimeFormatter.ISO_DATE_TIME)
-            val wibZone = ZoneId.of("Asia/Jakarta")
-            val wibDateTime = utcDateTime.atZone(wibZone).toLocalDateTime()
-            val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-            wibDateTime.format(formatter)
-        } catch (e: Exception) {
-            Log.e("RecapFragment", "Error parsing date: $utcDateStr, ${e.message}")
-            "N/A"
-        }
-    }
-
-    private fun exportReceipts() {
-        apiService.exportReceipts().enqueue(object : Callback<ResponseBody> {
-            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                if (response.isSuccessful) {
-                    response.body()?.let { body ->
-                        try {
-                            val fileName = "receipts_export_${System.currentTimeMillis()}.pdf"
-                            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                            val file = File(downloadsDir, fileName)
-
-                            FileOutputStream(file).use { outputStream ->
-                                outputStream.write(body.bytes())
-                                outputStream.flush()
-                            }
-
-                            val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-                            intent.data = android.net.Uri.fromFile(file)
-                            requireContext().sendBroadcast(intent)
-
-                            Toast.makeText(requireContext(), "PDF berhasil disimpan di Download/$fileName", Toast.LENGTH_LONG).show()
-                        } catch (e: IOException) {
-                            Log.e("RecapFragment", "Error saving PDF: ${e.message}", e)
-                            Toast.makeText(requireContext(), "Gagal menyimpan PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+        apiService.deleteReceipts(DeleteReceiptRequest(idsToDelete)).enqueue(object : Callback<GenericResponse> {
+            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    showToast("Berhasil menghapus transaksi")
+                    fetchReceipts() // Refresh data dari server
                 } else {
-                    Toast.makeText(requireContext(), "Gagal mengunduh PDF: ${response.message()}", Toast.LENGTH_SHORT).show()
-                    Log.e("RecapFragment", "Export error: ${response.errorBody()?.string()}")
+                    showToast("Gagal menghapus: ${response.body()?.message}")
+                    displayTransactions(getPageItems()) // Tampilkan kembali data lama jika gagal
                 }
             }
 
-            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                Toast.makeText(requireContext(), "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                Log.e("RecapFragment", "Export failure: ${t.message}", t)
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                showToast("Error jaringan: ${t.message}")
+                displayTransactions(getPageItems()) // Tampilkan kembali data lama jika gagal
             }
         })
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    // --- Export ---
+
+    private fun exportReceipts() {
+        showShimmer()
+        apiService.exportReceipts().enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                if (response.isSuccessful) {
+                    response.body()?.let { savePdf(it) } ?: showToast("Gagal mengunduh: Response kosong")
+                } else {
+                    showToast("Gagal mengunduh PDF: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                showToast("Error jaringan: ${t.message}")
+            }
+        })
+    }
+
+    private fun savePdf(body: ResponseBody) {
+        if (!isAdded) return // Guard
+        try {
+            val fileName = "receipts_export_${System.currentTimeMillis()}.pdf"
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val file = File(downloadsDir, fileName)
+            FileOutputStream(file).use { it.write(body.bytes()) }
+            showToast("PDF disimpan di Download/$fileName", Toast.LENGTH_LONG)
+        } catch (e: IOException) {
+            showToast("Gagal menyimpan PDF: ${e.message}")
+        }
+    }
+
+    // --- Formatting ---
+
+    private fun formatWibDateTime(utcDateStr: String): String {
+        return try {
+            val utcDateTime = LocalDateTime.parse(utcDateStr, DateTimeFormatter.ISO_DATE_TIME)
+            val wibDateTime = utcDateTime.atZone(ZoneId.of("UTC")).withZoneSameInstant(ZoneId.of("Asia/Jakarta")).toLocalDateTime()
+            wibDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+        } catch (e: Exception) {
+            "N/A"
+        }
+    }
+
+    private fun formatPrice(price: Int): String {
+        return java.text.NumberFormat.getInstance(Locale("id", "ID")).format(price)
+    }
+
+    // --- Utility ---
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        if (isAdded) { // Cek sebelum menampilkan Toast
+            Toast.makeText(context, message, duration).show()
+        }
     }
 }

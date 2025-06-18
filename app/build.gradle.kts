@@ -51,6 +51,9 @@ dependencies {
     //tableview
     implementation(libs.tableview)
 
+    //shimmer
+    implementation(libs.shimmer)
+
     //retrofit
     implementation(libs.retrofit)
     implementation(libs.converter.gson)

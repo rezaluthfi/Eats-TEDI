@@ -7,67 +7,66 @@
     android:layout_height="match_parent"
     tools:context=".activity.ManageStockMenuActivity">
 
-    <!-- Outer ScrollView (Wrapped in NestedScrollView) -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:fillViewport="true"
-        app:layout_constraintStart_toStartOf="parent"
+        android:paddingBottom="16dp"
         app:layout_constraintEnd_toEndOf="parent"
-        android:paddingBottom="16dp">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/paginationLayout">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
             <!-- Arrow Back Image -->
             <ImageView
                 android:id="@+id/iv_arrow_back"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_margin="24dp"
                 android:layout_gravity="start"
-                android:src="@drawable/icon_arrow_back"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                android:layout_margin="24dp"
+                android:src="@drawable/icon_arrow_back" />
 
             <!-- Form Section -->
             <LinearLayout
                 android:layout_width="670dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingVertical="24dp"
-                android:paddingHorizontal="48dp"
                 android:layout_marginTop="48dp"
-                android:background="@drawable/bg_form_login">
+                android:background="@drawable/bg_form_login"
+                android:orientation="vertical"
+                android:paddingHorizontal="48dp"
+                android:paddingVertical="24dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
+                    android:fontFamily="@font/noto_sans_gujarati_bold"
                     android:text="Atur Stok"
-                    android:textSize="24sp"
                     android:textColor="@color/black"
-                    android:fontFamily="@font/noto_sans_gujarati_bold" />
+                    android:textSize="24sp" />
 
                 <!-- Stock Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:orientation="horizontal"
-                    android:gravity="center" >
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
                     <!-- Image Section -->
                     <LinearLayout
                         android:layout_width="155dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp"
+                        android:background="@drawable/bg_outline"
                         android:gravity="center"
-                        android:background="@drawable/bg_outline">
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
                         <androidx.cardview.widget.CardView
                             android:layout_width="80dp"
@@ -80,8 +79,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:scaleType="centerCrop"
-                                android:src="@drawable/img_menu_dummy" />
-
+                                tools:src="@drawable/img_menu_dummy" />
                         </androidx.cardview.widget.CardView>
 
                         <TextView
@@ -89,124 +87,122 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Ayam Geprek"
+                            android:fontFamily="@font/noto_sans_gujarati_bold"
                             android:minLines="2"
-                            android:textSize="16sp"
                             android:textColor="@color/black"
-                            android:fontFamily="@font/noto_sans_gujarati_bold" />
+                            android:textSize="16sp"
+                            tools:text="Ayam Geprek" />
                     </LinearLayout>
 
                     <!-- Quantity Section -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="24dp"
                         android:layout_weight="1"
-                        android:layout_marginLeft="24dp"
+                        android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="16dp"
-                        android:gravity="center" >
+                        android:padding="16dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center" >
+                            android:gravity="center"
+                            android:orientation="horizontal">
 
                             <Button
                                 android:id="@+id/btn_minus"
+                                style="?android:attr/buttonStyle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:background="@drawable/bg_outline"
                                 android:text="-"
-                                android:textSize="24sp"
                                 android:textColor="@color/black"
-                                app:backgroundTint="@null"
-                                android:background="@drawable/bg_outline" />
+                                android:textSize="24sp"
+                                app:backgroundTint="@null" />
 
                             <EditText
                                 android:id="@+id/et_quantity"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="32dp"
+                                android:background="@color/white"
                                 android:inputType="number"
-                                android:text="0"
-                                android:textSize="24sp"
-                                android:textColor="@color/black"
                                 android:paddingHorizontal="32dp"
                                 android:paddingVertical="16dp"
-                                android:layout_marginHorizontal="32dp"
-                                android:background="@color/white" />
+                                android:text="0"
+                                android:textColor="@color/black"
+                                android:textSize="24sp" />
 
                             <Button
                                 android:id="@+id/btn_plus"
+                                style="?android:attr/buttonStyle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:background="@drawable/bg_outline"
                                 android:text="+"
-                                android:textSize="24sp"
                                 android:textColor="@color/black"
-                                app:backgroundTint="@null"
-                                android:background="@drawable/bg_outline" />
+                                android:textSize="24sp"
+                                app:backgroundTint="@null" />
                         </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginVertical="16dp"
-                            android:orientation="horizontal"
-                            android:gravity="center" >
+                            android:gravity="center"
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="match_parent"
+                                android:fontFamily="@font/noto_sans_gujarati_bold"
                                 android:text="Sisa:"
-                                android:textSize="16sp"
                                 android:textColor="@color/black"
-                                android:fontFamily="@font/noto_sans_gujarati_bold" />
+                                android:textSize="16sp" />
 
                             <TextView
                                 android:id="@+id/tv_stock"
                                 android:layout_width="wrap_content"
                                 android:layout_height="match_parent"
                                 android:layout_marginStart="16dp"
-                                android:text="100"
-                                android:textSize="16sp"
+                                android:fontFamily="@font/noto_sans_gujarati_bold"
                                 android:textColor="@color/black"
-                                android:fontFamily="@font/noto_sans_gujarati_bold" />
+                                android:textSize="16sp"
+                                tools:text="100" />
                         </LinearLayout>
-
                     </LinearLayout>
-
                 </LinearLayout>
 
                 <!-- Button Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:layout_marginTop="32dp"
                     android:gravity="center"
-                    android:layout_marginTop="32dp" >
+                    android:orientation="horizontal">
 
                     <Button
                         android:id="@+id/btn_delete_input_stock"
                         android:layout_width="155dp"
                         android:layout_height="wrap_content"
-                        android:text="Hapus"
-                        android:textSize="16sp"
-                        android:textColor="@color/white"
                         android:background="@drawable/bg_btn_secondary"
+                        android:text="Hapus"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
                         app:backgroundTint="@null" />
 
                     <Button
                         android:id="@+id/btn_save_stock"
                         android:layout_width="155dp"
                         android:layout_height="wrap_content"
-                        android:text="Simpan"
-                        android:textSize="16sp"
-                        android:textColor="@color/white"
                         android:layout_marginStart="24dp"
                         android:background="@drawable/bg_btn_secondary"
+                        android:text="Simpan"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
                         app:backgroundTint="@null" />
-
                 </LinearLayout>
-
             </LinearLayout>
 
             <!-- Stock History Section -->
@@ -214,38 +210,266 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                android:orientation="vertical"
+                android:background="@drawable/bg_outline"
                 android:gravity="center"
-                android:background="@drawable/bg_outline">
+                android:orientation="vertical"
+                android:paddingBottom="24dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Riwayat Stok"
-                    android:textSize="24sp"
-                    android:textColor="@color/black"
+                    android:layout_marginTop="16dp"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:layout_marginTop="16dp" />
+                    android:text="Riwayat Stok"
+                    android:textColor="@color/black"
+                    android:textSize="24sp" />
 
-                <!-- Nested Scroll for TableView -->
-                <ScrollView
-                    android:id="@+id/scroll_view"
+                <!-- Shimmer Placeholder for Table -->
+                <com.facebook.shimmer.ShimmerFrameLayout
+                    android:id="@+id/shimmer_table"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:scrollbars="none">
+                    android:paddingHorizontal="24dp"
+                    android:visibility="gone"
+                    app:shimmer_duration="1000"
+                    app:shimmer_auto_start="true">
 
-                    <TableLayout
-                        android:id="@+id/tableView"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="24dp" />
+                        android:orientation="vertical">
 
-                </ScrollView>
+                        <!-- Header Placeholder -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="#E0E0E0"
+                            android:padding="16dp">
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                        </LinearLayout>
+
+                        <!-- Row Placeholder (Repeat 3 times) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="16dp">
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="16dp">
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="16dp">
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="20dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="16dp"
+                                android:background="#E0E0E0" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.facebook.shimmer.ShimmerFrameLayout>
+
+                <!-- Content Container -->
+                <LinearLayout
+                    android:id="@+id/content_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <ScrollView
+                        android:id="@+id/scroll_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:scrollbars="none">
+
+                        <TableLayout
+                            android:id="@+id/tableView"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingHorizontal="24dp" />
+                    </ScrollView>
+                </LinearLayout>
             </LinearLayout>
-
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Pagination Layout -->
+    <LinearLayout
+        android:id="@+id/paginationLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingVertical="8dp"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <Button
+            android:id="@+id/btnPrevPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_btn_secondary"
+            android:text="Sebelumnya"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            app:backgroundTint="@null" />
+
+        <TextView
+            android:id="@+id/tvPageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            tools:text="Halaman 1/10" />
+
+        <Button
+            android:id="@+id/btnNextPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_btn_secondary"
+            android:text="Selanjutnya"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            app:backgroundTint="@null" />
+    </LinearLayout>
+
+    <!-- Shimmer Placeholder for Pagination -->
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmer_pagination"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingVertical="8dp"
+        android:paddingHorizontal="16dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:shimmer_duration="1000"
+        app:shimmer_auto_start="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="100dp"
+                android:layout_height="40dp"
+                android:background="#E0E0E0" />
+
+            <View
+                android:layout_width="80dp"
+                android:layout_height="20dp"
+                android:layout_marginHorizontal="24dp"
+                android:background="#E0E0E0" />
+
+            <View
+                android:layout_width="100dp"
+                android:layout_height="40dp"
+                android:background="#E0E0E0" />
+        </LinearLayout>
+    </com.facebook.shimmer.ShimmerFrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

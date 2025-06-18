@@ -15,13 +15,86 @@
         android:orientation="vertical"
         android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintRight_toRightOf="parent" >
+        app:layout_constraintRight_toRightOf="parent">
 
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="-24dp"
             android:src="@drawable/banner_eats_tedi" />
+
+        <!-- Employee Schedule Section with Shimmer -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/shimmer_schedule"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:shimmer_duration="1000"
+            app:shimmer_auto_start="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_container"
+                android:padding="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="150dp"
+                        android:layout_height="20dp"
+                        android:background="#E0E0E0" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end">
+
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="30dp"
+                            android:layout_marginStart="24dp"
+                            android:background="#E0E0E0" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="325dp"
+                    android:layout_marginTop="16dp">
+
+                    <!-- Placeholder rows -->
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp">
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="20dp"
+                            android:layout_weight="1"
+                            android:background="#E0E0E0" />
+                    </TableRow>
+                    <!-- Add more placeholder rows as needed -->
+                </TableLayout>
+            </LinearLayout>
+        </com.facebook.shimmer.ShimmerFrameLayout>
 
         <LinearLayout
             android:id="@+id/ll_employee_schedule"
@@ -57,23 +130,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="24dp"
-                        android:background="@drawable/bg_btn_primary" >
-
-<!--                        <Spinner-->
-<!--                            android:id="@+id/sp_shift"-->
-<!--                            android:layout_width="wrap_content"-->
-<!--                            android:layout_height="wrap_content"-->
-<!--                            android:textColor="@android:color/white"-->
-<!--                            android:padding="10dp" />-->
-
-                    </LinearLayout>
+                        android:background="@drawable/bg_btn_primary" />
                 </LinearLayout>
             </LinearLayout>
 
             <androidx.core.widget.NestedScrollView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scrollbars="none" >
+                android:scrollbars="none">
 
                 <TableLayout
                     android:id="@+id/tableView"
@@ -81,11 +145,69 @@
                     android:layout_height="325dp"
                     android:layout_marginTop="16dp" />
             </androidx.core.widget.NestedScrollView>
-
         </LinearLayout>
 
+        <!-- Employee Section with Shimmer -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/shimmer_employee"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:visibility="gone"
+            app:shimmer_duration="1000"
+            app:shimmer_auto_start="true">
 
-        <!-- Employee -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_container"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="100dp"
+                        android:layout_height="20dp"
+                        android:background="#E0E0E0" />
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="#E0E0E0" />
+                </RelativeLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="#E0E0E0"
+                            android:backgroundTint="#E0E0E0" />
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="#E0E0E0" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </com.facebook.shimmer.ShimmerFrameLayout>
+
         <LinearLayout
             android:id="@+id/ll_employee"
             android:layout_width="match_parent"
@@ -93,7 +215,7 @@
             android:background="@drawable/bg_container"
             android:orientation="vertical"
             android:layout_marginTop="56dp"
-            android:padding="24dp" >
+            android:padding="24dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -121,7 +243,6 @@
                     android:textSize="20sp"
                     android:clickable="true"
                     android:focusable="true"/>
-
             </RelativeLayout>
 
             <HorizontalScrollView
@@ -135,13 +256,71 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
-
                     <!-- Profil employee akan ditambahkan di sini secara dinamis -->
                 </LinearLayout>
             </HorizontalScrollView>
         </LinearLayout>
 
-        <!-- Supplier -->
+        <!-- Supplier Section with Shimmer -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/shimmer_supplier"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:visibility="gone"
+            app:shimmer_duration="1000"
+            app:shimmer_auto_start="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_container"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="100dp"
+                        android:layout_height="20dp"
+                        android:background="#E0E0E0" />
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="#E0E0E0" />
+                </RelativeLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="#E0E0E0" />
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="#E0E0E0" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </com.facebook.shimmer.ShimmerFrameLayout>
+
         <LinearLayout
             android:id="@+id/ll_supplier"
             android:layout_width="match_parent"
@@ -149,7 +328,7 @@
             android:background="@drawable/bg_container"
             android:orientation="vertical"
             android:layout_marginTop="56dp"
-            android:padding="24dp" >
+            android:padding="24dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -175,7 +354,6 @@
                     android:text="Lihat semua>"
                     android:textColor="@color/black"
                     android:textSize="20sp" />
-
             </RelativeLayout>
 
             <HorizontalScrollView
@@ -189,13 +367,52 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
-
                     <!-- Profil supplier akan ditambahkan di sini secara dinamis -->
                 </LinearLayout>
             </HorizontalScrollView>
         </LinearLayout>
 
+        <!-- Payments Section with Shimmer -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/shimmer_payments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:visibility="gone"
+            app:shimmer_duration="1000"
+            app:shimmer_auto_start="true">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="100dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="start"
+                    android:background="#E0E0E0" />
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_outline">
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="16dp"
+                        android:background="#E0E0E0" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="350dp"
+                        android:layout_marginTop="16dp"
+                        android:background="#E0E0E0" />
+                </RelativeLayout>
+            </LinearLayout>
+        </com.facebook.shimmer.ShimmerFrameLayout>
 
         <TextView
             android:id="@+id/tv_payments"
@@ -215,7 +432,7 @@
             android:padding="16dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_outline"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tv_keuangan"
@@ -232,8 +449,114 @@
                 android:layout_height="350dp"
                 android:layout_marginTop="16dp"
                 android:layout_below="@+id/tv_keuangan"/>
-
         </RelativeLayout>
+
+        <!-- Statistics Section with Shimmer -->
+        <com.facebook.shimmer.ShimmerFrameLayout
+            android:id="@+id/shimmer_statistics"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:visibility="gone"
+            app:shimmer_duration="1000"
+            app:shimmer_auto_start="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="100dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="start"
+                    android:background="#E0E0E0" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <RelativeLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_outline">
+
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="16dp"
+                            android:background="#E0E0E0" />
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="16dp"
+                            android:layout_alignParentEnd="true"
+                            android:background="#E0E0E0" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="600dp"
+                            android:layout_marginTop="16dp"
+                            android:background="#E0E0E0" />
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_outline">
+
+                        <View
+                            android:layout_width="80dp"
+                            android:layout_height="16dp"
+                            android:background="#E0E0E0" />
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="16dp"
+                            android:layout_alignParentEnd="true"
+                            android:background="#E0E0E0" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="600dp"
+                            android:layout_marginTop="16dp"
+                            android:background="#E0E0E0" />
+                    </RelativeLayout>
+                </LinearLayout>
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:padding="16dp"
+                    android:background="@drawable/bg_outline">
+
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="16dp"
+                        android:background="#E0E0E0" />
+
+                    <View
+                        android:layout_width="60dp"
+                        android:layout_height="16dp"
+                        android:layout_alignParentEnd="true"
+                        android:background="#E0E0E0" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="700dp"
+                        android:layout_marginTop="16dp"
+                        android:background="#E0E0E0" />
+                </RelativeLayout>
+            </LinearLayout>
+        </com.facebook.shimmer.ShimmerFrameLayout>
 
         <TextView
             android:id="@+id/tv_statistics"
@@ -251,7 +574,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal" >
+            android:orientation="horizontal">
 
             <RelativeLayout
                 android:layout_width="0dp"
@@ -260,7 +583,7 @@
                 android:layout_marginEnd="8dp"
                 android:padding="16dp"
                 android:background="@drawable/bg_outline"
-                android:orientation="vertical" >
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -285,7 +608,6 @@
                     android:layout_height="600dp"
                     android:layout_marginTop="16dp"
                     android:layout_below="@+id/tv_download_daily" />
-
             </RelativeLayout>
 
             <RelativeLayout
@@ -295,7 +617,7 @@
                 android:padding="16dp"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_outline"
-                android:orientation="vertical" >
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -320,9 +642,7 @@
                     android:layout_height="600dp"
                     android:layout_below="@+id/tv_download_weekly"
                     android:layout_marginTop="13dp" />
-
             </RelativeLayout>
-
         </LinearLayout>
 
         <LinearLayout
@@ -330,14 +650,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal" >
+            android:orientation="horizontal">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="16dp"
                 android:background="@drawable/bg_outline"
-                android:orientation="vertical" >
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -362,11 +682,7 @@
                     android:layout_height="700dp"
                     android:layout_marginTop="16dp"
                     android:layout_below="@+id/tv_download_monthly"/>
-
             </RelativeLayout>
-
         </LinearLayout>
-
     </LinearLayout>
-
 </ScrollView>

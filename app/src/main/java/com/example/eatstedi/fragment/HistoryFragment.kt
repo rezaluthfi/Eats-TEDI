@@ -3,6 +3,7 @@ package com.example.eatstedi.fragment
 import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Environment
@@ -23,6 +24,7 @@ import com.example.eatstedi.api.service.AttendanceRecord
 import com.example.eatstedi.api.service.DateFilterRequest
 import com.example.eatstedi.databinding.FragmentHistoryBinding
 import com.example.eatstedi.login.LoginActivity
+import com.facebook.shimmer.ShimmerFrameLayout
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
@@ -60,16 +62,13 @@ class HistoryFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Ambil userRole dan cashierId dari SharedPreferences
         val sharedPreferences = requireContext().getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         userRole = sharedPreferences.getString("user_role", null)
-        val id = sharedPreferences.getInt("user_id", 0)
-        cashierId = if (id == 0) null else id
+        val id = sharedPreferences.getInt("user_id", -1)
+        cashierId = if (id == -1) null else id
 
-        if (userRole.isNullOrEmpty()) {
-            redirectToLogin()
-        }
-        if (userRole == "cashier" && cashierId == null) {
+        // Validasi role dan ID
+        if (userRole.isNullOrEmpty() || (userRole == "cashier" && cashierId == null)) {
             redirectToLogin()
         }
     }
@@ -91,25 +90,49 @@ class HistoryFragment : Fragment() {
         setupExportButton()
         setupPagination()
 
-        // Set filter Total sebagai aktif secara default dan perbarui UI
         updateActiveFilter("Total")
         fetchAttendance()
+    }
+
+    // --- FUNGSI SHIMMER ---
+
+    private fun showShimmer() {
+        _binding?.let {
+            it.shimmerTable.visibility = View.VISIBLE
+            it.shimmerPagination.visibility = View.VISIBLE
+            it.contentContainer.visibility = View.GONE
+            it.paginationLayout.visibility = View.GONE
+            it.tvNoData.visibility = View.GONE
+            it.shimmerTable.startShimmer()
+            it.shimmerPagination.startShimmer()
+        }
+    }
+
+    private fun hideShimmer() {
+        _binding?.let {
+            it.shimmerTable.stopShimmer()
+            it.shimmerPagination.stopShimmer()
+            it.shimmerTable.visibility = View.GONE
+            it.shimmerPagination.visibility = View.GONE
+            it.contentContainer.visibility = View.VISIBLE
+        }
     }
 
     // --- FUNGSI PAGINASI ---
 
     private fun setupPagination() {
-        binding.btnPrevPage.setOnClickListener {
-            if (currentPage > 1) {
-                currentPage--
-                displayDataForCurrentPage()
+        _binding?.let { binding ->
+            binding.btnPrevPage.setOnClickListener {
+                if (currentPage > 1) {
+                    currentPage--
+                    displayDataForCurrentPage()
+                }
             }
-        }
-
-        binding.btnNextPage.setOnClickListener {
-            if (currentPage < totalPages) {
-                currentPage++
-                displayDataForCurrentPage()
+            binding.btnNextPage.setOnClickListener {
+                if (currentPage < totalPages) {
+                    currentPage++
+                    displayDataForCurrentPage()
+                }
             }
         }
     }
@@ -119,8 +142,8 @@ class HistoryFragment : Fragment() {
             it.tvPageInfo.text = "Halaman $currentPage / $totalPages"
             it.btnPrevPage.isEnabled = currentPage > 1
             it.btnNextPage.isEnabled = currentPage < totalPages
-            it.btnPrevPage.alpha = if (currentPage > 1) 1.0f else 0.5f
-            it.btnNextPage.alpha = if (currentPage < totalPages) 1.0f else 0.5f
+            it.btnPrevPage.alpha = if (it.btnPrevPage.isEnabled) 1.0f else 0.5f
+            it.btnNextPage.alpha = if (it.btnNextPage.isEnabled) 1.0f else 0.5f
         }
     }
 
@@ -136,292 +159,120 @@ class HistoryFragment : Fragment() {
     // --- FUNGSI FETCH DATA ---
 
     private fun fetchAttendance() {
-        Log.d("DEBUG", "[HistoryFragment] fetchAttendance: Memulai fetch dengan role: $userRole")
+        showShimmer()
         when (userRole) {
-            "admin" -> {
-                Log.d("DEBUG", "[HistoryFragment] fetchAttendance: Masuk cabang ADMIN")
-                apiService.getAllAttendance().enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG_PASTI_BISA", "Fragment not attached or binding null during admin fetch response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG", "Fetched admin attendance successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG", "Fetch admin error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG", "Fetch admin error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
-
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        Log.e("DEBUG", "Fetch admin failure: ${t.message}", t)
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
-            }
+            "admin" -> apiService.getAllAttendance().enqueue(createAttendanceCallback())
             "cashier" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] fetchAttendance: Masuk cabang KASIR, ID: $cashierId")
-                apiService.getAttendanceByCashier(cashierId!!).enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG", "Fragment not attached or binding null during cashier fetch response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG", "Fetched cashier attendance successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG", "Fetch cashier error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG", "Fetch cashier error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
-
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
+                cashierId?.let { id ->
+                    apiService.getAttendanceByCashier(id).enqueue(createAttendanceCallback())
+                } ?: redirectToLogin() // Jika ID kasir null, kembali ke login
             }
             else -> {
-                Toast.makeText(requireContext(), "Role pengguna tidak diketahui, silakan login kembali", Toast.LENGTH_SHORT).show()
+                hideShimmer()
+                Toast.makeText(context, "Role tidak valid.", Toast.LENGTH_SHORT).show()
                 redirectToLogin()
             }
         }
     }
 
     private fun fetchAttendanceByDate() {
-        if (startDate == null || endDate == null) {
-            Toast.makeText(requireContext(), "Pilih tanggal mulai dan selesai", Toast.LENGTH_SHORT).show()
+        val safeStartDate = startDate
+        val safeEndDate = endDate
+        if (safeStartDate == null || safeEndDate == null) {
+            Toast.makeText(context, "Pilih tanggal mulai dan selesai", Toast.LENGTH_SHORT).show()
             return
         }
+        showShimmer()
         val request = DateFilterRequest(
-            date_awal = apiDateFormat.format(startDate!!),
-            date_akhir = apiDateFormat.format(endDate!!)
+            date_awal = apiDateFormat.format(safeStartDate),
+            date_akhir = apiDateFormat.format(safeEndDate)
         )
         when (userRole) {
-            "admin" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] fetchAttendanceByDate: Masuk cabang ADMIN")
-                apiService.filterByDateAttendance(request).enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG_PASTI_BISA", "Fragment not attached or binding null during admin date filter response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG_PASTI_BISA", "Fetched admin attendance by date successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG_PASTI_BISA", "Fetch admin date filter error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG_PASTI_BISA", "Fetch admin date filter error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
-
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        Log.e("DEBUG_PASTI_BISA", "Fetch admin date filter failure: ${t.message}", t)
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
-            }
+            "admin" -> apiService.filterByDateAttendance(request).enqueue(createAttendanceCallback())
             "cashier" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] fetchAttendanceByDate: Masuk cabang KASIR, ID: $cashierId")
-                apiService.filterAttendanceByDateCashier(cashierId!!, request).enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG_PASTI_BISA", "Fragment not attached or binding null during cashier date filter response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG_PASTI_BISA", "Fetched cashier attendance by date successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG_PASTI_BISA", "Fetch cashier date filter error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG_PASTI_BISA", "Fetch cashier date filter error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
-
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        Log.e("DEBUG_PASTI_BISA", "Fetch cashier date filter failure: ${t.message}", t)
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
+                cashierId?.let { id ->
+                    apiService.filterAttendanceByDateCashier(id, request).enqueue(createAttendanceCallback())
+                } ?: redirectToLogin()
             }
         }
     }
 
     private fun fetchAttendanceByStatus() {
+        showShimmer()
+        val status = if (activeFilter == "Hadir") 1 else 0
         when (userRole) {
-            "admin" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] fetchAttendanceByStatus: Masuk cabang ADMIN, Status: $activeFilter")
-                val status = if (activeFilter == "Hadir") 1 else 0
-                apiService.getAttendanceByAbsent(status).enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG_PASTI_BISA", "Fragment not attached or binding null during admin status filter response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG_PASTI_BISA", "Fetched admin attendance by status successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG_PASTI_BISA", "Fetch admin status filter error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG_PASTI_BISA", "Fetch admin status filter error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
-
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        Log.e("DEBUG_PASTI_BISA", "Fetch admin status filter failure: ${t.message}", t)
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
-            }
+            "admin" -> apiService.getAttendanceByAbsent(status).enqueue(createAttendanceCallback())
             "cashier" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] fetchAttendanceByStatus: Masuk cabang KASIR, ID: $cashierId, Status: $activeFilter")
-                val status = activeFilter == "Hadir"
-                apiService.getAttendanceByAbsentCashier(cashierId!!, status).enqueue(object : Callback<AttendanceApiResponse> {
-                    override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
-                        if (!isAdded || _binding == null) {
-                            Log.w("DEBUG_PASTI_BISA", "Fragment not attached or binding null during cashier status filter response")
-                            return
-                        }
-                        if (response.isSuccessful) {
-                            val body = response.body()
-                            if (body?.success == true) {
-                                allAttendanceRecords = body.data ?: emptyList()
-                                Log.d("DEBUG_PASTI_BISA", "Fetched cashier attendance by status successfully, data size: ${allAttendanceRecords.size}")
-                                filterAndDisplayData()
-                            } else {
-                                Log.e("DEBUG_PASTI_BISA", "Fetch cashier status filter error: ${body?.activity}, response: ${response.body()?.toString()}")
-                                handleApiError(response, "Gagal mengambil data kehadiran: ${body?.activity ?: "Unknown error"}")
-                                filterAndDisplayData(emptyList())
-                            }
-                        } else {
-                            Log.e("DEBUG_PASTI_BISA", "Fetch cashier status filter error: ${response.code()} - ${response.message()}, error body: ${response.errorBody()?.string()}")
-                            handleApiError(response, "Gagal mengambil data kehadiran, kode: ${response.code()}")
-                            filterAndDisplayData(emptyList())
-                        }
-                    }
+                cashierId?.let { id ->
+                    apiService.getAttendanceByAbsentCashier(id, status == 1).enqueue(createAttendanceCallback())
+                } ?: redirectToLogin()
+            }
+        }
+    }
 
-                    override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
-                        if (!isAdded) return
-                        Log.e("DEBUG_PASTI_BISA", "Fetch cashier status filter failure: ${t.message}", t)
-                        handleApiFailure(t)
-                        filterAndDisplayData(emptyList())
-                    }
-                })
+    // Callback terpusat untuk response data kehadiran
+    private fun createAttendanceCallback(): Callback<AttendanceApiResponse> {
+        return object : Callback<AttendanceApiResponse> {
+            override fun onResponse(call: Call<AttendanceApiResponse>, response: Response<AttendanceApiResponse>) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                val body = response.body()
+                if (response.isSuccessful && body?.success == true) {
+                    allAttendanceRecords = body.data ?: emptyList()
+                    filterAndDisplayData()
+                } else {
+                    handleApiError(response, "Gagal mengambil data: ${body?.activity}")
+                    filterAndDisplayData(emptyList())
+                }
+            }
+
+            override fun onFailure(call: Call<AttendanceApiResponse>, t: Throwable) {
+                if (!isAdded || _binding == null) return // Guard
+                hideShimmer()
+                handleApiFailure(t)
+                filterAndDisplayData(emptyList())
             }
         }
     }
 
     private fun exportAttendance() {
+        showShimmer()
+        val callback = object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (!isAdded || _binding == null) return
+                hideShimmer()
+                if (response.isSuccessful) {
+                    val fileName = "attendance_${userRole}_${System.currentTimeMillis()}.pdf"
+                    saveExportFile(response.body(), fileName)
+                } else {
+                    handleApiError(response, "Gagal mengunduh PDF")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                if (!isAdded || _binding == null) return
+                hideShimmer()
+                handleApiFailure(t)
+            }
+        }
+
         when (userRole) {
-            "admin" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] exportAttendance: Masuk cabang ADMIN")
-                apiService.exportAttendance().enqueue(object : Callback<ResponseBody> {
-                    override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                        if (!isAdded || _binding == null) return
-                        if (response.isSuccessful) {
-                            saveExportFile(response.body(), "attendance_admin_${System.currentTimeMillis()}.pdf")
-                        } else {
-                            handleApiError(response, "Gagal mengunduh PDF")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                        handleApiFailure(t)
-                    }
-                })
-            }
-            "cashier" -> {
-                Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] exportAttendance: Masuk cabang KASIR, ID: $cashierId")
-                apiService.exportAttendanceCashier(cashierId!!).enqueue(object : Callback<ResponseBody> {
-                    override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                        if (!isAdded || _binding == null) return
-                        if (response.isSuccessful) {
-                            saveExportFile(response.body(), "attendance_cashier_${cashierId}_${System.currentTimeMillis()}.pdf")
-                        } else {
-                            handleApiError(response, "Gagal mengunduh PDF")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                        handleApiFailure(t)
-                    }
-                })
-            }
+            "admin" -> apiService.exportAttendance().enqueue(callback)
+            "cashier" -> cashierId?.let { apiService.exportAttendanceCashier(it).enqueue(callback) } ?: redirectToLogin()
         }
     }
 
     private fun saveExportFile(body: ResponseBody?, fileName: String) {
+        if (!isAdded) return
         body?.let {
             try {
                 val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val file = File(downloadsDir, fileName)
-                FileOutputStream(file).use { outputStream ->
-                    outputStream.write(body.bytes())
-                }
-                val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-                intent.data = android.net.Uri.fromFile(file)
-                requireContext().sendBroadcast(intent)
+                FileOutputStream(file).use { it.write(body.bytes()) }
                 Toast.makeText(requireContext(), "PDF disimpan di Download/$fileName", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Log.e("HistoryFragment", "Error saving PDF", e)
-                Toast.makeText(requireContext(), "Gagal menyimpan PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Gagal menyimpan PDF: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -433,7 +284,6 @@ class HistoryFragment : Fragment() {
             allAttendanceRecords = data
         }
         currentDisplayedData = allAttendanceRecords
-
         updateFilteredCounts(allAttendanceRecords)
 
         currentPage = 1
@@ -449,17 +299,14 @@ class HistoryFragment : Fragment() {
 
     private fun updateFilteredCounts(records: List<AttendanceRecord>) {
         _binding?.let { binding ->
-            val total = records.size
-            val present = records.count { it.attendance == 1 }
-            val absent = records.count { it.attendance == 0 }
-
-            binding.tvTotal.text = total.toString()
-            binding.tvPresent.text = present.toString()
-            binding.tvAbsent.text = absent.toString()
+            binding.tvTotal.text = records.size.toString()
+            binding.tvPresent.text = records.count { it.attendance == 1 }.toString()
+            binding.tvAbsent.text = records.count { it.attendance == 0 }.toString()
         }
     }
 
     private fun displayData(paginatedRecords: List<AttendanceRecord>) {
+        if (!isAdded) return // Cek sebelum akses context
         _binding?.let { binding ->
             binding.attendanceTableView.removeAllViews()
 
@@ -467,12 +314,12 @@ class HistoryFragment : Fragment() {
                 binding.tvNoData.visibility = View.VISIBLE
                 binding.attendanceTableView.visibility = View.GONE
                 binding.paginationLayout.visibility = View.GONE
-                return
-            } else {
-                binding.tvNoData.visibility = View.GONE
-                binding.attendanceTableView.visibility = View.VISIBLE
-                binding.paginationLayout.visibility = View.VISIBLE
+                return@let
             }
+
+            binding.tvNoData.visibility = View.GONE
+            binding.attendanceTableView.visibility = View.VISIBLE
+            binding.paginationLayout.visibility = View.VISIBLE
 
             val headerRow = TableRow(context).apply {
                 setPadding(8, 16, 8, 16)
@@ -488,10 +335,8 @@ class HistoryFragment : Fragment() {
             for ((index, record) in paginatedRecords.withIndex()) {
                 val row = TableRow(context).apply {
                     setPadding(8, 8, 8, 8)
-                    setBackgroundColor(
-                        if (index % 2 == 0) ContextCompat.getColor(requireContext(), R.color.white)
-                        else ContextCompat.getColor(requireContext(), R.color.secondary)
-                    )
+                    val bgColor = if (index % 2 == 0) R.color.white else R.color.secondary
+                    setBackgroundColor(ContextCompat.getColor(requireContext(), bgColor))
                 }
 
                 val shiftInfo = mapShiftIdToTime(record.id_shift)
@@ -524,10 +369,10 @@ class HistoryFragment : Fragment() {
     private fun createTextView(text: String, isHeader: Boolean = false): TextView {
         return TextView(requireContext()).apply {
             this.text = text
-            textSize = if (isHeader) 18f else 16f
-            setPadding(8, 8, 8, 8)
+            textSize = if (isHeader) 16f else 14f
+            setPadding(12, 12, 12, 12)
             setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-            setTypeface(null, if (isHeader) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+            setTypeface(null, if (isHeader) Typeface.BOLD else Typeface.NORMAL)
             layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
         }
     }
@@ -535,15 +380,15 @@ class HistoryFragment : Fragment() {
     // --- FUNGSI SETUP UI DAN HELPER ---
 
     private fun setupFilters() {
-        binding.llSummaryTotal.setOnClickListener { updateActiveFilter("Total") }
-        binding.llSummaryPresent.setOnClickListener { updateActiveFilter("Hadir") }
-        binding.llSummaryAbsent.setOnClickListener { updateActiveFilter("Tidak Hadir") }
+        _binding?.let { binding ->
+            binding.llSummaryTotal.setOnClickListener { updateActiveFilter("Total") }
+            binding.llSummaryPresent.setOnClickListener { updateActiveFilter("Hadir") }
+            binding.llSummaryAbsent.setOnClickListener { updateActiveFilter("Tidak Hadir") }
+        }
     }
 
     private fun updateActiveFilter(filter: String) {
         activeFilter = filter
-        Log.d("DEBUG_PASTI_BISA", "[HistoryFragment] updateActiveFilter: Filter diubah ke: $filter")
-
         _binding?.let { binding ->
             updateFilterUI(binding.llSummaryTotal, filter == "Total", binding.tvTotal, binding.tvTotalLabel)
             updateFilterUI(binding.llSummaryPresent, filter == "Hadir", binding.tvPresent, binding.tvPresentLabel)
@@ -558,11 +403,12 @@ class HistoryFragment : Fragment() {
     }
 
     private fun updateFilterUI(layout: View, isActive: Boolean, valueTextView: TextView, labelTextView: TextView) {
+        if (!isAdded) return
         _binding?.let {
             val backgroundColor = if (isActive) R.color.red else R.color.secondary
             val textColor = if (isActive) R.color.white else R.color.black
             val drawable = GradientDrawable().apply {
-                cornerRadius = 8f
+                cornerRadius = 16f // Disesuaikan agar lebih rounded
                 setColor(ContextCompat.getColor(requireContext(), backgroundColor))
             }
             layout.background = drawable
@@ -572,25 +418,28 @@ class HistoryFragment : Fragment() {
     }
 
     private fun setupDatePickers() {
-        binding.btnStartDate.setOnClickListener {
-            showDatePicker(isStartDate = true) { date ->
-                startDate = date
-                binding.btnStartDate.text = dateFormatDisplay.format(date)
-                binding.ivClearSearch.visibility = View.VISIBLE
-                if (endDate != null) fetchAttendanceByDate()
+        _binding?.let { binding ->
+            binding.btnStartDate.setOnClickListener {
+                showDatePicker(isStartDate = true) { date ->
+                    startDate = date
+                    binding.btnStartDate.text = dateFormatDisplay.format(date)
+                    binding.ivClearSearch.visibility = View.VISIBLE
+                    if (endDate != null) fetchAttendanceByDate()
+                }
             }
-        }
-        binding.btnEndDate.setOnClickListener {
-            showDatePicker(isStartDate = false) { date ->
-                endDate = date
-                binding.btnEndDate.text = dateFormatDisplay.format(date)
-                binding.ivClearSearch.visibility = View.VISIBLE
-                if (startDate != null) fetchAttendanceByDate()
+            binding.btnEndDate.setOnClickListener {
+                showDatePicker(isStartDate = false) { date ->
+                    endDate = date
+                    binding.btnEndDate.text = dateFormatDisplay.format(date)
+                    binding.ivClearSearch.visibility = View.VISIBLE
+                    if (startDate != null) fetchAttendanceByDate()
+                }
             }
         }
     }
 
     private fun showDatePicker(isStartDate: Boolean, onDateSelected: (Date) -> Unit) {
+        if (!isAdded) return
         val calendar = Calendar.getInstance()
         DatePickerDialog(
             requireContext(),
@@ -598,12 +447,12 @@ class HistoryFragment : Fragment() {
                 val selectedDate = Calendar.getInstance().apply { set(year, month, dayOfMonth) }.time
                 if (isStartDate) {
                     if (endDate != null && selectedDate.after(endDate)) {
-                        Toast.makeText(requireContext(), "Tanggal mulai tidak boleh setelah tanggal selesai!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Tanggal mulai tidak boleh setelah tanggal selesai", Toast.LENGTH_SHORT).show()
                         return@DatePickerDialog
                     }
                 } else {
                     if (startDate != null && selectedDate.before(startDate)) {
-                        Toast.makeText(requireContext(), "Tanggal selesai tidak boleh sebelum tanggal mulai!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Tanggal selesai tidak boleh sebelum tanggal mulai", Toast.LENGTH_SHORT).show()
                         return@DatePickerDialog
                     }
                 }
@@ -616,38 +465,37 @@ class HistoryFragment : Fragment() {
     }
 
     private fun setupClearSearchButton() {
-        binding.ivClearSearch.setOnClickListener {
+        _binding?.ivClearSearch?.setOnClickListener {
             startDate = null
             endDate = null
-            binding.btnStartDate.text = "dd/mm/yyyy"
-            binding.btnEndDate.text = "dd/mm/yyyy"
-            binding.ivClearSearch.visibility = View.GONE
-
+            _binding?.btnStartDate?.text = "dd/mm/yyyy"
+            _binding?.btnEndDate?.text = "dd/mm/yyyy"
+            it.visibility = View.GONE
             updateActiveFilter("Total")
         }
     }
 
     private fun setupExportButton() {
-        binding.ivDownload.setOnClickListener {
-            exportAttendance()
-        }
+        _binding?.ivDownload?.setOnClickListener { exportAttendance() }
     }
 
     private fun handleApiError(response: Response<*>, defaultMessage: String) {
         if (!isAdded) return
-        Toast.makeText(requireContext(), defaultMessage, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, defaultMessage, Toast.LENGTH_SHORT).show()
         Log.e("HistoryFragment", "API Error: ${response.code()} - ${response.errorBody()?.string()}")
     }
 
     private fun handleApiFailure(t: Throwable) {
         if (!isAdded) return
-        Toast.makeText(requireContext(), "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
-        Log.e("HistoryFragment", "Network Failure: ${t.message}", t)
+        Toast.makeText(context, "Error Jaringan: ${t.message}", Toast.LENGTH_SHORT).show()
+        Log.e("HistoryFragment", "Network Failure", t)
     }
 
     private fun redirectToLogin() {
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        if (!isAdded) return
+        val intent = Intent(activity, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
         startActivity(intent)
         activity?.finish()
     }

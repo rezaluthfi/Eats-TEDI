@@ -6,11 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,7 +19,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
@@ -34,6 +31,7 @@ import com.example.eatstedi.databinding.FragmentDashboardBinding
 import com.example.eatstedi.databinding.ViewItemEmployeeBinding
 import com.example.eatstedi.databinding.ViewItemSupplierBinding
 import com.example.eatstedi.model.*
+import com.facebook.shimmer.ShimmerFrameLayout
 import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.Legend
@@ -49,7 +47,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -57,7 +54,9 @@ import java.util.*
 
 class DashboardFragment : Fragment() {
 
+    // Gunakan _binding yang nullable untuk mencegah memory leak dan NPE
     private var _binding: FragmentDashboardBinding? = null
+    // Aksesor ini hanya untuk digunakan di antara onCreateView dan onDestroyView
     private val binding get() = _binding!!
 
     // Data API
@@ -105,6 +104,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupUiForRole() {
+        // Gunakan null-safe check untuk binding
         _binding?.let { binding ->
             if (userRole == "cashier") {
                 binding.llEmployee.visibility = View.GONE
@@ -115,6 +115,9 @@ class DashboardFragment : Fragment() {
                 binding.llStatisticsDailyWeekly.visibility = View.GONE
                 binding.llStatisticsMonthly.visibility = View.GONE
                 binding.tvScheduleTitle.text = "Jadwal Saya"
+                binding.shimmerEmployee.visibility = View.GONE
+                binding.shimmerSupplier.visibility = View.GONE
+                binding.shimmerStatistics.visibility = View.GONE
             } else { // Admin
                 binding.llEmployee.visibility = View.VISIBLE
                 binding.llSupplier.visibility = View.VISIBLE
@@ -142,56 +145,71 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    private fun showShimmer(shimmer: ShimmerFrameLayout, content: View) {
+        shimmer.visibility = View.VISIBLE
+        content.visibility = View.GONE
+        shimmer.startShimmer()
+    }
+
+    private fun hideShimmer(shimmer: ShimmerFrameLayout, content: View) {
+        shimmer.stopShimmer()
+        shimmer.visibility = View.GONE
+        content.visibility = View.VISIBLE
+    }
+
     private fun fetchDataForRole() {
-        fetchSchedulesForRole()
-        if (userRole == "admin") {
-            fetchCashiers()
-            fetchSuppliers()
-            // Panggil data rekap mingguan KHUSUS untuk Pie Chart
-            fetchWeeklyRecapForAdminPieChart()
-            // Panggil data statistik untuk Horizontal Bar Charts
-            fetchDailyStatisticsForAdmin()
-            fetchWeeklyStatistics()
-            fetchMonthlyStatistics()
-        } else if (userRole == "cashier" && userId != -1) {
-            fetchCashierPaymentRecap(userId)
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerSchedule, binding.llEmployeeSchedule)
+            if (userRole == "admin") {
+                showShimmer(binding.shimmerEmployee, binding.llEmployee)
+                showShimmer(binding.shimmerSupplier, binding.llSupplier)
+                showShimmer(binding.shimmerPayments, binding.rlPayments)
+                showShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+                showShimmer(binding.shimmerStatistics, binding.llStatisticsMonthly)
+                fetchCashiers()
+                fetchSuppliers()
+                fetchWeeklyRecapForAdminPieChart()
+                fetchDailyStatisticsForAdmin()
+                fetchWeeklyStatistics()
+                fetchMonthlyStatistics()
+            } else if (userRole == "cashier" && userId != -1) {
+                showShimmer(binding.shimmerPayments, binding.rlPayments)
+                fetchCashierPaymentRecap(userId)
+            }
+            fetchSchedulesForRole()
         }
     }
 
-    /**
-     * Fungsi baru untuk mengambil rekap pembayaran mingguan
-     * dan menggunakannya untuk mengisi Pie Chart Admin.
-     */
     private fun fetchWeeklyRecapForAdminPieChart() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        // Pastikan endpoint ini sudah ditambahkan di ApiService.kt
-        apiService.getWeeklyPaymentRecap().enqueue(object : Callback<CashierPaymentRecapResponse> {
-            override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
-                if (!isAdded || _binding == null) return
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerPayments, binding.rlPayments)
+            apiService.getWeeklyPaymentRecap().enqueue(object : Callback<CashierPaymentRecapResponse> {
+                override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
+                    // Cek jika fragment masih aktif sebelum update UI
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerPayments, binding.rlPayments)
 
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val weeklyRecapData = response.body()!!.data
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        val weeklyRecapData = body.data
+                        val cashCount = weeklyRecapData.count { it.payment_type.lowercase() == "cash" }.toFloat()
+                        val qrisCount = weeklyRecapData.count { it.payment_type.lowercase() == "qris" }.toFloat()
+                        setupPieChartForAdmin(cashCount, qrisCount)
+                    } else {
+                        handleApiError(response, "Gagal mengambil rekap mingguan")
+                        setupPieChartForAdmin(0f, 0f)
+                    }
+                }
 
-                    val cashCount = weeklyRecapData.count { it.payment_type.lowercase() == "cash" }.toFloat()
-                    val qrisCount = weeklyRecapData.count { it.payment_type.lowercase() == "qris" }.toFloat()
-
-                    Log.d("DashboardFragment", "Weekly Recap -> Cash: $cashCount, QRIS: $qrisCount")
-                    // Panggil fungsi setup pie chart dengan data yang sudah dihitung
-                    setupPieChartForAdmin(cashCount, qrisCount)
-                } else {
-                    handleApiError(response, "Gagal mengambil rekap mingguan")
-                    // Tampilkan chart kosong jika gagal
+                override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerPayments, binding.rlPayments)
+                    handleApiFailure(t)
                     setupPieChartForAdmin(0f, 0f)
                 }
-            }
-
-            override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
-                if (!isAdded) return
-                handleApiFailure(t)
-                // Tampilkan chart kosong jika gagal
-                setupPieChartForAdmin(0f, 0f)
-            }
-        })
+            })
+        }
     }
 
     private fun fetchSchedulesForRole() {
@@ -201,151 +219,209 @@ class DashboardFragment : Fragment() {
         } else if (userRole == "cashier" && userId != -1) {
             apiService.getScheduleByIdCashier(userId)
         } else {
+            _binding?.let { hideShimmer(it.shimmerSchedule, it.llEmployeeSchedule) }
             return
         }
 
-        call.enqueue(object : Callback<ScheduleResponse> {
-            override fun onResponse(call: Call<ScheduleResponse>, response: Response<ScheduleResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    schedules.clear()
-                    schedules.addAll(response.body()!!.data)
-                    updateScheduleTableForRole()
-                } else {
-                    handleApiError(response, "Gagal mengambil jadwal")
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerSchedule, binding.llEmployeeSchedule)
+            call.enqueue(object : Callback<ScheduleResponse> {
+                override fun onResponse(call: Call<ScheduleResponse>, response: Response<ScheduleResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerSchedule, binding.llEmployeeSchedule)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        schedules.clear()
+                        schedules.addAll(body.data)
+                        updateScheduleTableForRole()
+                    } else {
+                        handleApiError(response, "Gagal mengambil jadwal")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<ScheduleResponse>, t: Throwable) {
-                handleApiFailure(t)
-            }
-        })
+                override fun onFailure(call: Call<ScheduleResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerSchedule, binding.llEmployeeSchedule)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun fetchCashierPaymentRecap(cashierId: Int) {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getCashierPaymentRecap(cashierId).enqueue(object : Callback<CashierPaymentRecapResponse> {
-            override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
-                if (!isAdded || _binding == null) return
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerPayments, binding.rlPayments)
+            apiService.getCashierPaymentRecap(cashierId).enqueue(object : Callback<CashierPaymentRecapResponse> {
+                override fun onResponse(call: Call<CashierPaymentRecapResponse>, response: Response<CashierPaymentRecapResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerPayments, binding.rlPayments)
 
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val paymentDataList = response.body()!!.data
-                    val cashCount = paymentDataList.count { it.payment_type.lowercase() == "cash" }.toFloat()
-                    val qrisCount = paymentDataList.count { it.payment_type.lowercase() == "qris" }.toFloat()
-
-                    Log.d("DashboardFragment", "Cashier Recap -> Cash: $cashCount, QRIS: $qrisCount")
-                    setupPieChartForCashier(cashCount, qrisCount)
-
-                } else {
-                    Log.e("DashboardFragment", "Response not successful or body is null")
-                    handleApiError(response, "Gagal mengambil rekap pembayaran")
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        val paymentDataList = body.data
+                        val cashCount = paymentDataList.count { it.payment_type.lowercase() == "cash" }.toFloat()
+                        val qrisCount = paymentDataList.count { it.payment_type.lowercase() == "qris" }.toFloat()
+                        setupPieChartForCashier(cashCount, qrisCount)
+                    } else {
+                        handleApiError(response, "Gagal mengambil rekap pembayaran")
+                        setupPieChartForCashier(0f, 0f)
+                    }
+                }
+                override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerPayments, binding.rlPayments)
+                    handleApiFailure(t)
                     setupPieChartForCashier(0f, 0f)
                 }
-            }
-
-            override fun onFailure(call: Call<CashierPaymentRecapResponse>, t: Throwable) {
-                Log.e("DashboardFragment", "API call failed", t)
-                handleApiFailure(t)
-                setupPieChartForCashier(0f, 0f)
-            }
-        })
+            })
+        }
     }
 
     private fun fetchCashiers() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
-            override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val cashierList = response.body()!!.data
-                    cashiers.clear()
-                    cashiers.addAll(cashierList)
-                    val employeeList = cashierList.map { EmployeePreview(it.name, it.profile_picture) }
-                    addEmployeeProfiles(employeeList)
-                    updateScheduleTableForRole()
-                } else {
-                    handleApiError(response, "Gagal mengambil data karyawan")
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerEmployee, binding.llEmployee)
+            apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
+                override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerEmployee, binding.llEmployee)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        cashiers.clear()
+                        cashiers.addAll(body.data)
+                        val employeeList = cashiers.map { EmployeePreview(it.name, it.profile_picture) }
+                        addEmployeeProfiles(employeeList)
+                        updateScheduleTableForRole()
+                    } else {
+                        handleApiError(response, "Gagal mengambil data karyawan")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<CashierResponse>, t: Throwable) {
-                handleApiFailure(t)
-            }
-        })
+                override fun onFailure(call: Call<CashierResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerEmployee, binding.llEmployee)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun fetchSuppliers() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
-            override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val supplierList = response.body()!!.data
-                    val supplierPreviewList = supplierList.map { SupplierPreview(it.name, it.profile_picture) }
-                    addSupplierProfiles(supplierPreviewList)
-                } else {
-                    handleApiError(response, "Gagal mengambil data pemasok")
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerSupplier, binding.llSupplier)
+            apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
+                override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerSupplier, binding.llSupplier)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        val supplierList = body.data
+                        val supplierPreviewList = supplierList.map { SupplierPreview(it.name, it.profile_picture) }
+                        addSupplierProfiles(supplierPreviewList)
+                    } else {
+                        handleApiError(response, "Gagal mengambil data pemasok")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
-                handleApiFailure(t)
-            }
-        })
+                override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerSupplier, binding.llSupplier)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun fetchDailyStatisticsForAdmin() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getDailyStatistics().enqueue(object : Callback<DailyStatisticsResponse> {
-            @RequiresApi(Build.VERSION_CODES.O)
-            override fun onResponse(call: Call<DailyStatisticsResponse>, response: Response<DailyStatisticsResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    dailyStatsForAdmin.clear()
-                    dailyStatsForAdmin.addAll(response.body()!!.data)
-                    // Panggilan ke Pie Chart DIHAPUS dari sini
-                    // setupPieChartForAdmin() // <-- DIHAPUS
-                    setupHorizontalBarCharts() // <-- Biarkan ini untuk mengisi bar chart harian
-                } else {
-                    handleApiError(response, "Gagal mengambil statistik harian")
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+            apiService.getDailyStatistics().enqueue(object : Callback<DailyStatisticsResponse> {
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onResponse(call: Call<DailyStatisticsResponse>, response: Response<DailyStatisticsResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        dailyStatsForAdmin.clear()
+                        dailyStatsForAdmin.addAll(body.data)
+                        setupHorizontalBarCharts()
+                    } else {
+                        handleApiError(response, "Gagal mengambil statistik harian")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<DailyStatisticsResponse>, t: Throwable) {
-                handleApiFailure(t)
-            }
-        })
+                override fun onFailure(call: Call<DailyStatisticsResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun fetchWeeklyStatistics() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getWeeklyStatistics().enqueue(object : Callback<WeeklyStatisticsResponse> {
-            @RequiresApi(Build.VERSION_CODES.O)
-            override fun onResponse(call: Call<WeeklyStatisticsResponse>, response: Response<WeeklyStatisticsResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    weeklyStats.clear()
-                    weeklyStats.putAll(response.body()!!.data)
-                    setupHorizontalBarCharts()
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+            apiService.getWeeklyStatistics().enqueue(object : Callback<WeeklyStatisticsResponse> {
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onResponse(call: Call<WeeklyStatisticsResponse>, response: Response<WeeklyStatisticsResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        weeklyStats.clear()
+                        weeklyStats.putAll(body.data)
+                        setupHorizontalBarCharts()
+                    } else {
+                        handleApiError(response, "Gagal mengambil statistik mingguan")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<WeeklyStatisticsResponse>, t: Throwable) { handleApiFailure(t) }
-        })
+                override fun onFailure(call: Call<WeeklyStatisticsResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun fetchMonthlyStatistics() {
         val apiService = RetrofitClient.getInstance(requireContext())
-        apiService.getMonthlyStatistics().enqueue(object : Callback<MonthlyStatisticsResponse> {
-            @RequiresApi(Build.VERSION_CODES.O)
-            override fun onResponse(call: Call<MonthlyStatisticsResponse>, response: Response<MonthlyStatisticsResponse>) {
-                if (!isAdded || _binding == null) return
-                if (response.isSuccessful && response.body()?.success == true) {
-                    monthlyStats.clear()
-                    monthlyStats.putAll(response.body()!!.data)
-                    setupHorizontalBarCharts()
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerStatistics, binding.llStatisticsMonthly)
+            apiService.getMonthlyStatistics().enqueue(object : Callback<MonthlyStatisticsResponse> {
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onResponse(call: Call<MonthlyStatisticsResponse>, response: Response<MonthlyStatisticsResponse>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsMonthly)
+
+                    val body = response.body()
+                    if (response.isSuccessful && body?.success == true) {
+                        monthlyStats.clear()
+                        monthlyStats.putAll(body.data)
+                        setupHorizontalBarCharts()
+                    } else {
+                        handleApiError(response, "Gagal mengambil statistik bulanan")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<MonthlyStatisticsResponse>, t: Throwable) { handleApiFailure(t) }
-        })
+                override fun onFailure(call: Call<MonthlyStatisticsResponse>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsMonthly)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun updateScheduleTableForRole() {
+        // Cek null-safety sebelum mengakses context atau view
+        if (!isAdded || _binding == null) return
+
         val shiftTimeMap = mapOf(1 to "07:00-09:00", 2 to "09:00-12:00", 3 to "12:00-14:00", 4 to "14:00-16:00")
         val scheduleList = if (userRole == "admin") {
             schedules.mapNotNull { schedule ->
@@ -433,7 +509,6 @@ class DashboardFragment : Fragment() {
             val totalTransactions = totalCashTransactions + totalQRISTransactions
 
             if (totalTransactions == 0f) {
-                // ... (Logika untuk menampilkan "Tidak ada data" tetap sama)
                 setupEmptyPieChart(pieChart)
                 return@let
             }
@@ -463,7 +538,6 @@ class DashboardFragment : Fragment() {
             val data = PieData(dataSet).apply {
                 setValueFormatter(object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
-                        // Perbaikan logika agar label persen benar
                         return if (value == totalCashTransactions) {
                             "Tunai: ${value.toInt()} (${String.format("%.1f", cashPercentage)}%)"
                         } else {
@@ -475,7 +549,6 @@ class DashboardFragment : Fragment() {
 
             pieChart.apply {
                 this.data = data
-                // ... (Konfigurasi PieChart tetap sama)
                 description.isEnabled = false
                 setDrawHoleEnabled(true)
                 setHoleColor(Color.WHITE)
@@ -745,19 +818,25 @@ class DashboardFragment : Fragment() {
             else -> return
         }
 
-        call.enqueue(object : Callback<ResponseBody> {
-            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                if (!isAdded) return
-                if (response.isSuccessful) {
-                    response.body()?.let { saveToCsv(it.string(), "Rekap_${type.capitalizeFirst()}_${System.currentTimeMillis()}.csv") }
-                } else {
-                    handleApiError(response, "Gagal mengunduh data")
+        _binding?.let { binding ->
+            showShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+            call.enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+                    if (response.isSuccessful) {
+                        response.body()?.let { saveToCsv(it.string(), "Rekap_${type.capitalizeFirst()}_${System.currentTimeMillis()}.csv") }
+                    } else {
+                        handleApiError(response, "Gagal mengunduh data")
+                    }
                 }
-            }
-            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                handleApiFailure(t)
-            }
-        })
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    if (!isAdded || _binding == null) return
+                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+                    handleApiFailure(t)
+                }
+            })
+        }
     }
 
     private fun saveToCsv(csvContent: String, fileName: String) {
@@ -778,13 +857,13 @@ class DashboardFragment : Fragment() {
     }
 
     private fun handleApiError(response: Response<*>, defaultMessage: String) {
-        if (!isAdded) return
+        if (!isAdded) return // Cek sebelum menampilkan Toast
         Toast.makeText(context, defaultMessage, Toast.LENGTH_SHORT).show()
         Log.e("DashboardFragment", "API Error: ${response.code()} - ${response.errorBody()?.string()}")
     }
 
     private fun handleApiFailure(t: Throwable) {
-        if (!isAdded) return
+        if (!isAdded) return // Cek sebelum menampilkan Toast
         Toast.makeText(context, "Network Error: ${t.message}", Toast.LENGTH_SHORT).show()
         Log.e("DashboardFragment", "Network Failure", t)
     }
@@ -831,6 +910,7 @@ class DashboardFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Set binding menjadi null untuk menghindari memory leak
         _binding = null
     }
 }
