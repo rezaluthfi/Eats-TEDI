@@ -585,10 +585,14 @@ class DashboardFragment : Fragment() {
             val cashPercentage = (totalCashTransactions / totalTransactions) * 100
             val qrisPercentage = (totalQRISTransactions / totalTransactions) * 100
 
-            val entries = listOf(
-                PieEntry(totalCashTransactions, "Tunai"),
-                PieEntry(totalQRISTransactions, "QRIS")
-            )
+            // Buat entri untuk pie chart
+            val entries = mutableListOf<PieEntry>()
+            if (totalCashTransactions > 0) {
+                entries.add(PieEntry(totalCashTransactions, "Tunai"))
+            }
+            if (totalQRISTransactions > 0) {
+                entries.add(PieEntry(totalQRISTransactions, "QRIS"))
+            }
 
             val dataSet = PieDataSet(entries, "Metode Pembayaran").apply {
                 colors = listOf(Color.parseColor("#FFB74D"), Color.parseColor("#64B5F6"))
@@ -607,6 +611,7 @@ class DashboardFragment : Fragment() {
             val data = PieData(dataSet).apply {
                 setValueFormatter(object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
+                        // Logika formatter ini tetap aman karena membandingkan nilai aktual
                         return if (value == totalCashTransactions) {
                             "Tunai: ${value.toInt()} (${String.format("%.1f", cashPercentage)}%)"
                         } else {
@@ -855,6 +860,7 @@ class DashboardFragment : Fragment() {
             axisLeft.isEnabled = false
             axisRight.isEnabled = false
             description.isEnabled = false
+            setScaleEnabled(false)
             setDrawValueAboveBar(true)
             setExtraOffsets(16f, 24f, 16f, 24f)
             setVisibleXRangeMaximum(xLabels.size.toFloat())
@@ -885,7 +891,7 @@ class DashboardFragment : Fragment() {
         }
 
         _binding?.let { binding ->
-            // Anda bisa menambahkan loading indicator di sini
+            // Tampilkan loading
             Toast.makeText(requireContext(), "Mulai mengunduh...", Toast.LENGTH_SHORT).show()
 
             call.enqueue(object : Callback<ResponseBody> {
@@ -944,7 +950,7 @@ class DashboardFragment : Fragment() {
                         throw IOException("Gagal membuka output stream untuk $uri")
                     }
                     outputStream.write(csvContent.toByteArray())
-                    Toast.makeText(requireContext(), "File disimpan di Download//$fileName", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "File disimpan di Download/$fileName", Toast.LENGTH_LONG).show()
                 }
             } catch (e: IOException) {
                 Log.e("DashboardFragment", "Gagal menyimpan file dengan MediaStore", e)

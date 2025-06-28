@@ -680,9 +680,9 @@
                 <com.github.mikephil.charting.charts.HorizontalBarChart
                     android:id="@+id/horizontalBarChart_monthly"
                     android:layout_width="match_parent"
-                    android:layout_height="700dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_below="@+id/tv_download_monthly"/>
+                    android:layout_height="800dp"
+                    android:layout_below="@+id/tv_download_monthly"
+                    android:layout_marginTop="16dp" />
             </RelativeLayout>
         </LinearLayout>
     </LinearLayout>

@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.eatstedi.adapter.LogActivityAdapter
 import com.example.eatstedi.api.retrofit.RetrofitClient
+import com.example.eatstedi.api.service.AdminProfileResponse
 import com.example.eatstedi.api.service.ApiService
+import com.example.eatstedi.api.service.CashierResponse
 import com.example.eatstedi.api.service.LogByDateRequest
 import com.example.eatstedi.api.service.LogByNameRequest
 import com.example.eatstedi.api.service.LogResponse
@@ -38,6 +40,10 @@ class LogFragment : Fragment() {
     private lateinit var adapter: LogActivityAdapter
     private var originalLogActivities: List<ModelLogActivity> = emptyList()
     private var filteredLogs = listOf<ModelLogActivity>()
+
+    // Maps untuk menyimpan nama kasir dan admin berdasarkan ID
+    private val cashierNameMap = mutableMapOf<Int, String>()
+    private val adminNameMap = mutableMapOf<Int, String>()
 
     private var startDate: Calendar? = null
     private var endDate: Calendar? = null
@@ -71,7 +77,7 @@ class LogFragment : Fragment() {
         setupRecyclerView()
         setupUI()
         showShimmer()
-        fetchLogs()
+        fetchAllUserDataThenLogs()
     }
 
     override fun onDestroyView() {
@@ -177,6 +183,48 @@ class LogFragment : Fragment() {
 
     // --- Data Fetching ---
 
+    private fun fetchAllUserDataThenLogs() {
+        // Ambil data Admin
+        apiService.getAdminProfile().enqueue(object : Callback<AdminProfileResponse> {
+            override fun onResponse(call: Call<AdminProfileResponse>, response: Response<AdminProfileResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val admin = response.body()?.data
+                    if (admin != null) {
+                        adminNameMap[admin.id] = admin.name
+                    }
+                }
+                // Setelah admin selesai, ambil data Kasir
+                fetchCashierData()
+            }
+
+            override fun onFailure(call: Call<AdminProfileResponse>, t: Throwable) {
+                Log.e("LogFragment", "Gagal mengambil profil admin", t)
+                // Tetap lanjutkan ke pengambilan data kasir
+                fetchCashierData()
+            }
+        })
+    }
+
+    private fun fetchCashierData() {
+        apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
+            override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    response.body()?.data?.forEach { cashier ->
+                        cashierNameMap[cashier.id] = cashier.name
+                    }
+                }
+                // Setelah semua data pengguna terkumpul, baru ambil data log
+                fetchLogs()
+            }
+
+            override fun onFailure(call: Call<CashierResponse>, t: Throwable) {
+                Log.e("LogFragment", "Gagal mengambil data kasir", t)
+                // Tetap lanjutkan ke pengambilan log, meskipun mungkin hanya nama admin yang tampil
+                fetchLogs()
+            }
+        })
+    }
+
     private fun fetchLogs() {
         if (isLoading) return
         isLoading = true
@@ -280,8 +328,14 @@ class LogFragment : Fragment() {
                 val date = isoFormat.parse(log.createdAt) ?: return@mapNotNull null
 
                 val user = when {
-                    log.idCashier != null -> "Kasir ID: ${log.idCashier}"
-                    log.idAdmin != null -> "Admin ID: ${log.idAdmin}"
+                    log.idCashier != null -> {
+                        // Cari nama kasir di map, jika tidak ada, tampilkan ID
+                        cashierNameMap[log.idCashier] ?: "Kasir (ID: ${log.idCashier})"
+                    }
+                    log.idAdmin != null -> {
+                        // Cari nama admin di map, jika tidak ada, tampilkan "Admin"
+                        adminNameMap[log.idAdmin] ?: "Admin"
+                    }
                     else -> "Pengguna Tidak Dikenal"
                 }
 
