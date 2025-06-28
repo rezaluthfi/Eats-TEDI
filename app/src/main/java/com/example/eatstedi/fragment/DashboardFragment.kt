@@ -1,6 +1,7 @@
 package com.example.eatstedi.fragment
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,6 +10,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -72,6 +74,8 @@ class DashboardFragment : Fragment() {
 
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
+    private var pendingDownload: (() -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -79,11 +83,15 @@ class DashboardFragment : Fragment() {
         userRole = sharedPrefs.getString("user_role", null)
         userId = sharedPrefs.getInt("user_id", -1)
 
+        // Inisialisasi ActivityResultLauncher untuk izin penyimpanan
         requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                Toast.makeText(requireContext(), "Izin penyimpanan diberikan", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Izin penyimpanan diberikan.", Toast.LENGTH_SHORT).show()
+                // Jalankan download yang tertunda setelah izin diberikan
+                pendingDownload?.invoke()
+                pendingDownload = null // Hapus setelah dijalankan
             } else {
-                Toast.makeText(requireContext(), "Izin penyimpanan ditolak", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Izin penyimpanan ditolak. Tidak dapat mengunduh file.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -280,6 +288,7 @@ class DashboardFragment : Fragment() {
 
     private fun fetchCashiers() {
         val apiService = RetrofitClient.getInstance(requireContext())
+        if (!isAdded) return
         _binding?.let { binding ->
             showShimmer(binding.shimmerEmployee, binding.llEmployee)
             apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
@@ -287,12 +296,12 @@ class DashboardFragment : Fragment() {
                     if (!isAdded || _binding == null) return
                     hideShimmer(binding.shimmerEmployee, binding.llEmployee)
 
-                    val body = response.body()
-                    if (response.isSuccessful && body?.success == true) {
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        val fetchedCashiers = response.body()!!.data
                         cashiers.clear()
-                        cashiers.addAll(body.data)
-                        val employeeList = cashiers.map { EmployeePreview(it.name, it.profile_picture) }
-                        addEmployeeProfiles(employeeList)
+                        cashiers.addAll(fetchedCashiers)
+                        // Langsung kirim daftar Employee yang lengkap ke fungsi addEmployeeProfiles
+                        addEmployeeProfiles(fetchedCashiers)
                         updateScheduleTableForRole()
                     } else {
                         handleApiError(response, "Gagal mengambil data karyawan")
@@ -309,6 +318,7 @@ class DashboardFragment : Fragment() {
 
     private fun fetchSuppliers() {
         val apiService = RetrofitClient.getInstance(requireContext())
+        if (!isAdded) return
         _binding?.let { binding ->
             showShimmer(binding.shimmerSupplier, binding.llSupplier)
             apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
@@ -316,11 +326,10 @@ class DashboardFragment : Fragment() {
                     if (!isAdded || _binding == null) return
                     hideShimmer(binding.shimmerSupplier, binding.llSupplier)
 
-                    val body = response.body()
-                    if (response.isSuccessful && body?.success == true) {
-                        val supplierList = body.data
-                        val supplierPreviewList = supplierList.map { SupplierPreview(it.name, it.profile_picture) }
-                        addSupplierProfiles(supplierPreviewList)
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        // Langsung kirim daftar Supplier yang lengkap ke fungsi addSupplierProfiles
+                        val fetchedSuppliers = response.body()!!.data ?: emptyList()
+                        addSupplierProfiles(fetchedSuppliers)
                     } else {
                         handleApiError(response, "Gagal mengambil data pemasok")
                     }
@@ -477,27 +486,87 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    private fun addEmployeeProfiles(employeeList: List<EmployeePreview>) {
+    private fun addEmployeeProfiles(employeeList: List<Employee>) {
+        val apiService = RetrofitClient.getInstance(requireContext())
         _binding?.let { binding ->
             val container = binding.employeeContainer
             container.removeAllViews()
-            employeeList.forEach { employee ->
+
+            // Tampilkan maksimal 7 karyawan di dashboard
+            employeeList.take(7).forEach { employee ->
                 val itemBinding = ViewItemEmployeeBinding.inflate(layoutInflater, container, false)
-                Glide.with(this).load(employee.imageUrl).placeholder(R.drawable.img_avatar).error(R.drawable.img_avatar).circleCrop().into(itemBinding.ivEmployee)
                 itemBinding.tvEmployee.text = employee.name
+                // Set gambar default terlebih dahulu
+                itemBinding.ivEmployee.setImageResource(R.drawable.img_avatar)
+
+                // Panggil API untuk mengambil foto untuk setiap karyawan
+                apiService.getCashierPhotoProfile(employee.id).enqueue(object : Callback<ResponseBody> {
+                    override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                        // Pastikan fragment masih aktif saat callback dieksekusi
+                        if (isAdded && response.isSuccessful && response.body() != null) {
+                            try {
+                                val imageBytes = response.body()!!.bytes()
+                                if (imageBytes.isNotEmpty()) {
+                                    Glide.with(this@DashboardFragment)
+                                        .load(imageBytes)
+                                        .circleCrop()
+                                        .placeholder(R.drawable.img_avatar)
+                                        .error(R.drawable.img_avatar)
+                                        .into(itemBinding.ivEmployee)
+                                }
+                            } catch (e: Exception) {
+                                Log.e("DashboardFragment", "Error loading employee image bytes for id ${employee.id}", e)
+                            }
+                        }
+                    }
+                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                        Log.e("DashboardFragment", "Network failure loading employee image for id ${employee.id}", t)
+                    }
+                })
+
                 container.addView(itemBinding.root)
             }
         }
     }
 
-    private fun addSupplierProfiles(supplierList: List<SupplierPreview>) {
+    private fun addSupplierProfiles(supplierList: List<Supplier>) {
+        val apiService = RetrofitClient.getInstance(requireContext())
         _binding?.let { binding ->
             val container = binding.supplierContainer
             container.removeAllViews()
-            supplierList.forEach { supplier ->
+
+            // Tampilkan maksimal 7 supplier di dashboard
+            supplierList.take(7).forEach { supplier ->
                 val itemBinding = ViewItemSupplierBinding.inflate(layoutInflater, container, false)
-                Glide.with(this).load(supplier.imageUrl).placeholder(R.drawable.img_avatar).error(R.drawable.img_avatar).circleCrop().into(itemBinding.ivSupplier)
                 itemBinding.tvSupplier.text = supplier.name
+                // Set gambar default terlebih dahulu
+                itemBinding.ivSupplier.setImageResource(R.drawable.img_avatar)
+
+                // Panggil API untuk mengambil foto untuk setiap supplier
+                apiService.getSupplierPhotoProfile(supplier.id).enqueue(object : Callback<ResponseBody> {
+                    override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                        // Pastikan fragment masih aktif saat callback dieksekusi
+                        if (isAdded && response.isSuccessful && response.body() != null) {
+                            try {
+                                val imageBytes = response.body()!!.bytes()
+                                if (imageBytes.isNotEmpty()) {
+                                    Glide.with(this@DashboardFragment)
+                                        .load(imageBytes)
+                                        .circleCrop()
+                                        .placeholder(R.drawable.img_avatar)
+                                        .error(R.drawable.img_avatar)
+                                        .into(itemBinding.ivSupplier)
+                                }
+                            } catch (e: Exception) {
+                                Log.e("DashboardFragment", "Error loading supplier image bytes for id ${supplier.id}", e)
+                            }
+                        }
+                    }
+                    override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                        Log.e("DashboardFragment", "Network failure loading supplier image for id ${supplier.id}", t)
+                    }
+                })
+
                 container.addView(itemBinding.root)
             }
         }
@@ -805,11 +874,8 @@ class DashboardFragment : Fragment() {
     }
 
     private fun handleDownload(type: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !checkStoragePermission()) {
-            Toast.makeText(requireContext(), "Izin penyimpanan diperlukan", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+        // UBAH: Logika diubah total. Langsung panggil API.
+        // Pengecekan izin akan dilakukan di dalam fungsi `saveCsvFile`.
         val apiService = RetrofitClient.getInstance(requireContext())
         val call = when (type) {
             "daily" -> apiService.exportDailyStatistics()
@@ -819,41 +885,102 @@ class DashboardFragment : Fragment() {
         }
 
         _binding?.let { binding ->
-            showShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
+            // Anda bisa menambahkan loading indicator di sini
+            Toast.makeText(requireContext(), "Mulai mengunduh...", Toast.LENGTH_SHORT).show()
+
             call.enqueue(object : Callback<ResponseBody> {
                 override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                     if (!isAdded || _binding == null) return
-                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
                     if (response.isSuccessful) {
-                        response.body()?.let { saveToCsv(it.string(), "Rekap_${type.capitalizeFirst()}_${System.currentTimeMillis()}.csv") }
+                        response.body()?.let {
+                            val fileName = "Rekap_${type.replaceFirstChar { it.uppercase() }}_${System.currentTimeMillis()}.csv"
+                            saveCsvFile(it.string(), fileName)
+                        } ?: run {
+                            Toast.makeText(requireContext(), "Gagal mengunduh: Respons kosong", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         handleApiError(response, "Gagal mengunduh data")
                     }
                 }
                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                     if (!isAdded || _binding == null) return
-                    hideShimmer(binding.shimmerStatistics, binding.llStatisticsDailyWeekly)
                     handleApiFailure(t)
                 }
             })
         }
     }
 
-    private fun saveToCsv(csvContent: String, fileName: String) {
+    // Save CSV file dengan metode yang sesuai berdasarkan versi Android
+    private fun saveCsvFile(csvContent: String, fileName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // METODE MODERN UNTUK ANDROID 10+ (TANPA IZIN RUNTIME)
+            saveCsvUsingMediaStore(csvContent, fileName)
+        } else {
+            // METODE LAMA UNTUK ANDROID 9 KE BAWAH (MEMERLUKAN IZIN RUNTIME)
+            if (checkAndRequestStoragePermission()) {
+                saveCsvLegacy(csvContent, fileName)
+            } else {
+                // Simpan permintaan download, akan dijalankan jika user memberikan izin
+                pendingDownload = { saveCsvLegacy(csvContent, fileName) }
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun saveCsvUsingMediaStore(csvContent: String, fileName: String) {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val resolver = requireContext().contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (uri != null) {
+            try {
+                resolver.openOutputStream(uri).use { outputStream ->
+                    if (outputStream == null) {
+                        throw IOException("Gagal membuka output stream untuk $uri")
+                    }
+                    outputStream.write(csvContent.toByteArray())
+                    Toast.makeText(requireContext(), "File disimpan di Download//$fileName", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: IOException) {
+                Log.e("DashboardFragment", "Gagal menyimpan file dengan MediaStore", e)
+                Toast.makeText(requireContext(), "Gagal menyimpan file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(requireContext(), "Gagal membuat file di MediaStore", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun saveCsvLegacy(csvContent: String, fileName: String) {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        // Pastikan direktori ada
+        if (!downloadDir.exists()) {
+            downloadDir.mkdirs()
+        }
+        val file = File(downloadDir, fileName)
+
         try {
-            val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
             FileOutputStream(file).use { it.write(csvContent.toByteArray()) }
-            Toast.makeText(requireContext(), "File $fileName berhasil disimpan di Downloads", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "File disimpan di Download/$fileName", Toast.LENGTH_LONG).show()
         } catch (e: IOException) {
+            Log.e("DashboardFragment", "Gagal menyimpan file (legacy)", e)
             Toast.makeText(requireContext(), "Gagal menyimpan file: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun checkStoragePermission(): Boolean {
-        return if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+    // Cek izin penyimpanan dan minta izin jika belum diberikan
+    private fun checkAndRequestStoragePermission(): Boolean {
+        return if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            true
+        } else {
+            // Minta izin
             requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             false
-        } else true
+        }
     }
 
     private fun handleApiError(response: Response<*>, defaultMessage: String) {

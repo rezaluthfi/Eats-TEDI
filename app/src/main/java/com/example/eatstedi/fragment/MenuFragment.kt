@@ -14,6 +14,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
@@ -41,6 +42,7 @@ import com.example.eatstedi.api.service.SingleMenuResponse
 import com.example.eatstedi.api.service.SearchRequest
 import com.example.eatstedi.api.service.SupplierResponse
 import com.example.eatstedi.databinding.FragmentMenuBinding
+import com.example.eatstedi.databinding.ViewDialogConfirmDeleteMenuBinding
 import com.example.eatstedi.databinding.ViewModalAddEditMenuBinding
 import com.example.eatstedi.databinding.ViewModalInvoiceOrderBinding
 import com.example.eatstedi.model.MenuItem
@@ -56,6 +58,7 @@ import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.max
 
 class MenuFragment : Fragment() {
 
@@ -72,6 +75,31 @@ class MenuFragment : Fragment() {
     private var currentRequestIdMenu: Map<String, Int>? = null
     private var supplierList: List<Pair<Int, String>> = listOf(Pair(0, "Semua Pemasok"))
     private var userRole: String? = null
+
+    // TAMBAHKAN KODE INI DI BAGIAN ATAS CLASS
+    private var lastRecyclerViewWidth = 0
+    private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+        // Cek jika binding masih ada dan fragment ter-attach
+        _binding?.takeIf { isAdded }?.let {
+            val currentWidth = it.rvAllMenu.width
+            // Hanya hitung ulang jika lebar berubah secara signifikan (mis > 10px)
+            // dan lebarnya tidak nol.
+            if (currentWidth > 0 && currentWidth != lastRecyclerViewWidth) {
+                lastRecyclerViewWidth = currentWidth // Simpan lebar terakhir
+
+                val columnWidth = resources.getDimensionPixelSize(R.dimen.menu_column_width)
+                if (columnWidth > 0) {
+                    val spanCount = max(1, currentWidth / columnWidth)
+                    val currentLayoutManager = it.rvAllMenu.layoutManager as? GridLayoutManager
+                    // Hanya set jika span count berubah untuk efisiensi
+                    if (currentLayoutManager?.spanCount != spanCount) {
+                        it.rvAllMenu.layoutManager = GridLayoutManager(context, spanCount)
+                        Log.d("MenuFragment", "Layout automatically recalculated. New SpanCount: $spanCount")
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
         private const val REQUEST_CODE_MANAGE_STOCK = 1001
@@ -127,14 +155,25 @@ class MenuFragment : Fragment() {
         adjustUIBasedOnRole()
 
         apiService = RetrofitClient.getInstance(requireContext())
-        setupMenuRecyclerView()
+
+        // Atur LayoutManager sementara untuk mencegah crash
+        binding.rvAllMenu.layoutManager = GridLayoutManager(context, 2)
+
+        // Inisialisasi adapter terlebih dahulu
+        setupMenuAdapter()
+
+        // Lisener untuk mengatur ulang layout RecyclerView saat ukuran berubah
+        binding.rvAllMenu.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+
         if (userRole?.lowercase() == "cashier") {
             setupOrderRecyclerView()
             setupInputPayment()
         }
         setupChipFilter()
         setupButtons()
+
         setupSpinner()
+        fetchMenuFromServer()
         setupSearchView()
     }
 
@@ -156,7 +195,7 @@ class MenuFragment : Fragment() {
             }
             "cashier" -> {
                 binding.btnAddNewMenu.visibility = View.GONE
-                binding.nestedScrollView.visibility = View.VISIBLE
+                binding.nestedScrollView.visibility = View.GONE
                 binding.arrowToggle.visibility = View.VISIBLE
                 binding.rgPaymentMethod.visibility = View.VISIBLE
                 binding.btnPayNow.visibility = View.VISIBLE
@@ -170,7 +209,7 @@ class MenuFragment : Fragment() {
             else -> {
                 Log.w("MenuFragment", "Unknown user role: $userRole, defaulting to cashier permissions")
                 binding.btnAddNewMenu.visibility = View.GONE
-                binding.nestedScrollView.visibility = View.VISIBLE
+                binding.nestedScrollView.visibility = View.GONE
                 binding.arrowToggle.visibility = View.VISIBLE
                 binding.rgPaymentMethod.visibility = View.VISIBLE
                 binding.btnPayNow.visibility = View.VISIBLE
@@ -184,8 +223,20 @@ class MenuFragment : Fragment() {
         }
     }
 
+    private fun setupMenuAdapter() {
+        // Menginisialisasi adapter dengan list kosong karena data akan dikirim melalui updateList
+        menuAdapter = MenuAdapter(
+            mutableListOf(), // Kirim list kosong
+            userRole ?: "cashier",
+            onItemClick = { menuItem -> addItemToOrder(menuItem) },
+            onEditMenu = { menuItem -> showEditMenuDialog(menuItem) },
+            onDeleteMenu = { menuItem -> showConfirmDeleteDialog(menuItem) }
+        )
+        binding.rvAllMenu.adapter = menuAdapter
+        Log.d("MenuFragment", "setupMenuAdapter: MenuAdapter initialized with role=$userRole")
+    }
+
     private fun showProgressBar() {
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
             binding.progressBar.visibility = View.VISIBLE
             binding.tvNoData.visibility = View.GONE
@@ -195,7 +246,6 @@ class MenuFragment : Fragment() {
     }
 
     private fun hideProgressBar() {
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
             binding.progressBar.visibility = View.GONE
             Log.d("MenuFragment", "hideProgressBar: Hiding progress bar")
@@ -203,39 +253,48 @@ class MenuFragment : Fragment() {
     }
 
     private fun fetchSuppliers(onSuppliersFetched: (List<Pair<Int, String>>) -> Unit) {
-        showProgressBar()
+        // Tidak perlu progress bar di sini karena fetchMenuFromServer sudah menanganinya
         apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
             override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
-                // ----> TAMBAHKAN BARIS INI <----
                 if (!isAdded || _binding == null) return
 
-                hideProgressBar()
                 if (response.isSuccessful && response.body()?.success == true) {
                     val suppliers = response.body()?.data?.map { Pair(it.id, it.name) } ?: emptyList()
-                    Log.d("MenuFragment", "Suppliers fetched: ${suppliers.map { "${it.first} -> ${it.second}" }}")
                     onSuppliersFetched(suppliers)
+
+                    // PERUBAHAN: Setelah supplier ter-fetch, update ulang menu yang mungkin sudah tampil
+                    // agar nama supplier yang tadinya "Memuat..." menjadi nama aslinya.
+                    if (originalMenuList.isNotEmpty()) {
+                        originalMenuList.forEach { menuItem ->
+                            val supplierName = supplierList.find { it.first == menuItem.idSupplier }?.second
+                            menuItem.supplierName = supplierName ?: "Pemasok Tdk Dikenal"
+                        }
+                        // Update adapter jika ada perubahan
+                        menuAdapter.updateList(filteredMenuList)
+                    }
+
                 } else {
                     handleErrorResponse(response, "Gagal mengambil daftar pemasok")
-                    onSuppliersFetched(emptyList()) // Pastikan tetap memanggil callback
+                    onSuppliersFetched(emptyList())
                 }
             }
 
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
-                // ----> TAMBAHKAN BARIS INI <----
                 if (!isAdded || _binding == null) return
-
-                hideProgressBar()
                 handleNetworkError(t, "Error fetching suppliers")
-                onSuppliersFetched(emptyList()) // Pastikan tetap memanggil callback
+                onSuppliersFetched(emptyList())
             }
         })
     }
 
     private fun fetchMenuFromServer() {
-        showProgressBar()
+        // Tampilkan progress bar hanya jika ini adalah fetch pertama kali
+        if (originalMenuList.isEmpty()) {
+            showProgressBar()
+        }
+
         apiService.getMenu().enqueue(object : Callback<MenuResponse> {
             override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
-                // ----> TAMBAHKAN BARIS INI <----
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -246,6 +305,7 @@ class MenuFragment : Fragment() {
                     menuAdapter.updateList(filteredMenuList)
                     isInitialFetchComplete = true
                     updateVisibility()
+
                     Log.d("MenuFragment", "Menu fetched: ${originalMenuList.size} items, IDs: ${originalMenuList.map { it.id }}, Suppliers: ${originalMenuList.map { it.supplierName }}")
                     if (originalMenuList.isNotEmpty()) {
                         Toast.makeText(requireContext(), "Berhasil mengambil ${originalMenuList.size} menu", Toast.LENGTH_SHORT).show()
@@ -261,7 +321,6 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
-                // ----> TAMBAHKAN BARIS INI <----
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -276,12 +335,14 @@ class MenuFragment : Fragment() {
     }
 
     private fun mapMenuItemsWithSuppliers(menuItems: List<MenuItem>): List<MenuItem> {
+        // Cek jika supplierList masih kosong (race condition)
+        if (supplierList.size <= 1) { // Hanya berisi "Semua Pemasok"
+            Log.w("MenuFragment", "Mapping menu items when supplierList is not ready yet.")
+        }
         return menuItems.map { menuItem ->
             val supplierName = supplierList.find { it.first == menuItem.idSupplier }?.second
-            if (supplierName == null && menuItem.idSupplier != 0) {
-                Log.w("MenuFragment", "Supplier ID ${menuItem.idSupplier} not found in supplierList")
-            }
-            menuItem.copy(supplierName = supplierName ?: "Pemasok Tidak Diketahui")
+            // Tampilkan "Memuat..." jika nama supplier belum tersedia, atau nama aslinya jika sudah.
+            menuItem.copy(supplierName = supplierName ?: "Memuat...")
         }
     }
 
@@ -306,12 +367,17 @@ class MenuFragment : Fragment() {
     }
 
     private fun updateVisibility() {
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
-            Log.d("MenuFragment", "updateVisibility: filteredMenuList size=${filteredMenuList.size}")
+            Log.d("MenuFragment", "updateVisibility: filteredMenuList size=${filteredMenuList.size}, initialFetchComplete=${isInitialFetchComplete}")
+            // Tampilkan "No Data" hanya jika fetch sudah selesai dan listnya benar-benar kosong.
+            val isEmpty = filteredMenuList.isEmpty() && isInitialFetchComplete
             binding.rvAllMenu.visibility = if (filteredMenuList.isEmpty()) View.GONE else View.VISIBLE
-            binding.tvNoData.visibility = if (filteredMenuList.isEmpty()) View.VISIBLE else View.GONE
-            binding.progressBar.visibility = View.GONE
+            binding.tvNoData.visibility = if (isEmpty) View.VISIBLE else View.GONE
+
+            // Sembunyikan progress bar jika fetch awal selesai
+            if (isInitialFetchComplete) {
+                binding.progressBar.visibility = View.GONE
+            }
         }
     }
 
@@ -366,7 +432,7 @@ class MenuFragment : Fragment() {
         showProgressBar()
         apiService.searchMenu(SearchRequest(query)).enqueue(object : Callback<MenuResponse> {
             override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
-                // ----> TAMBAHKAN BARIS INI <----
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -384,7 +450,7 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
-                // ----> TAMBAHKAN BARIS INI <----
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -429,6 +495,7 @@ class MenuFragment : Fragment() {
         showProgressBar()
         apiService.filterByFoodType(foodType).enqueue(object : Callback<MenuResponse> {
             override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -446,6 +513,7 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -476,6 +544,7 @@ class MenuFragment : Fragment() {
         showProgressBar()
         apiService.filterBySupplier(supplierId).enqueue(object : Callback<MenuResponse> {
             override fun onResponse(call: Call<MenuResponse>, response: Response<MenuResponse>) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -497,6 +566,7 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<MenuResponse>, t: Throwable) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -662,6 +732,9 @@ class MenuFragment : Fragment() {
         apiService.updateMenu(menuId, namePart, pricePart, foodTypePart, imagePart)
             .enqueue(object : Callback<SingleMenuResponse> {
                 override fun onResponse(call: Call<SingleMenuResponse>, response: Response<SingleMenuResponse>) {
+                    // PERBAIKAN 1: Tambahkan pengecekan keamanan
+                    if (!isAdded || _binding == null) return
+
                     Log.d("MenuFragment", "API Response: ${response.body()}")
                     if (response.isSuccessful && response.body()?.success == true) {
                         response.body()?.data?.let { updatedMenu ->
@@ -691,29 +764,58 @@ class MenuFragment : Fragment() {
                 }
 
                 override fun onFailure(call: Call<SingleMenuResponse>, t: Throwable) {
+                    // PERBAIKAN 1: Tambahkan pengecekan keamanan
+                    if (!isAdded || _binding == null) return
+
                     handleNetworkError(t, "Error updating menu")
                     selectedImageUri = null
                 }
             })
     }
 
+    private fun showConfirmDeleteDialog(menuItem: MenuItem) {
+        // 1. Inflate layout custom dialog dan buat binding
+        val dialogBinding = ViewDialogConfirmDeleteMenuBinding.inflate(layoutInflater)
+
+        // 2. Buat AlertDialog menggunakan layout custom
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogBinding.root)
+            .create()
+
+        // 3. Atur listener untuk tombol-tombol di dalam dialog
+        dialogBinding.btnCancelDelete.setOnClickListener {
+            // Jika "Batal" diklik, tutup dialog
+            dialog.dismiss()
+        }
+
+        dialogBinding.btnConfirmDelete.setOnClickListener {
+            // Jika "Hapus" diklik, panggil fungsi deleteMenu yang asli
+            deleteMenu(menuItem)
+            // Tutup dialog setelahnya
+            dialog.dismiss()
+        }
+
+        // 4. INI BAGIAN PENTING: Membuat background dialog menjadi transparan
+        // Ini akan menghilangkan kotak putih di belakang layout rounded Anda.
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // 5. Tampilkan dialog
+        dialog.show()
+    }
+
     private fun deleteMenu(menuItem: MenuItem) {
         apiService.deleteMenu(menuItem.id).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                // Cek apakah fragment masih ada
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded) return
 
                 if (response.isSuccessful && response.body()?.success == true) {
-                    // Hapus dari daftar menu utama
                     originalMenuList.remove(menuItem)
-                    // Pastikan filteredMenuList juga diperbarui dengan benar
                     filteredMenuList = originalMenuList.filter { it.id != menuItem.id }
                     menuAdapter.updateList(filteredMenuList)
 
-                    // Hanya lakukan operasi terkait pesanan jika rolenya adalah cashier
                     if (userRole?.lowercase() == "cashier") {
                         selectedMenuItems.remove(menuItem)
-                        // Cek juga apakah orderAdapter sudah diinisialisasi sebelum digunakan
                         if (::orderAdapter.isInitialized) {
                             orderAdapter.notifyDataSetChanged()
                         }
@@ -727,35 +829,11 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                // Cek apakah fragment masih ada
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded) return
                 handleNetworkError(t, "Error deleting menu")
             }
         })
-    }
-
-    private fun setupMenuRecyclerView() {
-        menuAdapter = MenuAdapter(
-            filteredMenuList,
-            userRole ?: "cashier",
-            onItemClick = { menuItem -> addItemToOrder(menuItem) },
-            onEditMenu = { menuItem -> showEditMenuDialog(menuItem) },
-            onDeleteMenu = { menuItem -> deleteMenu(menuItem) }
-        )
-        binding.rvAllMenu.apply {
-            adapter = menuAdapter
-            layoutManager = if (userRole?.lowercase() == "cashier" && binding.nestedScrollView.visibility == View.VISIBLE) {
-                GridLayoutManager(context, 3)
-            } else {
-                GridLayoutManager(context, 4)
-            }
-            this.layoutParams.width = if (userRole?.lowercase() == "cashier" && binding.nestedScrollView.visibility == View.VISIBLE) {
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            } else {
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            }
-        }
-        Log.d("MenuFragment", "setupMenuRecyclerView: MenuAdapter initialized with role=$userRole")
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -852,6 +930,7 @@ class MenuFragment : Fragment() {
         apiService.createReceipt(request).enqueue(object : Callback<CreateReceiptResponse> {
             @RequiresApi(Build.VERSION_CODES.O)
             override fun onResponse(call: Call<CreateReceiptResponse>, response: Response<CreateReceiptResponse>) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -929,6 +1008,7 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<CreateReceiptResponse>, t: Throwable) {
+                // PERBAIKAN 1: Tambahkan pengecekan keamanan
                 if (!isAdded || _binding == null) return
 
                 hideProgressBar()
@@ -959,14 +1039,12 @@ class MenuFragment : Fragment() {
     }
 
     private fun showNoOrderMessage(empty: Boolean) {
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
             binding.tvEmptyOrder.visibility = if (empty) View.VISIBLE else View.GONE
         }
     }
 
     private fun setupSpinner() {
-        // Panggil fetchSuppliers, dan berikan lambda yang akan dieksekusi nanti
         fetchSuppliers { suppliers ->
             _binding?.let { binding ->
                 // Logika untuk mempersiapkan data spinner
@@ -980,7 +1058,6 @@ class MenuFragment : Fragment() {
                     setSelection(0)
                 }
                 setupSpinnerListener()
-                fetchMenuFromServer()
             }
         }
     }
@@ -1036,6 +1113,10 @@ class MenuFragment : Fragment() {
             ).show()
             return
         }
+
+        // Simpan status visibilitas sidebar sebelum ada perubahan
+        val sidebarWasVisible = binding.nestedScrollView.visibility == View.VISIBLE
+
         val existingItem = selectedMenuItems.find { it.id == menuItem.id }
         if (existingItem != null) {
             if (menu.stock < existingItem.quantity + 1) {
@@ -1062,11 +1143,16 @@ class MenuFragment : Fragment() {
             orderAdapter.notifyItemInserted(selectedMenuItems.size - 1)
             Toast.makeText(requireContext(), "${menuItem.menuName} ditambahkan ke pesanan", Toast.LENGTH_SHORT).show()
         }
+
         orderAdapter.notifyDataSetChanged()
-        binding.nestedScrollView.visibility = View.VISIBLE
-        binding.rvAllMenu.layoutManager = GridLayoutManager(context, 3)
         updateTotalPayment()
         showNoOrderMessage(selectedMenuItems.isEmpty())
+
+        // Hanya tampilkan sidebar jika sebelumnya tidak terlihat.
+        // Listener akan menangani kalkulasi ulang secara otomatis.
+        if (!sidebarWasVisible) {
+            binding.nestedScrollView.visibility = View.VISIBLE
+        }
     }
 
     fun formatPrice(price: Int): String {
@@ -1075,7 +1161,6 @@ class MenuFragment : Fragment() {
     }
 
     private fun updateTotalPayment() {
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
             val totalPayment = selectedMenuItems.sumOf { it.price * it.quantity }
             binding.tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
@@ -1084,26 +1169,20 @@ class MenuFragment : Fragment() {
 
     private fun toggleSidebar() {
         if (userRole?.lowercase() != "cashier") return
+
         binding.nestedScrollView.visibility = if (binding.nestedScrollView.visibility == View.VISIBLE) {
             View.GONE
         } else {
             View.VISIBLE
         }
-        binding.rvAllMenu.layoutManager = if (binding.nestedScrollView.visibility == View.VISIBLE) {
-            GridLayoutManager(context, 3)
-        } else {
-            GridLayoutManager(context, 4)
-        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun showInvoiceDialog(receiptResponse: CreateReceiptResponse? = null) {
-        // Pastikan fragment masih memiliki view dan context sebelum membuat dialog.
         _binding?.let { binding ->
             val dialogBinding = ViewModalInvoiceOrderBinding.inflate(layoutInflater)
             dialogBinding.apply {
                 if (receiptResponse != null && receiptResponse.success && receiptResponse.data != null) {
-                    // Logika jika ada respons dari API (sudah aman, tidak akses 'binding' fragment)
                     val receiptData = receiptResponse.data
                     tvTotalPaymentAmount.text = "Rp${formatPrice(receiptData.total)}"
                     tvPaymentMethodLabel.text = "Bayar (${receiptData.payment_type.replaceFirstChar { it.uppercase() }})"
@@ -1139,7 +1218,6 @@ class MenuFragment : Fragment() {
                     tvMoneyChange.text = "Rp${formatPrice(receiptData.returns)}"
                 }
                 else {
-                    // Logika jika tidak ada respons dari API (sekarang aman di dalam 'let')
                     val totalPayment = selectedMenuItems.sumOf { it.price * it.quantity }
                     tvTotalPaymentAmount.text = "Rp${formatPrice(totalPayment)}"
                     val menuNames = selectedMenuItems.joinToString("\n") { "${it.menuName} (x${it.quantity})" }
@@ -1155,7 +1233,6 @@ class MenuFragment : Fragment() {
                     val cashierName = sharedPreferences.getString("user_name", "Kasir") ?: "Kasir"
                     tvNameEmployee.text = cashierName
 
-                    // Akses ke 'binding' Fragment sekarang aman
                     val paymentType = if (binding.rbCash.isChecked) "Cash" else "QRIS"
                     tvPaymentMethodLabel.text = "Bayar ($paymentType)"
                     tvMoneyPay.text = "Rp${formatPrice(totalPayment)}"
@@ -1187,12 +1264,17 @@ class MenuFragment : Fragment() {
 
     private fun resetOrderData() {
         selectedMenuItems.clear()
-        // Perbaikan: Gunakan safe call untuk memastikan binding tidak null
         _binding?.let { binding ->
-            // orderAdapter tidak bergantung pada view, jadi aman dipanggil di luar
             orderAdapter.notifyDataSetChanged()
             binding.tvTotalPaymentAmount.text = "Rp0"
+
+            // Kosongkan field input pembayaran.
+            binding.etInputPayment.text.clear()
+
             showNoOrderMessage(selectedMenuItems.isEmpty())
+
+            // Sembunyikan sidebar setelah transaksi selesai.
+            binding.nestedScrollView.visibility = View.GONE
         }
     }
 
@@ -1216,6 +1298,8 @@ class MenuFragment : Fragment() {
     private fun fetchSuppliersForDialog(onSuppliersFetched: (List<Pair<Int, String>>) -> Unit) {
         apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
             override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
+                if (!isAdded) return
+
                 if (response.isSuccessful && response.body()?.success == true) {
                     val suppliers = response.body()?.data?.map { Pair(it.id, it.name) } ?: emptyList()
                     Log.d("MenuFragment", "fetchSuppliersForDialog: Fetched ${suppliers.size} suppliers")
@@ -1227,6 +1311,8 @@ class MenuFragment : Fragment() {
             }
 
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
+                if (!isAdded) return
+
                 handleNetworkError(t, "Error fetching suppliers")
                 onSuppliersFetched(listOf(Pair(0, "Semua Pemasok")))
             }
@@ -1240,7 +1326,7 @@ class MenuFragment : Fragment() {
         dialogBinding.imgMenu.setImageResource(R.drawable.image_menu) // Set placeholder awal
 
         fetchSuppliersForDialog { suppliers ->
-            Log.d("MenuFragment", "Suppliers for dialog: ${suppliers.map { "${it.first} -> ${it.second}"} }")
+            Log.d("MenuFragment", "Suppliers for dialog: ${suppliers.map { "${it.first} -> ${it.second}" }}")
             val supplierNames = suppliers.map { it.second }.toTypedArray()
             val supplierAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, supplierNames)
             supplierAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -1256,7 +1342,6 @@ class MenuFragment : Fragment() {
                 btnCancel.setOnClickListener {
                     dialog.dismiss()
                     selectedImageUri = null
-                    updateVisibility()
                     Log.d("MenuFragment", "showMenuDialog: Dialog cancelled")
                 }
                 btnSave.setOnClickListener {
@@ -1270,8 +1355,6 @@ class MenuFragment : Fragment() {
                     val menuName = etMenuName.text.toString().trim()
                     val menuPrice = etMenuPrice.text.toString().toIntOrNull() ?: 0
                     val foodType = getSelectedFoodType(dialogBinding)
-
-                    Log.d("MenuFragment", "Saving new menu: idSupplier=$supplierId, supplierName=$supplierName, name=$menuName, price=$menuPrice, foodType=$foodType")
 
                     if (menuName.isNotEmpty() && menuPrice > 0 && foodType.isNotEmpty()) {
                         val namePart = menuName.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -1289,7 +1372,6 @@ class MenuFragment : Fragment() {
                                 }
                                 val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
                                 imagePart = MultipartBody.Part.createFormData("menu_picture", file.name, requestFile)
-                                Log.d("MenuFragment", "Image prepared for upload: ${file.name}")
                             } catch (e: Exception) {
                                 Log.e("MenuFragment", "Error preparing image: ${e.message}", e)
                                 Toast.makeText(requireContext(), "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
@@ -1306,15 +1388,27 @@ class MenuFragment : Fragment() {
                             menuPicture = imagePart
                         ).enqueue(object : Callback<SingleMenuResponse> {
                             override fun onResponse(call: Call<SingleMenuResponse>, response: Response<SingleMenuResponse>) {
-                                Log.d("MenuFragment", "createMenu API Response: ${response.body()}")
+                                if (!isAdded || _binding == null) return
+
                                 if (response.isSuccessful && response.body()?.success == true) {
                                     response.body()?.data?.let { newMenu ->
-                                        Log.d("MenuFragment", "New menu received: id=${newMenu.id}, imageUrl=${newMenu.imageUrl}")
+                                        Log.d("MenuFragment", "New menu received: id=${newMenu.id}, stock=${newMenu.stock}")
+
                                         val mappedMenu = mapMenuItemsWithSuppliers(listOf(newMenu)).first()
-                                        originalMenuList.add(mappedMenu)
+                                        originalMenuList.add(0, mappedMenu)
                                         applyCurrentFilter()
                                         menuAdapter.updateList(filteredMenuList)
                                         updateVisibility()
+
+                                        // ================== TRIK UTAMA DI SINI ==================
+                                        binding.rvAllMenu.postDelayed({
+                                            if (!isAdded) return@postDelayed
+                                            binding.rvAllMenu.scrollToPosition(0)
+                                            menuAdapter.notifyDataSetChanged()
+                                            Log.d("MenuFragment", "Forcing UI refresh after adding new menu.")
+                                        }, 100) // Jeda 100 milidetik
+                                        // ======================================================
+
                                         Toast.makeText(requireContext(), "Berhasil menambahkan menu baru", Toast.LENGTH_SHORT).show()
                                     } ?: run {
                                         Log.e("MenuFragment", "No data in createMenu response: ${response.body()}")
@@ -1322,15 +1416,14 @@ class MenuFragment : Fragment() {
                                     }
                                 } else {
                                     handleErrorResponse(response, "Gagal menambahkan menu")
-                                    updateVisibility()
                                 }
                                 selectedImageUri = null
                             }
 
                             override fun onFailure(call: Call<SingleMenuResponse>, t: Throwable) {
+                                if (!isAdded || _binding == null) return
                                 handleNetworkError(t, "Error creating menu")
                                 selectedImageUri = null
-                                updateVisibility()
                             }
                         })
                         dialog.dismiss()
@@ -1347,6 +1440,7 @@ class MenuFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        _binding?.rvAllMenu?.viewTreeObserver?.removeOnGlobalLayoutListener(layoutListener)
         super.onDestroyView()
         _binding = null
     }

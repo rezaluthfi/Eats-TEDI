@@ -5,45 +5,54 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
+    <!-- ImageView akan menjaga rasio aspeknya agar tidak gepeng -->
     <ImageView
-        android:id="@+id/onboardingImage"
-        android:layout_width="300dp"
-        android:layout_height="300dp"
-        android:adjustViewBounds="true"
+        android:id="@+id/onboarding_image"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@+id/guideline_horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="64dp"
-        android:contentDescription="Onboarding image" />
+        app:srcCompat="@drawable/img_onboarding_1" />
 
+    <!-- Guideline untuk membagi ruang antara gambar dan teks -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.6" />
+
+    <!-- Judul -->
     <TextView
-        android:id="@+id/onboardingTitle"
+        android:id="@+id/onboarding_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="48sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/black"
-        android:fontFamily="@font/bree_serif_regular"
-        app:layout_constraintTop_toBottomOf="@id/onboardingImage"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="32dp"
-        android:gravity="center" />
-
-    <TextView
-        android:id="@+id/onboardingDescription"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textSize="24sp"
-        android:textColor="@android:color/darker_gray"
-        android:fontFamily="@font/noto_serif_gujarati_regular"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
+        android:fontFamily="@font/noto_sans_gujarati_bold"
         android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/onboardingTitle"
+        android:text="Selamat Datang"
+        android:textColor="@color/black"
+        android:textSize="@dimen/onboarding_title_size"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="@+id/guideline_horizontal" />
+
+    <!-- Deskripsi -->
+    <TextView
+        android:id="@+id/onboarding_description"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="@font/noto_sans_gujarati_regular"
+        android:gravity="center"
+        android:text="Aplikasi kasir praktis untuk kantin modern"
+        android:textColor="@color/black"
+        android:textSize="@dimen/onboarding_desc_size"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/onboarding_title" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

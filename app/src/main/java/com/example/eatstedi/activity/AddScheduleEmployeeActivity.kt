@@ -3,16 +3,17 @@ package com.example.eatstedi.activity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.eatstedi.R
+import com.example.eatstedi.adapter.ScheduleAdapter
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.CreateScheduleRequest
 import com.example.eatstedi.api.service.GenericResponse
@@ -23,6 +24,7 @@ import com.example.eatstedi.model.Schedule
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlin.math.max
 
 class AddScheduleEmployeeActivity : AppCompatActivity() {
 
@@ -31,20 +33,13 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
     private val schedules = mutableListOf<Schedule>()
     private var cashierId: Int = -1
 
-    // Mapping hari dari bahasa Indonesia ke bahasa Inggris
     private val dayTranslationMap = mapOf(
-        "Senin" to "MONDAY",
-        "Selasa" to "TUESDAY",
-        "Rabu" to "WEDNESDAY",
-        "Kamis" to "THURSDAY",
-        "Jumat" to "FRIDAY",
-        "Sabtu" to "SATURDAY",
-        "Minggu" to "SUNDAY"
+        "Senin" to "MONDAY", "Selasa" to "TUESDAY", "Rabu" to "WEDNESDAY",
+        "Kamis" to "THURSDAY", "Jumat" to "FRIDAY", "Sabtu" to "SATURDAY", "Minggu" to "SUNDAY"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(binding.root)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -52,53 +47,72 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
             insets
         }
 
-        // Ambil cashierId dari Intent
         cashierId = intent.getIntExtra("EMPLOYEE_ID", -1)
         Log.d("AddScheduleEmployeeActivity", "Received EMPLOYEE_ID: $cashierId")
 
-        // Validasi cashierId
         if (cashierId == -1) {
             Toast.makeText(this, "ID Karyawan tidak valid", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        // Periksa peran pengguna
         val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
-        val userRole = sharedPreferences.getString("user_role", "cashier") ?: "cashier"
-        val isAdmin = userRole == "admin"
-
-        // Hanya admin yang dapat mengakses halaman ini
-        if (!isAdmin) {
+        val userRole = sharedPreferences.getString("user_role", null)
+        if (userRole != "admin") {
             Toast.makeText(this, "Hanya admin yang dapat mengelola jadwal", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        // Inisialisasi RecyclerView
-        scheduleAdapter = ScheduleAdapter(schedules, isAdmin) { position ->
+        // Inisialisasi adapter
+        scheduleAdapter = ScheduleAdapter(schedules, true, 0) { position ->
             removeSchedule(position)
         }
-        binding.rvSchedule.apply {
-            layoutManager = GridLayoutManager(this@AddScheduleEmployeeActivity, 3)
-            adapter = scheduleAdapter
-        }
+
+        // Set layout manager SEMENTARA untuk mencegah error
+        binding.rvSchedule.layoutManager = GridLayoutManager(this, 2)
+        binding.rvSchedule.adapter = scheduleAdapter
+
+        // Panggil fungsi untuk membuat grid dinamis
+        setupDynamicGrid()
 
         with(binding) {
-            // Pastikan tombol Tambah Jadwal terlihat untuk admin
             btnAddSchedule.visibility = View.VISIBLE
-            btnAddSchedule.isEnabled = true
             btnAddSchedule.setOnClickListener {
                 showScheduleModal()
             }
-
             ivArrowBack.setOnClickListener {
                 finish()
             }
         }
 
-        // Ambil data jadwal saat aktivitas dimulai
         fetchSchedules()
+    }
+
+    private fun setupDynamicGrid() {
+        binding.rvSchedule.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                // Hapus listener agar tidak berjalan berulang kali
+                binding.rvSchedule.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                val recyclerViewWidth = binding.rvSchedule.width
+
+                // Lebar ideal per kolom dalam DP. Angka ini sedikit lebih besar dari
+                // lebar item untuk memberikan sedikit ruang
+                val idealColumnWidthDp = 360
+                val idealColumnWidthPx = (idealColumnWidthDp * resources.displayMetrics.density).toInt()
+
+                if (idealColumnWidthPx > 0 && recyclerViewWidth > 0) {
+                    // Hitung jumlah kolom yang muat, minimal 1
+                    val spanCount = max(1, recyclerViewWidth / idealColumnWidthPx)
+
+                    // Terapkan LayoutManager baru dengan span count yang sudah dihitung
+                    binding.rvSchedule.layoutManager = GridLayoutManager(this@AddScheduleEmployeeActivity, spanCount)
+
+                    Log.d("AddScheduleActivity", "Dynamic grid setup. RVWidth: $recyclerViewWidth, SpanCount: $spanCount")
+                }
+            }
+        })
     }
 
     private fun fetchSchedules() {
@@ -112,33 +126,24 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
                     if (body?.success == true) {
                         schedules.clear()
                         schedules.addAll(body.data)
-                        // Log data untuk debugging
-                        schedules.forEach { schedule ->
-                            Log.d("AddScheduleEmployeeActivity", "Schedule: id=${schedule.id}, day=${schedule.day}, id_shifts=${schedule.id_shifts}, id_cashiers=${schedule.id_cashiers}")
-                        }
                         scheduleAdapter.notifyDataSetChanged()
-                        Log.d("AddScheduleEmployeeActivity", "Schedules fetched: ${schedules.size} entries")
                     } else {
                         Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal mengambil jadwal", Toast.LENGTH_LONG).show()
-                        Log.e("AddScheduleEmployeeActivity", "Fetch schedules error: ${response.errorBody()?.string()}")
                     }
                 } else {
                     Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal mengambil jadwal: HTTP ${response.code()}", Toast.LENGTH_LONG).show()
-                    Log.e("AddScheduleEmployeeActivity", "Fetch schedules HTTP error: ${response.errorBody()?.string()}")
                 }
             }
-
             override fun onFailure(call: Call<ScheduleResponse>, t: Throwable) {
                 showLoading(false)
                 Toast.makeText(this@AddScheduleEmployeeActivity, "Error jaringan: ${t.message}", Toast.LENGTH_LONG).show()
-                Log.e("AddScheduleEmployeeActivity", "Fetch schedules failure: ${t.message}", t)
+                Log.e("AddScheduleEmployeeActivity", "Fetch schedules failure", t)
             }
         })
     }
 
     private fun showScheduleModal() {
         val modalBinding = ViewModalScheduleBinding.inflate(layoutInflater)
-
         val dialog = AlertDialog.Builder(this)
             .setView(modalBinding.root)
             .create()
@@ -149,67 +154,33 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
         )
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Set up days spinner
-        val daysAdapter = ArrayAdapter.createFromResource(
-            this,
-            R.array.days_array,
-            android.R.layout.simple_spinner_item
-        )
+        val daysAdapter = ArrayAdapter.createFromResource(this, R.array.days_array, android.R.layout.simple_spinner_item)
         daysAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spDay.adapter = daysAdapter
-        modalBinding.spDay.setSelection(0) // Set default ke Senin
 
-        // Set up shift spinner
         val shiftList = listOf(
-            "Shift 1 (07.00 - 09.00)",
-            "Shift 2 (09.00 - 12.00)",
-            "Shift 3 (12.00 - 14.00)",
-            "Shift 4 (14.00 - 16.00)"
+            "Shift 1 (07.00 - 09.00)", "Shift 2 (09.00 - 12.00)",
+            "Shift 3 (12.00 - 14.00)", "Shift 4 (14.00 - 16.00)"
         )
         val shiftAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, shiftList)
         shiftAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         modalBinding.spShift.adapter = shiftAdapter
-        modalBinding.spShift.setSelection(0) // Set default ke Shift 1
 
         modalBinding.btnSaveSchedule.setOnClickListener {
             val selectedDay = modalBinding.spDay.selectedItem?.toString() ?: ""
-            val selectedShiftPosition = modalBinding.spShift.selectedItemPosition
-            val idShifts = selectedShiftPosition + 1 // Shift 1 = index 0, Shift 2 = index 1, dst.
-
-            // Log untuk debugging
-            Log.d("AddScheduleEmployeeActivity", "Selected day: $selectedDay, shift position: $selectedShiftPosition, id_shifts: $idShifts")
-
-            // Validasi input
-            if (selectedDay.isEmpty()) {
-                Toast.makeText(this@AddScheduleEmployeeActivity, "Pilih hari terlebih dahulu!", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-            if (selectedShiftPosition == -1) {
-                Toast.makeText(this@AddScheduleEmployeeActivity, "Pilih shift terlebih dahulu!", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-
-            // Terjemahkan hari ke format server
+            val idShifts = modalBinding.spShift.selectedItemPosition + 1
             val translatedDay = dayTranslationMap[selectedDay] ?: ""
+
             if (translatedDay.isEmpty()) {
-                Toast.makeText(this@AddScheduleEmployeeActivity, "Hari tidak valid!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Hari tidak valid!", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            if (schedules.any { it.day.equals(translatedDay, ignoreCase = true) && it.id_shifts == idShifts }) {
+                Toast.makeText(this, "Jadwal untuk $selectedDay shift $idShifts sudah ada!", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
-            // Cek duplikat jadwal
-            if (schedules.any { it.day == translatedDay && it.id_shifts == idShifts }) {
-                Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal untuk $selectedDay shift $idShifts sudah ada!", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-
-            // Log request body untuk debugging
-            Log.d("AddScheduleEmployeeActivity", "Creating schedule: id_cashier=$cashierId, id_shifts=$idShifts, day=$translatedDay")
-
-            val requestBody = CreateScheduleRequest(
-                id_shifts = idShifts,
-                day = translatedDay
-            )
-
+            val requestBody = CreateScheduleRequest(id_shifts = idShifts, day = translatedDay)
             createSchedule(cashierId, requestBody)
             dialog.dismiss()
         }
@@ -227,77 +198,48 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
         apiService.createSchedule(idCashier, requestBody).enqueue(object : Callback<GenericResponse> {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                 showLoading(false)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body?.success == true) {
-                        fetchSchedules()
-                        Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil ditambahkan!", Toast.LENGTH_LONG).show()
-                        Log.d("AddScheduleEmployeeActivity", "Schedule created: ${body.message}")
-                    } else {
-                        val errorMessage = when (body?.message) {
-                            is String -> body.message as String
-                            is Map<*, *> -> (body.message as Map<*, *>).toString()
-                            else -> "Unknown error"
-                        }
-                        Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menambahkan jadwal: $errorMessage", Toast.LENGTH_LONG).show()
-                        Log.e("AddScheduleEmployeeActivity", "Create schedule error: $errorMessage, raw: ${response.errorBody()?.string()}")
-                    }
+                if (response.isSuccessful && response.body()?.success == true) {
+                    fetchSchedules()
+                    Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil ditambahkan!", Toast.LENGTH_LONG).show()
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown HTTP error"
-                    Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menambahkan jadwal: HTTP ${response.code()}", Toast.LENGTH_LONG).show()
-                    Log.e("AddScheduleEmployeeActivity", "Create schedule HTTP error: $errorBody")
+                    val errorMessage = response.body()?.message?.toString() ?: "Gagal menambahkan jadwal"
+                    Toast.makeText(this@AddScheduleEmployeeActivity, errorMessage, Toast.LENGTH_LONG).show()
                 }
             }
-
             override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
                 showLoading(false)
                 Toast.makeText(this@AddScheduleEmployeeActivity, "Error jaringan: ${t.message}", Toast.LENGTH_LONG).show()
-                Log.e("AddScheduleEmployeeActivity", "Create schedule failure: ${t.message}", t)
             }
         })
     }
 
     private fun removeSchedule(position: Int) {
-        if (position >= 0 && position < schedules.size) {
+        if (position in schedules.indices) {
             AlertDialog.Builder(this)
                 .setTitle("Konfirmasi Hapus")
-                .setMessage("Apakah Anda yakin ingin menghapus jadwal ${schedules[position].day} Shift ${schedules[position].id_shifts}?")
+                .setMessage("Yakin ingin menghapus jadwal ${schedules[position].day} Shift ${schedules[position].id_shifts}?")
                 .setPositiveButton("Hapus") { _, _ ->
-                    val schedule = schedules[position]
+                    val scheduleId = schedules[position].id
                     showLoading(true)
                     val apiService = RetrofitClient.getInstance(this)
-                    apiService.deleteSchedule(schedule.id).enqueue(object : Callback<GenericResponse> {
+                    apiService.deleteSchedule(scheduleId).enqueue(object : Callback<GenericResponse> {
                         override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                             showLoading(false)
-                            if (response.isSuccessful) {
-                                val body = response.body()
-                                if (body?.success == true) {
-                                    schedules.removeAt(position)
-                                    scheduleAdapter.notifyItemRemoved(position)
-                                    Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil dihapus!", Toast.LENGTH_LONG).show()
-                                    Log.d("AddScheduleEmployeeActivity", "Schedule deleted: ${schedule.id}")
-                                } else {
-                                    Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menghapus jadwal: ${body?.message}", Toast.LENGTH_LONG).show()
-                                    Log.e("AddScheduleEmployeeActivity", "Delete schedule error: ${response.errorBody()?.string()}")
-                                }
+                            if (response.isSuccessful && response.body()?.success == true) {
+                                fetchSchedules()
+                                Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil dihapus!", Toast.LENGTH_LONG).show()
                             } else {
-                                Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menghapus jadwal: HTTP ${response.code()}", Toast.LENGTH_LONG).show()
-                                Log.e("AddScheduleEmployeeActivity", "Delete schedule HTTP error: ${response.errorBody()?.string()}")
+                                Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menghapus jadwal: ${response.body()?.message}", Toast.LENGTH_LONG).show()
                             }
                         }
-
                         override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
                             showLoading(false)
                             Toast.makeText(this@AddScheduleEmployeeActivity, "Error jaringan: ${t.message}", Toast.LENGTH_LONG).show()
-                            Log.e("AddScheduleEmployeeActivity", "Delete schedule failure: ${t.message}", t)
                         }
                     })
                 }
                 .setNegativeButton("Batal", null)
                 .show()
-        } else {
-            Log.e("AddScheduleEmployeeActivity", "Invalid position: $position")
-            Toast.makeText(this@AddScheduleEmployeeActivity, "Posisi jadwal tidak valid!", Toast.LENGTH_LONG).show()
         }
     }
 

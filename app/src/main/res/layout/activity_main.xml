@@ -13,15 +13,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/white"
-        android:layout_marginStart="240dp"
+        android:layout_marginStart="176dp"
         android:layout_gravity="end" />
 
     <!-- Sidebar (Navigation Drawer) -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigation_view"
-        android:layout_width="256dp"
+        android:layout_width="208dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
+        android:scrollbars="none"
         android:background="@drawable/bg_sidebar"
         android:fitsSystemWindows="true"
         app:theme="@style/CustomNavigationViewStyle"

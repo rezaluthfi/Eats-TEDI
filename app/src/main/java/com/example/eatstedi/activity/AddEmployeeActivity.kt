@@ -3,7 +3,6 @@ package com.example.eatstedi.activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
@@ -13,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.GenericResponse
@@ -26,21 +24,23 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 class AddEmployeeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddEmployeeBinding
     private var selectedImageUri: Uri? = null
 
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            selectedImageUri = result.data?.data
-            selectedImageUri?.let {
-                Glide.with(this@AddEmployeeActivity)
-                    .load(it)
-                    .apply(RequestOptions.circleCropTransform())
-                    .into(binding.imgEmployee)
-            }
+    // UBAH: Gunakan GetContent yang lebih modern
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            selectedImageUri = uri
+            Glide.with(this)
+                .load(uri)
+                .circleCrop() // Sintaks yang lebih modern dan ringkas
+                .placeholder(R.drawable.img_avatar)
+                .into(binding.imgEmployee)
         }
     }
 
@@ -56,35 +56,21 @@ class AddEmployeeActivity : AppCompatActivity() {
             insets
         }
 
-        // Set up status dropdown
         val statusAdapter = ArrayAdapter.createFromResource(
             this,
-            R.array.supplier_status,
+            R.array.employee_status,
             android.R.layout.simple_spinner_item
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        val etStatus = binding.etStatus as AutoCompleteTextView
-        etStatus.setAdapter(statusAdapter)
+        (binding.etStatus as AutoCompleteTextView).setAdapter(statusAdapter)
 
         with(binding) {
-            // Back button
-            ivArrowBack.setOnClickListener {
-                finish()
-            }
-
-            // Cancel button
-            btnCancel.setOnClickListener {
-                finish()
-            }
-
-            // Camera button
+            ivArrowBack.setOnClickListener { finish() }
+            btnCancel.setOnClickListener { finish() }
             btnCameraEmployee.setOnClickListener {
-                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                pickImageLauncher.launch(intent)
+                pickImageLauncher.launch("image/*") // Panggil launcher yang baru
             }
-
-            // Save button
             btnSave.setOnClickListener {
                 saveEmployeeData()
             }
@@ -104,14 +90,8 @@ class AddEmployeeActivity : AppCompatActivity() {
                 Toast.makeText(this@AddEmployeeActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
                 return
             }
-
-            if (status !in listOf("active", "inactive")) {
-                Toast.makeText(this@AddEmployeeActivity, "Status harus 'active' atau 'inactive'", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            if (password.length < 6) {
-                Toast.makeText(this@AddEmployeeActivity, "Kata sandi minimal 6 karakter", Toast.LENGTH_SHORT).show()
+            if (password.length < 8) {
+                Toast.makeText(this@AddEmployeeActivity, "Kata sandi minimal 8 karakter", Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -123,37 +103,53 @@ class AddEmployeeActivity : AppCompatActivity() {
             val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
             var imagePart: MultipartBody.Part? = null
 
-            selectedImageUri?.let {
-                val file = File(getRealPathFromURI(it))
-                val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-                imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
+            // Konversi URI ke File dengan metode yang aman
+            selectedImageUri?.let { uri ->
+                val file = uriToFile(uri)
+                if (file != null) {
+                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
+                } else {
+                    Toast.makeText(this@AddEmployeeActivity, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
+                    return // Hentikan jika file gagal dibuat
+                }
             }
 
             val apiService = RetrofitClient.getInstance(this@AddEmployeeActivity)
-            apiService.registerEmployee(nameBody, usernameBody, phoneBody, passwordBody, salaryBody, statusBody, imagePart).enqueue(object : Callback<GenericResponse> {
-                override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        Toast.makeText(this@AddEmployeeActivity, "Karyawan berhasil ditambahkan", Toast.LENGTH_SHORT).show()
-                        setResult(RESULT_OK)
-                        finish()
-                    } else {
-                        Toast.makeText(this@AddEmployeeActivity, "Gagal menambahkan karyawan: ${response.body()?.message}", Toast.LENGTH_SHORT).show()
+            apiService.registerEmployee(nameBody, usernameBody, phoneBody, passwordBody, salaryBody, statusBody, imagePart)
+                .enqueue(object : Callback<GenericResponse> {
+                    override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            Toast.makeText(this@AddEmployeeActivity, "Karyawan berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                            setResult(RESULT_OK)
+                            finish()
+                        } else {
+                            val errorMsg = response.body()?.message ?: "Gagal menambahkan karyawan"
+                            Toast.makeText(this@AddEmployeeActivity, errorMsg.toString(), Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
 
-                override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(this@AddEmployeeActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                        Toast.makeText(this@AddEmployeeActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                    }
+                })
         }
     }
 
-    private fun getRealPathFromURI(uri: Uri): String {
-        val cursor = contentResolver.query(uri, null, null, null, null)
-        cursor?.moveToFirst()
-        val idx = cursor?.getColumnIndex(MediaStore.Images.ImageColumns.DATA)
-        val path = cursor?.getString(idx ?: 0) ?: ""
-        cursor?.close()
-        return path
+    // Fungsi utilitas yang aman untuk mengonversi URI ke File
+    private fun uriToFile(uri: Uri): File? {
+        return try {
+            val inputStream: InputStream? = contentResolver.openInputStream(uri)
+            val file = File(cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
+
 }

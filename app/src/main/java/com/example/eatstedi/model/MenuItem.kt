@@ -9,7 +9,7 @@ data class MenuItem(
     @SerializedName("id") val id: Int,
     @SerializedName("name") val menuName: String,
     @SerializedName("id_supplier") val idSupplier: Int,
-    @SerializedName("supplier_name") val supplierName: String?,
+    @SerializedName("supplier_name") var supplierName: String?,
     @SerializedName("food_type") val foodType: String,
     @SerializedName("price") private val priceRaw: String,
     @SerializedName("stock") private var stockRaw: String,

@@ -61,6 +61,9 @@ class RecapFragment : Fragment() {
     private var totalPages = 1
     private var cashierList: List<Employee> = emptyList()
 
+    private lateinit var requestPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    private var pendingDownload: (() -> Unit)? = null
+
     // --- Lifecycle Methods ---
 
     override fun onCreateView(
@@ -74,6 +77,17 @@ class RecapFragment : Fragment() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Inisialisasi launcher untuk izin penyimpanan
+        requestPermissionLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                Toast.makeText(requireContext(), "Izin penyimpanan diberikan.", Toast.LENGTH_SHORT).show()
+                pendingDownload?.invoke()
+                pendingDownload = null
+            } else {
+                Toast.makeText(requireContext(), "Izin penyimpanan ditolak. Tidak dapat mengunduh file.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         apiService = RetrofitClient.getInstance(requireContext())
         setupUI()
@@ -349,14 +363,45 @@ class RecapFragment : Fragment() {
             override fun onResponse(call: Call<ReceiptResponse>, response: Response<ReceiptResponse>) {
                 if (!isAdded || _binding == null) return
                 hideShimmer()
+
                 val body = response.body()
+
+                // Kondisi 1: Respons sukses dari server
                 if (response.isSuccessful && body?.success == true) {
-                    filterAndDisplayTransactions(body.data ?: emptyList())
-                } else {
-                    showToast("Pencarian gagal: ${body?.message}")
-                    filterAndDisplayTransactions(emptyList())
+                    val searchResult = body.data
+                    if (searchResult != null && searchResult.isNotEmpty()) {
+                        // Sukses dan ada data
+                        filterAndDisplayTransactions(searchResult)
+                    } else {
+                        // Sukses tapi tidak ada data (kasus kasir 3, 4, 5)
+                        filterAndDisplayTransactions(emptyList())
+                        showToast("Tidak ada transaksi untuk '$query'")
+                    }
+                }
+                // Kondisi 2: Respons GAGAL, kita periksa alasannya
+                else {
+                    // Kita perlu membaca errorBody, tapi karena response.body() mungkin juga berisi pesan,
+                    // errorBody() hanya ada jika kode HTTP bukan 2xx.
+                    val errorBodyString = response.errorBody()?.string() ?: body?.message ?: ""
+
+                    // Cek apakah pesan error mengandung frasa kunci dari backend bahwa model Cashier tidak ditemukan
+                    if (errorBodyString.contains("No query results for model [App\\\\Models\\\\Cashier]")) {
+
+                        // Ini kasus kasir 2. Kita anggap sebagai "kasir tidak ditemukan", bukan error
+                        Log.w("RecapFragment", "Search failed because cashier model was not found. Treating as 'not found'.")
+                        filterAndDisplayTransactions(emptyList())
+                        showToast("Kasir dengan nama '$query' tidak ditemukan")
+
+                    } else {
+                        // Ini adalah error server yang sebenarnya
+                        val errorMessage = body?.message ?: "Terjadi kesalahan pada server"
+                        showToast("Pencarian gagal: $errorMessage")
+                        filterAndDisplayTransactions(emptyList())
+                    }
+                    // =============================================================
                 }
             }
+
             override fun onFailure(call: Call<ReceiptResponse>, t: Throwable) {
                 if (!isAdded || _binding == null) return
                 hideShimmer()
@@ -532,20 +577,44 @@ class RecapFragment : Fragment() {
 
     private fun toggleDeleteButtonVisibility() {
         _binding?.let { binding ->
+            // Cek apakah ada checkbox yang tercentang.
             val anyChecked = checkBoxList.any { it.isChecked }
+
+            // Atur visibilitas tombol delete berdasarkan kondisi di atas.
             binding.ivDelete.visibility = if (anyChecked) View.VISIBLE else View.GONE
 
+            // Atur visibilitas semua kontrol header lainnya.
             if (anyChecked) {
-                hideHeaderControls()
+                // Jika ada yang tercentang, SEMBUNYIKAN semua kontrol header lain.
+                binding.btnStartDate.visibility = View.GONE
+                binding.btnEndDate.visibility = View.GONE
+                binding.ivActiveCheckbox.visibility = View.GONE
+                binding.ivDownload.visibility = View.GONE
                 binding.etSearch.visibility = View.GONE
+                binding.ivClearSearch.visibility = View.GONE
+                // Sembunyikan juga pagination agar tidak mengganggu
                 binding.paginationLayout.visibility = View.GONE
-            } else if (_binding?.etSearch?.text.toString().trim().isEmpty()){
-                binding.ivDownload.visibility = View.VISIBLE
-                binding.btnStartDate.visibility = View.VISIBLE
-                binding.btnEndDate.visibility = View.VISIBLE
-                binding.etSearch.visibility = View.VISIBLE
-                if (currentDisplayedData.isNotEmpty()) {
-                    binding.paginationLayout.visibility = View.VISIBLE
+            } else {
+                // Jika TIDAK ada yang tercentang:
+                // Cek apakah kita sedang dalam mode search atau tidak.
+                val isSearching = binding.etSearch.isFocused || binding.etSearch.text.isNotEmpty()
+                if (!isSearching) {
+                    // Jika tidak sedang search, TAMPILKAN KEMBALI semua kontrol header.
+                    binding.btnStartDate.visibility = View.VISIBLE
+                    binding.btnEndDate.visibility = View.VISIBLE
+
+                    binding.ivActiveCheckbox.visibility = View.VISIBLE
+
+                    binding.ivDownload.visibility = View.VISIBLE
+                    binding.etSearch.visibility = View.VISIBLE
+
+                    // Tampilkan tombol clear hanya jika filter tanggal aktif
+                    binding.ivClearSearch.visibility = if (startDate != null || endDate != null) View.VISIBLE else View.GONE
+
+                    // Tampilkan kembali pagination jika ada data
+                    if (currentDisplayedData.isNotEmpty()) {
+                        binding.paginationLayout.visibility = View.VISIBLE
+                    }
                 }
             }
         }
@@ -595,36 +664,90 @@ class RecapFragment : Fragment() {
     // --- Export ---
 
     private fun exportReceipts() {
-        showShimmer()
+        // UBAH: Logika disederhanakan, hanya memanggil API
+        showToast("Mulai mengunduh...")
         apiService.exportReceipts().enqueue(object : Callback<ResponseBody> {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                if (!isAdded || _binding == null) return // Guard
-                hideShimmer()
+                if (!isAdded) return
                 if (response.isSuccessful) {
-                    response.body()?.let { savePdf(it) } ?: showToast("Gagal mengunduh: Response kosong")
+                    response.body()?.let {
+                        val fileName = "receipts_export_${System.currentTimeMillis()}.pdf"
+                        // Panggil router penyimpanan file yang baru
+                        savePdfFile(it, fileName)
+                    } ?: showToast("Gagal mengunduh: Respons kosong")
                 } else {
                     showToast("Gagal mengunduh PDF: ${response.message()}")
                 }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                if (!isAdded || _binding == null) return // Guard
-                hideShimmer()
+                if (!isAdded) return
                 showToast("Error jaringan: ${t.message}")
             }
         })
     }
 
-    private fun savePdf(body: ResponseBody) {
-        if (!isAdded) return // Guard
+    private fun savePdfFile(body: ResponseBody, fileName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Metode modern untuk Android 10+
+            savePdfUsingMediaStore(body, fileName)
+        } else {
+            // Metode lama untuk Android 9 ke bawah
+            if (checkAndRequestStoragePermission()) {
+                savePdfLegacy(body, fileName)
+            } else {
+                // Simpan aksi download, akan dijalankan jika user memberikan izin
+                pendingDownload = { savePdfLegacy(body, fileName) }
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun savePdfUsingMediaStore(body: ResponseBody, fileName: String) {
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val resolver = requireContext().contentResolver
+        val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (uri != null) {
+            try {
+                resolver.openOutputStream(uri).use { outputStream ->
+                    outputStream?.write(body.bytes())
+                    showToast("PDF disimpan di Download/$fileName", Toast.LENGTH_LONG)
+                }
+            } catch (e: IOException) {
+                showToast("Gagal menyimpan PDF: ${e.message}")
+            }
+        }
+    }
+
+    private fun savePdfLegacy(body: ResponseBody, fileName: String) {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadDir.exists()) {
+            downloadDir.mkdirs()
+        }
+        val file = File(downloadDir, fileName)
+
         try {
-            val fileName = "receipts_export_${System.currentTimeMillis()}.pdf"
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val file = File(downloadsDir, fileName)
             FileOutputStream(file).use { it.write(body.bytes()) }
             showToast("PDF disimpan di Download/$fileName", Toast.LENGTH_LONG)
         } catch (e: IOException) {
             showToast("Gagal menyimpan PDF: ${e.message}")
+        }
+    }
+
+    // --- Permission Handling ---
+
+    private fun checkAndRequestStoragePermission(): Boolean {
+        return if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            true
+        } else {
+            requestPermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            false
         }
     }
 

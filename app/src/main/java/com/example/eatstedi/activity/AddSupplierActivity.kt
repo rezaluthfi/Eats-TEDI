@@ -3,7 +3,6 @@ package com.example.eatstedi.activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Toast
@@ -12,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.bumptech.glide.Glide // UBAH: Import Glide
 import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.CreateSupplierResponse
@@ -24,18 +24,24 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 class AddSupplierActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddSupplierBinding
     private var selectedImageUri: Uri? = null
 
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            selectedImageUri = result.data?.data
-            selectedImageUri?.let {
-                binding.imgSupplier.setImageURI(it)
-            }
+    // Gunakan GetContent dan tampilkan gambar dengan Glide.circleCrop()
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            selectedImageUri = uri
+            // Tampilkan gambar pratinjau sebagai lingkaran menggunakan Glide
+            Glide.with(this)
+                .load(uri)
+                .circleCrop()
+                .placeholder(R.drawable.img_avatar) // Gambar default saat loading
+                .into(binding.imgSupplier)
         }
     }
 
@@ -51,29 +57,20 @@ class AddSupplierActivity : AppCompatActivity() {
             insets
         }
 
-        // Set up status dropdown
         val statusAdapter = ArrayAdapter.createFromResource(
-            this,
-            R.array.supplier_status,
-            android.R.layout.simple_spinner_item
+            this, R.array.supplier_status, android.R.layout.simple_spinner_item
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        val etStatus = binding.etStatus as AutoCompleteTextView
-        etStatus.setAdapter(statusAdapter)
+        (binding.etStatus as AutoCompleteTextView).setAdapter(statusAdapter)
 
         with(binding) {
-            ivArrowBack.setOnClickListener {
-                finish()
-            }
-
-            btnCancel.setOnClickListener {
-                finish()
-            }
+            ivArrowBack.setOnClickListener { finish() }
+            btnCancel.setOnClickListener { finish() }
 
             btnCameraSupplier.setOnClickListener {
-                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                pickImageLauncher.launch(intent)
+                // Panggil launcher dengan tipe "image/*"
+                pickImageLauncher.launch("image/*")
             }
 
             btnSave.setOnClickListener {
@@ -93,26 +90,33 @@ class AddSupplierActivity : AppCompatActivity() {
     }
 
     private fun createSupplier(name: String, username: String, phone: String, status: String, imageUri: Uri?) {
-        val apiService = RetrofitClient.getInstance(this)
         val nameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
         val usernameBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
         val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
         val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
         var imagePart: MultipartBody.Part? = null
 
-        imageUri?.let {
-            val file = File(getRealPathFromURI(it))
-            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
-            imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
+        imageUri?.let { uri ->
+            val file = uriToFile(uri)
+            if (file != null) {
+                val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
+            } else {
+                Toast.makeText(this, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
+                return // Hentikan proses jika file tidak bisa dibuat
+            }
         }
 
+        val apiService = RetrofitClient.getInstance(this)
         apiService.createSupplier(nameBody, usernameBody, phoneBody, statusBody, imagePart).enqueue(object : Callback<CreateSupplierResponse> {
             override fun onResponse(call: Call<CreateSupplierResponse>, response: Response<CreateSupplierResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     Toast.makeText(this@AddSupplierActivity, "Supplier berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK) // Beri tahu activity sebelumnya bahwa ada data baru
                     finish()
                 } else {
-                    Toast.makeText(this@AddSupplierActivity, "Gagal menambahkan supplier: ${response.body()?.message}", Toast.LENGTH_SHORT).show()
+                    val errorMsg = response.body()?.message ?: "Gagal menambahkan supplier"
+                    Toast.makeText(this@AddSupplierActivity, errorMsg, Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -122,12 +126,19 @@ class AddSupplierActivity : AppCompatActivity() {
         })
     }
 
-    private fun getRealPathFromURI(uri: Uri): String {
-        val cursor = contentResolver.query(uri, null, null, null, null)
-        cursor?.moveToFirst()
-        val idx = cursor?.getColumnIndex(MediaStore.Images.ImageColumns.DATA)
-        val path = cursor?.getString(idx ?: 0) ?: ""
-        cursor?.close()
-        return path
+    private fun uriToFile(uri: Uri): File? {
+        return try {
+            val inputStream: InputStream? = contentResolver.openInputStream(uri)
+            val file = File(cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
+
 }

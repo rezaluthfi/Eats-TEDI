@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
+        android:scrollbars="none"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/paginationLayout"
         app:layout_constraintStart_toStartOf="parent"
@@ -31,7 +32,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Rekap Transaksi"
+                    android:text="Rekap"
                     android:textSize="32sp"
                     android:textColor="@color/black"
                     android:fontFamily="@font/noto_sans_gujarati_bold" />

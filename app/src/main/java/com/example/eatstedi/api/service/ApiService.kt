@@ -109,6 +109,14 @@ interface ApiService {
     @GET("get-admin-profile")
     fun getAdminProfile(): Call<AdminProfileResponse>
 
+    @Multipart
+    @POST("update-admin-profile")
+    fun updateAdminProfile(
+        @Part("username") username: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part profilePicture: MultipartBody.Part?
+    ): Call<GenericResponse>
+
     @GET("get-cashier-profile")
     fun getCashierProfile(): Call<CashierProfileResponse>
 
@@ -151,6 +159,9 @@ interface ApiService {
 
     @GET("get-cashier")
     fun getCashiers(): Call<CashierResponse>
+
+    @POST("search-cashier") // Asumsi nama endpointnya ini
+    fun searchCashiers(@Body request: SearchCashierRequest): Call<CashierResponse>
 
     @GET("get-supplier")
     fun getSuppliers(): Call<SupplierResponse>
@@ -448,13 +459,20 @@ data class ScheduleResponse(
 data class CashierResponse(
     val success: Boolean,
     val activity: String,
-    val data: List<Employee>
+    val data: List<Employee>,
+    val message: String?
+)
+
+data class SearchCashierRequest(
+    @SerializedName("name")
+    val query: String
 )
 
 data class SupplierResponse(
     val success: Boolean,
     val activity: String,
-    val data: List<Supplier>
+    val data: List<Supplier>,
+    val message: String?
 )
 
 data class CreateSupplierRequest(
@@ -486,6 +504,7 @@ data class UpdateSupplierResponse(
 )
 
 data class SearchSupplierRequest(
+    @SerializedName("name")
     val query: String
 )
 

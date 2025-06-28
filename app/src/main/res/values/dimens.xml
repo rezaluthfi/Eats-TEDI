@@ -14,7 +14,10 @@
     <!-- Onboarding -->
     <dimen name="button_width">80dp</dimen>
     <dimen name="button_height">36dp</dimen>
-    <dimen name="dots_indicator_height">16dp</dimen>
+    <dimen name="dots_indicator_height">10dp</dimen>
+    <dimen name="onboarding_title_size">24sp</dimen>
+    <dimen name="onboarding_desc_size">16sp</dimen>
+    <dimen name="onboarding_button_text_size">16sp</dimen>
 
     <!-- Login -->
     <dimen name="content_margin">16dp</dimen>
@@ -30,6 +33,9 @@
     <dimen name="line_height_subtitle">20dp</dimen>
     <dimen name="search_expanded_width">240dp</dimen>
     <dimen name="search_collapsed_width">40dp</dimen>
+
+    <!-- Lebar ideal untuk satu kolom di dalam grid menu fragment -->
+    <dimen name="menu_column_width">220dp</dimen>
 
     <!-- Splash -->
     <dimen name="logo_size">150dp</dimen>

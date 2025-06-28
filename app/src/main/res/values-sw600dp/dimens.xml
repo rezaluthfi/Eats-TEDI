@@ -12,7 +12,10 @@
     <!-- Onboarding -->
     <dimen name="button_width">120dp</dimen>
     <dimen name="button_height">48dp</dimen>
-    <dimen name="dots_indicator_height">24dp</dimen>
+    <dimen name="dots_indicator_height">10dp</dimen>
+    <dimen name="onboarding_title_size">24sp</dimen>
+    <dimen name="onboarding_desc_size">16sp</dimen>
+    <dimen name="onboarding_button_text_size">16sp</dimen>
 
     <!-- Login -->
     <dimen name="content_margin">80dp</dimen>

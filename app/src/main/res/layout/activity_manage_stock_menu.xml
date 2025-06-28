@@ -10,6 +10,7 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:scrollbars="none"
         android:fillViewport="true"
         android:paddingBottom="16dp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -381,6 +382,7 @@
 
                         <TableLayout
                             android:id="@+id/tableView"
+                            android:scrollbars="none"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:paddingHorizontal="24dp" />

@@ -39,4 +39,10 @@
         <item>active</item>
         <item>inactive</item>
     </string-array>
+
+    <!-- Data untuk dropdown status cashier/karyawan -->
+    <string-array name="employee_status">
+        <item>active</item>
+        <item>inactive</item>
+    </string-array>
 </resources>

@@ -1,8 +1,11 @@
 package com.example.eatstedi.activity
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -10,7 +13,8 @@ import android.view.View
 import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -21,6 +25,7 @@ import com.example.eatstedi.api.service.SearchSupplierRequest
 import com.example.eatstedi.api.service.SupplierResponse
 import com.example.eatstedi.databinding.ActivityAllSupplierBinding
 import com.example.eatstedi.model.Supplier
+import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -30,11 +35,20 @@ import java.util.Locale
 class AllSupplierActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAllSupplierBinding
-    private val supplierList = mutableListOf<Supplier>()
+    private var originalSupplierList = mutableListOf<Supplier>()
+    private val searchHandler = Handler(Looper.getMainLooper())
+    private var searchRunnable: Runnable? = null
+
+    private val profileActivityLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data?.getBooleanExtra("isDataUpdated", false) == true) {
+                Log.d("AllSupplierActivity", "Data updated, refreshing supplier list.")
+                fetchSuppliers()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityAllSupplierBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -44,85 +58,118 @@ class AllSupplierActivity : AppCompatActivity() {
             insets
         }
 
-        with(binding) {
-            ivArrowBack.setOnClickListener {
-                val intent = Intent(this@AllSupplierActivity, MainActivity::class.java)
-                startActivity(intent)
-                finish()
-            }
+        setupClickListeners()
+        setupSearch()
+        fetchSuppliers()
+    }
 
+    private fun setupClickListeners() {
+        with(binding) {
+            ivArrowBack.setOnClickListener { finish() }
             btnAddNewSupplier.setOnClickListener {
                 val intent = Intent(this@AllSupplierActivity, AddSupplierActivity::class.java)
-                startActivity(intent)
+                profileActivityLauncher.launch(intent)
+            }
+        }
+    }
+
+    private fun setupSearch() {
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchRunnable?.let { searchHandler.removeCallbacks(it) }
             }
 
-            etSearch.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val query = s.toString().trim()
-                    if (query.length >= 2) {
+            override fun afterTextChanged(s: Editable?) {
+                val query = s.toString().trim()
+                searchRunnable = Runnable {
+                    if (query.isNotEmpty()) {
                         searchSupplier(query)
                     } else {
-                        fetchSuppliers()
+                        addSupplierDataToTable(originalSupplierList)
                     }
                 }
-
-                override fun afterTextChanged(s: Editable?) {}
-            })
-        }
-
-        fetchSuppliers()
+                searchHandler.postDelayed(searchRunnable!!, 300)
+            }
+        })
     }
 
     private fun fetchSuppliers() {
         val apiService = RetrofitClient.getInstance(this)
         apiService.getSuppliers().enqueue(object : Callback<SupplierResponse> {
             override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body?.success == true) {
-                        supplierList.clear()
-                        supplierList.addAll(body.data)
-                        addSupplierDataToTable(supplierList)
-                        binding.tvNoData.visibility = if (supplierList.isEmpty()) View.VISIBLE else View.GONE
-                        binding.tableView.visibility = if (supplierList.isEmpty()) View.GONE else View.VISIBLE
-                        Log.d("AllSupplierActivity", "Suppliers fetched: ${supplierList.size} entries")
-                    } else {
-                        Toast.makeText(this@AllSupplierActivity, "Gagal mengambil data pemasok: ${body?.activity}", Toast.LENGTH_SHORT).show()
-                        Log.e("AllSupplierActivity", "Fetch suppliers error: ${response.errorBody()?.string()}")
-                    }
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val suppliers = response.body()?.data ?: emptyList()
+                    originalSupplierList.clear()
+                    originalSupplierList.addAll(suppliers)
+                    addSupplierDataToTable(originalSupplierList)
                 } else {
-                    Toast.makeText(this@AllSupplierActivity, "Gagal mengambil data pemasok", Toast.LENGTH_SHORT).show()
-                    Log.e("AllSupplierActivity", "Fetch suppliers error: ${response.errorBody()?.string()}")
+                    val errorMessage = response.body()?.message ?: "Gagal mengambil data pemasok"
+                    Toast.makeText(this@AllSupplierActivity, errorMessage, Toast.LENGTH_SHORT).show()
                 }
             }
-
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
                 Toast.makeText(this@AllSupplierActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                Log.e("AllSupplierActivity", "Fetch suppliers failure: ${t.message}", t)
             }
         })
     }
 
     private fun searchSupplier(query: String) {
+
+        binding.tvNoData.visibility = View.GONE
+
         val apiService = RetrofitClient.getInstance(this)
-        val request = SearchSupplierRequest(query)
-        apiService.searchSupplier(request).enqueue(object : Callback<SupplierResponse> {
+        apiService.searchSupplier(SearchSupplierRequest(query)).enqueue(object : Callback<SupplierResponse> {
             override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
-                if (response.isSuccessful && response.body()?.success == true) {
-                    supplierList.clear()
-                    supplierList.addAll(response.body()?.data ?: emptyList())
-                    addSupplierDataToTable(supplierList)
-                    binding.tvNoData.visibility = if (supplierList.isEmpty()) View.VISIBLE else View.GONE
-                    binding.tableView.visibility = if (supplierList.isEmpty()) View.GONE else View.VISIBLE
-                } else {
-                    Toast.makeText(this@AllSupplierActivity, "Gagal mencari supplier", Toast.LENGTH_SHORT).show()
+                // Kondisi 1: Respons sukses (kode 2xx)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body?.success == true) {
+                        // Sukses dan ada data
+                        val searchResults = body.data ?: emptyList()
+                        addSupplierDataToTable(searchResults)
+
+                        // Tampilkan pesan jika hasilnya kosong
+                        if (searchResults.isEmpty()) {
+                            Toast.makeText(this@AllSupplierActivity, "Tidak ada supplier yang cocok dengan '$query'", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        // Sukses tapi flag success=false dari backend
+                        addSupplierDataToTable(emptyList())
+                        val message = body?.message ?: "Supplier tidak ditemukan"
+                        Toast.makeText(this@AllSupplierActivity, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                // Kondisi 2: Respons GAGAL (kode 4xx atau 5xx), tapi mungkin ada pesan di errorBody
+                else {
+                    addSupplierDataToTable(emptyList()) // Pastikan tabel kosong
+
+                    // ================== PERBAIKAN UTAMA DI SINI ==================
+                    try {
+                        // Coba baca errorBody dan parse JSON-nya
+                        val errorBodyString = response.errorBody()?.string()
+                        if (errorBodyString != null) {
+                            // Asumsi error body memiliki struktur yang sama dengan SupplierResponse
+                            val errorResponse = Gson().fromJson(errorBodyString, SupplierResponse::class.java)
+                            val message = errorResponse.message ?: "Gagal mencari supplier"
+                            Toast.makeText(this@AllSupplierActivity, message, Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Jika errorBody null, tampilkan pesan generik
+                            Toast.makeText(this@AllSupplierActivity, "Terjadi kesalahan (Kode: ${response.code()})", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        // Jika terjadi error saat parsing JSON
+                        Toast.makeText(this@AllSupplierActivity, "Gagal memproses respons error", Toast.LENGTH_SHORT).show()
+                        Log.e("AllSupplierActivity", "Error parsing error body", e)
+                    }
+                    // =============================================================
                 }
             }
 
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
-                Toast.makeText(this@AllSupplierActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+
+                Toast.makeText(this@AllSupplierActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -130,45 +177,43 @@ class AllSupplierActivity : AppCompatActivity() {
     private fun addSupplierDataToTable(supplierList: List<Supplier>) {
         binding.tableView.removeAllViews()
 
+        binding.tvNoData.visibility = if (supplierList.isEmpty()) View.VISIBLE else View.GONE
+        binding.tableView.visibility = if (supplierList.isEmpty()) View.GONE else View.VISIBLE
+
+        if (supplierList.isEmpty()) return
+
         val headerRow = TableRow(this).apply {
             setPadding(8, 16, 8, 16)
             setBackgroundColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.secondary))
         }
-
         headerRow.addView(createTextView("Nama Supplier", isHeader = true))
         headerRow.addView(createTextView("Status", isHeader = true))
         headerRow.addView(createTextView("Nama Pengguna", isHeader = true))
         headerRow.addView(createTextView("No. Telepon", isHeader = true))
         headerRow.addView(createTextView("Pemasukan", isHeader = true))
-
         binding.tableView.addView(headerRow)
 
         val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
-        for (supplier in supplierList) {
+        supplierList.forEach { supplier ->
             val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
                 setBackgroundColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.white))
-            }
-
-            val nameTextView = createTextView(supplier.name)
-            nameTextView.setOnClickListener {
-                val intent = Intent(this@AllSupplierActivity, ProfileSupplierActivity::class.java).apply {
-                    putExtra("SUPPLIER_ID", supplier.id)
-                    putExtra("SUPPLIER_NAME", supplier.name)
-                    putExtra("SUPPLIER_STATUS", supplier.status)
-                    putExtra("SUPPLIER_USERNAME", supplier.username)
-                    putExtra("SUPPLIER_PHONE", supplier.no_telp)
-                    putExtra("SUPPLIER_INCOME", "Rp ${numberFormat.format(supplier.income)}")
+                setOnClickListener {
+                    val intent = Intent(this@AllSupplierActivity, ProfileSupplierActivity::class.java).apply {
+                        putExtra("SUPPLIER_ID", supplier.id)
+                        putExtra("SUPPLIER_NAME", supplier.name)
+                        putExtra("SUPPLIER_STATUS", supplier.status)
+                        putExtra("SUPPLIER_USERNAME", supplier.username)
+                        putExtra("SUPPLIER_PHONE", supplier.no_telp)
+                    }
+                    profileActivityLauncher.launch(intent)
                 }
-                startActivity(intent)
             }
-
-            row.addView(nameTextView)
+            row.addView(createTextView(supplier.name))
             row.addView(createTextView(supplier.status))
             row.addView(createTextView(supplier.username))
             row.addView(createTextView(supplier.no_telp))
             row.addView(createTextView("Rp ${numberFormat.format(supplier.income)}"))
-
             binding.tableView.addView(row)
         }
     }

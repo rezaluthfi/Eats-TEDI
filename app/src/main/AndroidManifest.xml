@@ -18,48 +18,63 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Material3.Light.NoActionBar"
         android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
         tools:targetApi="33">
         <activity
             android:name=".activity.OnboardingActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.RecapDetailActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.AddScheduleEmployeeActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.AddSupplierActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.AddEmployeeActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.ProfileAdminActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.ScheduleEmployeeActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.AllSupplierActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.AllEmployeeActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.ProfileEmployeeActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.ManageStockMenuActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.ProfileSupplierActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".login.LoginActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".activity.SplashScreenActivity"
+            android:screenOrientation="landscape"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -21,6 +21,8 @@ import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.GenericResponse
 import com.example.eatstedi.databinding.ActivityProfileEmployeeBinding
+// IMPORT BINDING UNTUK DIALOG KONFIRMASI HAPUS
+import com.example.eatstedi.databinding.ViewDialogConfirmDeleteEmployeeBinding
 import com.example.eatstedi.login.LoginActivity
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -132,7 +134,10 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                 tvDelete.visibility = View.GONE // Sembunyikan tombol hapus jika bukan admin
             } else {
                 tvDelete.setOnClickListener {
-                    showDeleteConfirmationDialog()
+                    // ===== BAGIAN YANG DIUBAH =====
+                    // Panggil dialog konfirmasi hapus
+                    showDeleteEmployeeConfirmationDialog()
+                    // ==============================
                 }
             }
 
@@ -185,31 +190,25 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
                 if (response.isSuccessful && response.body() != null) {
                     try {
-                        // Konversi ResponseBody ke ByteArray
                         val imageBytes = response.body()!!.bytes()
-
-                        // Load ByteArray ke ImageView menggunakan Glide
                         Glide.with(this@ProfileEmployeeActivity)
                             .load(imageBytes)
                             .placeholder(R.drawable.img_avatar)
                             .error(R.drawable.img_avatar)
                             .circleCrop()
                             .into(binding.imgMenu)
-
                         Log.d("ProfileEmployeeActivity", "Profile picture loaded successfully")
                     } catch (e: Exception) {
                         Log.e("ProfileEmployeeActivity", "Error converting ResponseBody to bytes: ${e.message}", e)
                         binding.imgMenu.setImageResource(R.drawable.img_avatar)
                     }
                 } else {
-                    // Jika gagal, gunakan gambar default
                     binding.imgMenu.setImageResource(R.drawable.img_avatar)
                     Log.w("ProfileEmployeeActivity", "Failed to load profile picture: ${response.code()} - ${response.message()}")
                 }
             }
 
             override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
-                // Jika error jaringan, gunakan gambar default
                 binding.imgMenu.setImageResource(R.drawable.img_avatar)
                 Log.e("ProfileEmployeeActivity", "Error loading profile picture: ${t.message}", t)
             }
@@ -261,19 +260,16 @@ class ProfileEmployeeActivity : AppCompatActivity() {
 
         val alertDialog = builder.create()
 
-        // Get references to the EditText and buttons
         val etPassword = dialogView.findViewById<EditText>(R.id.et_password)
         val btnCancel = dialogView.findViewById<Button>(R.id.btn_cancel)
         val btnConfirm = dialogView.findViewById<Button>(R.id.btn_confirm)
 
-        // Handle Cancel button
         btnCancel.setOnClickListener {
-            selectedImageUri = null // Reset selected image
-            binding.imgMenu.setImageResource(R.drawable.img_avatar) // Reset preview
+            selectedImageUri = null
+            binding.imgMenu.setImageResource(R.drawable.img_avatar)
             alertDialog.dismiss()
         }
 
-        // Handle Confirm button
         btnConfirm.setOnClickListener {
             val password = etPassword.text.toString().trim()
             if (password.isEmpty()) {
@@ -293,14 +289,12 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             return
         }
 
-        // Validasi tipe file
         val mimeType = contentResolver.getType(selectedImageUri!!)
         if (mimeType !in listOf("image/jpeg", "image/png")) {
             Toast.makeText(this, "Hanya file JPG atau PNG yang diperbolehkan", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Konversi URI ke File
         val file = File(cacheDir, "profile_picture_${System.currentTimeMillis()}.jpg")
         contentResolver.openInputStream(selectedImageUri!!)?.use { input ->
             file.outputStream().use { output ->
@@ -308,36 +302,20 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             }
         }
 
-        // Validasi ukuran file (maks 5MB)
         if (file.length() > 5 * 1024 * 1024) {
             Toast.makeText(this, "Gambar terlalu besar (maks 5MB)", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Buat RequestBody untuk file gambar
         val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
         val profilePicturePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
 
-        // Ambil data dari Intent untuk field yang diperlukan
-        val name = intent.getStringExtra("EMPLOYEE_NAME") ?: run {
-            Toast.makeText(this, "Nama tidak tersedia", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: run {
-            Toast.makeText(this, "Nama pengguna tidak tersedia", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: run {
-            Toast.makeText(this, "No. telepon tidak tersedia", Toast.LENGTH_SHORT).show()
-            return
-        }
+        val name = intent.getStringExtra("EMPLOYEE_NAME") ?: return
+        val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: return
+        val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: return
         val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0).toString()
-        val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: run {
-            Toast.makeText(this, "Status tidak tersedia", Toast.LENGTH_SHORT).show()
-            return
-        }
+        val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: return
 
-        // Buat RequestBody untuk semua field
         val idCashierRequestBody = cashierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val nameRequestBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
         val usernameRequestBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -346,10 +324,8 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         val statusRequestBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
         val passwordRequestBody = password.toRequestBody("text/plain".toMediaTypeOrNull())
 
-        // Log data yang akan dikirim untuk debugging
         Log.d("ProfileEmployeeActivity", "Uploading: id_cashier=$cashierId, name=$name, username=$username, no_telp=$noTelp, salary=$salary, status=$status, password=****")
 
-        // Panggil API untuk upload
         val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
         val token = sharedPreferences.getString("auth_token", null)
         if (token == null) {
@@ -373,7 +349,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     Toast.makeText(this@ProfileEmployeeActivity, "Foto profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                    // Reload foto profil menggunakan endpoint get-cashier-photo-profile
                     loadProfilePicture()
                 } else {
                     val errorMessage = response.body()?.message?.toString() ?: response.errorBody()?.string() ?: "Unknown error"
@@ -393,31 +368,35 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         })
     }
 
-    private fun showDeleteConfirmationDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.view_dialog_confirm_delete_employee, null)
+    // ===== FUNGSI BARU UNTUK DIALOG KONFIRMASI HAPUS =====
+    private fun showDeleteEmployeeConfirmationDialog() {
+        // Inflate layout dialog menggunakan View Binding
+        val dialogBinding = ViewDialogConfirmDeleteEmployeeBinding.inflate(layoutInflater)
+
+        // Buat AlertDialog
         val builder = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
+            .setView(dialogBinding.root)
 
-        val alertDialog = builder.create()
+        val dialog = builder.create()
 
-        // Get references to the buttons
-        val btnCancel = dialogView.findViewById<Button>(R.id.btn_cancel_employee)
-        val btnDelete = dialogView.findViewById<Button>(R.id.btn_delete_employee)
-
-        // Handle Cancel button
-        btnCancel.setOnClickListener {
-            alertDialog.dismiss()
+        // Atur listener untuk tombol batal
+        dialogBinding.btnCancelDelete.setOnClickListener {
+            dialog.dismiss()
         }
 
-        // Handle Delete button
-        btnDelete.setOnClickListener {
-            deleteCashier()
-            alertDialog.dismiss()
+        // Atur listener untuk tombol hapus
+        dialogBinding.btnConfirmDelete.setOnClickListener {
+            deleteCashier() // Panggil fungsi untuk menghapus kasir
+            dialog.dismiss()
         }
 
-        alertDialog.show()
+        // Buat background dialog transparan agar sudut membulat terlihat
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // Tampilkan dialog
+        dialog.show()
     }
+    // =========================================================
 
     private fun deleteCashier() {
         val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
@@ -425,22 +404,23 @@ class ProfileEmployeeActivity : AppCompatActivity() {
 
         if (token != null && cashierId > 0) {
             val apiService = RetrofitClient.getInstance(this)
-            apiService.deleteCashier(cashierId, "Bearer $token").enqueue(object : Callback<GenericResponse> {
+            apiService.deleteCashier(cashierId,"Bearer $token").enqueue(object : Callback<GenericResponse> {
                 override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
                     if (response.isSuccessful) {
                         val body = response.body()
                         if (body?.success == true) {
-                            Toast.makeText(this@ProfileEmployeeActivity, "Cashier berhasil dihapus", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@ProfileEmployeeActivity, "Karyawan berhasil dihapus", Toast.LENGTH_SHORT).show()
                             // Kembali ke AllEmployeeActivity setelah penghapusan
                             val intent = Intent(this@ProfileEmployeeActivity, AllEmployeeActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                             startActivity(intent)
                             finish()
                         } else {
-                            Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus cashier: ${body?.message}", Toast.LENGTH_SHORT).show()
-                            Log.e("ProfileEmployeeActivity", "Delete error: ${response.errorBody()?.string()}")
+                            Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus karyawan: ${body?.message}", Toast.LENGTH_SHORT).show()
+                            Log.e("ProfileEmployeeActivity", "Delete error: ${body?.message}")
                         }
                     } else {
-                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus cashier", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus karyawan (Error: ${response.code()})", Toast.LENGTH_SHORT).show()
                         Log.e("ProfileEmployeeActivity", "Delete error: ${response.errorBody()?.string()}")
                     }
                 }
@@ -451,7 +431,7 @@ class ProfileEmployeeActivity : AppCompatActivity() {
                 }
             })
         } else {
-            Toast.makeText(this@ProfileEmployeeActivity, "Tidak ada sesi aktif atau ID tidak valid", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Tidak ada sesi aktif atau ID tidak valid", Toast.LENGTH_SHORT).show()
         }
     }
 }

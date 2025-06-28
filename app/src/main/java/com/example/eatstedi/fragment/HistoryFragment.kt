@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
@@ -47,6 +48,10 @@ class HistoryFragment : Fragment() {
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private lateinit var apiService: ApiService
 
+    // Dua variabel ini untuk menangani izin dan download
+    private lateinit var requestPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    private var pendingDownload: (() -> Unit)? = null
+
     // Variabel data
     private var allAttendanceRecords: List<AttendanceRecord> = emptyList()
     private var currentDisplayedData: List<AttendanceRecord> = emptyList()
@@ -66,6 +71,18 @@ class HistoryFragment : Fragment() {
         userRole = sharedPreferences.getString("user_role", null)
         val id = sharedPreferences.getInt("user_id", -1)
         cashierId = if (id == -1) null else id
+
+        // Inisialisasi ActivityResultLauncher untuk meminta izin
+        requestPermissionLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                Toast.makeText(requireContext(), "Izin penyimpanan diberikan.", Toast.LENGTH_SHORT).show()
+                // Jalankan download yang tertunda setelah izin diberikan
+                pendingDownload?.invoke()
+                pendingDownload = null
+            } else {
+                Toast.makeText(requireContext(), "Izin penyimpanan ditolak. Tidak dapat mengunduh file.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         // Validasi role dan ID
         if (userRole.isNullOrEmpty() || (userRole == "cashier" && cashierId == null)) {
@@ -236,22 +253,23 @@ class HistoryFragment : Fragment() {
     }
 
     private fun exportAttendance() {
-        showShimmer()
+        // Mulai dengan validasi izin penyimpanan
+        Toast.makeText(requireContext(), "Mulai mengunduh...", Toast.LENGTH_SHORT).show()
+
         val callback = object : Callback<ResponseBody> {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
-                if (!isAdded || _binding == null) return
-                hideShimmer()
+                if (!isAdded) return
                 if (response.isSuccessful) {
                     val fileName = "attendance_${userRole}_${System.currentTimeMillis()}.pdf"
-                    saveExportFile(response.body(), fileName)
+                    // Panggil router penyimpanan file yang baru
+                    response.body()?.let { savePdfFile(it, fileName) }
                 } else {
                     handleApiError(response, "Gagal mengunduh PDF")
                 }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                if (!isAdded || _binding == null) return
-                hideShimmer()
+                if (!isAdded) return
                 handleApiFailure(t)
             }
         }
@@ -262,18 +280,67 @@ class HistoryFragment : Fragment() {
         }
     }
 
-    private fun saveExportFile(body: ResponseBody?, fileName: String) {
-        if (!isAdded) return
-        body?.let {
-            try {
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val file = File(downloadsDir, fileName)
-                FileOutputStream(file).use { it.write(body.bytes()) }
-                Toast.makeText(requireContext(), "PDF disimpan di Download/$fileName", Toast.LENGTH_LONG).show()
-            } catch (e: Exception) {
-                Log.e("HistoryFragment", "Error saving PDF", e)
-                Toast.makeText(context, "Gagal menyimpan PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+    private fun savePdfFile(body: ResponseBody, fileName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Metode modern untuk Android 10+
+            savePdfUsingMediaStore(body, fileName)
+        } else {
+            // Metode lama untuk Android 9 ke bawah (dengan permintaan izin)
+            if (checkAndRequestStoragePermission()) {
+                savePdfLegacy(body, fileName)
+            } else {
+                // Simpan aksi download, akan dijalankan jika user memberikan izin
+                pendingDownload = { savePdfLegacy(body, fileName) }
             }
+        }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.Q)
+    private fun savePdfUsingMediaStore(body: ResponseBody, fileName: String) {
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val resolver = requireContext().contentResolver
+        val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+
+        if (uri != null) {
+            try {
+                resolver.openOutputStream(uri).use { outputStream ->
+                    outputStream?.write(body.bytes())
+                    Toast.makeText(requireContext(), "File disimpan di Downloads", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: java.io.IOException) {
+                Log.e("HistoryFragment", "Gagal menyimpan PDF dengan MediaStore", e)
+                Toast.makeText(requireContext(), "Gagal menyimpan file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun savePdfLegacy(body: ResponseBody, fileName: String) {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadDir.exists()) {
+            downloadDir.mkdirs()
+        }
+        val file = File(downloadDir, fileName)
+
+        try {
+            FileOutputStream(file).use { it.write(body.bytes()) }
+            Toast.makeText(requireContext(), "File disimpan di Downloads", Toast.LENGTH_LONG).show()
+        } catch (e: java.io.IOException) {
+            Log.e("HistoryFragment", "Gagal menyimpan PDF (legacy)", e)
+            Toast.makeText(requireContext(), "Gagal menyimpan file: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun checkAndRequestStoragePermission(): Boolean {
+        return if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            true
+        } else {
+            requestPermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            false
         }
     }
 

@@ -6,193 +6,224 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".fragment.MenuFragment">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- HELPER: Barrier untuk membuat batas dinamis di sebelah kiri sidebar -->
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/barrier_sidebar"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="32dp"
-        app:layout_constraintTop_toTopOf="parent"
+        app:barrierDirection="start"
+        app:constraint_referenced_ids="nested_scroll_view,arrow_toggle"
+        />
+
+    <!-- BAGIAN KONTEN UTAMA (MENU) -->
+
+    <!-- Search Bar -->
+    <EditText
+        android:id="@+id/et_search_menu"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_btn_primary"
+        android:drawableStart="@drawable/icon_search"
+        android:drawablePadding="8dp"
+        android:hint="Cari Menu..."
+        android:inputType="text"
+        android:padding="10dp"
+        android:textColor="@color/white"
+        android:textColorHint="@color/white"
+        android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:padding="16dp" >
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/ll_spinner_container"
+        app:layout_constraintHorizontal_weight="1"
+        />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" >
+    <!-- Container untuk Spinner -->
+    <LinearLayout
+        android:id="@+id/ll_spinner_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_btn_primary"
+        app:layout_constraintTop_toTopOf="@id/et_search_menu"
+        app:layout_constraintBottom_toBottomOf="@id/et_search_menu"
+        app:layout_constraintEnd_toStartOf="@+id/btn_add_new_menu">
 
-            <EditText
-                android:id="@+id/et_search_menu"
-                android:layout_width="320dp"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_btn_primary"
-                android:drawableLeft="@drawable/icon_search"
-                android:drawablePadding="8dp"
-                android:hint="Cari Menu..."
-                android:inputType="text"
-                android:orientation="horizontal"
-                android:padding="10dp"
-                android:textColor="@color/white"
-                android:textColorHint="@color/white"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:background="@drawable/bg_btn_primary" >
-
-                <Spinner
-                    android:id="@+id/sp_filter_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:padding="10dp"
-                    android:textColor="@android:color/white"
-                    android:theme="@style/SpinnerTheme"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="end|center_vertical"
-                android:orientation="horizontal" >
-
-                <Button
-                    android:id="@+id/btn_add_new_menu"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:text="Tambah Menu"
-                    android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:textSize="16sp"
-                    android:textColor="@color/white"
-                    android:layout_marginStart="24dp"
-                    android:background="@drawable/bg_btn_primary"
-                    app:backgroundTint="@null" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chip_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
-            app:singleSelection="true"
-            app:selectionRequired="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_all_menu"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="Semua Item"
-                android:textAlignment="center"
-                android:textColor="@color/selector_text_chip_category"
-                android:layout_marginEnd="16dp"
-                app:chipBackgroundColor="@color/selector_bg_chip_category"
-                app:chipCornerRadius="300dp"
-                app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp"
-                app:chipStrokeWidth="1dp"
-                app:chipStrokeColor="@color/grey"
-                android:checked="true"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_foods"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="Makanan"
-                android:textAlignment="center"
-                android:textColor="@color/selector_text_chip_category"
-                android:layout_marginEnd="16dp"
-                app:chipBackgroundColor="@color/selector_bg_chip_category"
-                app:chipCornerRadius="300dp"
-                app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp"
-                app:chipStrokeWidth="1dp"
-                app:chipStrokeColor="@color/grey"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_drinks"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="Minuman"
-                android:textAlignment="center"
-                android:textColor="@color/selector_text_chip_category"
-                android:layout_marginEnd="16dp"
-                app:chipBackgroundColor="@color/selector_bg_chip_category"
-                app:chipCornerRadius="300dp"
-                app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp"
-                app:chipStrokeWidth="1dp"
-                app:chipStrokeColor="@color/grey"/>
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_snacks"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:text="Camilan"
-                android:textAlignment="center"
-                android:textColor="@color/selector_text_chip_category"
-                android:layout_marginEnd="16dp"
-                app:chipBackgroundColor="@color/selector_bg_chip_category"
-                app:chipCornerRadius="300dp"
-                app:chipEndPadding="10dp"
-                app:chipStartPadding="10dp"
-                app:chipStrokeWidth="1dp"
-                app:chipStrokeColor="@color/grey"/>
-
-        </com.google.android.material.chip.ChipGroup>
-
-        <TextView
-            android:id="@+id/tv_no_data"
+        <Spinner
+            android:id="@+id/sp_filter_name"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:layout_marginTop="48dp"
-            android:layout_gravity="center"
-            android:text="Maaf, data tidak ditemukan."
-            android:textSize="16sp"
-            android:textColor="@color/black"
+            android:layout_height="40dp"
+            android:padding="10dp"
+            android:textColor="@android:color/white"
+            android:theme="@style/SpinnerTheme"
             />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_all_menu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="32dp"
-            android:paddingVertical="16dp"
-            app:layout_constraintTop_toBottomOf="@id/chip_group"
-            tools:listitem="@layout/view_item_menu" />
-
     </LinearLayout>
 
-    <!-- Order Menu yang bisa di-slide -->
+    <!-- Tombol Tambah Menu (terikat pada Barrier) -->
+    <Button
+        android:id="@+id/btn_add_new_menu"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_btn_primary"
+        android:fontFamily="@font/noto_sans_gujarati_regular"
+        android:text="Tambah Menu"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:backgroundTint="@null"
+        app:layout_constraintTop_toTopOf="@id/et_search_menu"
+        app:layout_constraintBottom_toBottomOf="@id/et_search_menu"
+        app:layout_constraintEnd_toStartOf="@+id/barrier_sidebar"
+        />
+
+    <!-- Chip Group (terikat pada Barrier) -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintTop_toBottomOf="@id/et_search_menu"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/barrier_sidebar">
+
+        <!-- Semua Chip -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_all_menu"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:checked="true"
+            android:text="Semua Item"
+            android:textAlignment="center"
+            android:textColor="@color/selector_text_chip_category"
+            app:chipBackgroundColor="@color/selector_bg_chip_category"
+            app:chipCornerRadius="300dp"
+            app:chipEndPadding="10dp"
+            app:chipStartPadding="10dp"
+            app:chipStrokeColor="@color/grey"
+            app:chipStrokeWidth="1dp" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_foods"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Makanan"
+            android:textAlignment="center"
+            android:textColor="@color/selector_text_chip_category"
+            app:chipBackgroundColor="@color/selector_bg_chip_category"
+            app:chipCornerRadius="300dp"
+            app:chipEndPadding="10dp"
+            app:chipStartPadding="10dp"
+            app:chipStrokeColor="@color/grey"
+            app:chipStrokeWidth="1dp" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_drinks"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Minuman"
+            android:textAlignment="center"
+            android:textColor="@color/selector_text_chip_category"
+            app:chipBackgroundColor="@color/selector_bg_chip_category"
+            app:chipCornerRadius="300dp"
+            app:chipEndPadding="10dp"
+            app:chipStartPadding="10dp"
+            app:chipStrokeColor="@color/grey"
+            app:chipStrokeWidth="1dp" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_snacks"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Camilan"
+            android:textAlignment="center"
+            android:textColor="@color/selector_text_chip_category"
+            app:chipBackgroundColor="@color/selector_bg_chip_category"
+            app:chipCornerRadius="300dp"
+            app:chipEndPadding="10dp"
+            app:chipStartPadding="10dp"
+            app:chipStrokeColor="@color/grey"
+            app:chipStrokeWidth="1dp" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- RecyclerView Menu (terikat pada Barrier) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_all_menu"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/chip_group"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/barrier_sidebar"
+        tools:listitem="@layout/view_item_menu" />
+
+    <!-- Text "No Data" yang akan muncul di atas RecyclerView -->
+    <TextView
+        android:id="@+id/tv_no_data"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Maaf, data tidak ditemukan."
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/rv_all_menu"
+        app:layout_constraintEnd_toEndOf="@+id/rv_all_menu"
+        app:layout_constraintStart_toStartOf="@+id/rv_all_menu"
+        app:layout_constraintTop_toTopOf="@+id/rv_all_menu" />
+
+    <!-- BAGIAN SIDEBAR ORDER -->
+
+    <!-- Tombol Panah (menjadi pembatas kanan untuk konten utama) -->
+    <ImageView
+        android:id="@+id/arrow_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/icon_arrow_right"
+        android:background="@drawable/bg_arrow_close_order_menu"
+        android:paddingVertical="16dp"
+        app:layout_constraintEnd_toStartOf="@+id/nested_scroll_view"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
+
+    <!-- Sidebar Order -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nested_scroll_view"
         android:layout_width="300dp"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:background="#FFFAE3"
         android:padding="16dp"
+        android:scrollbars="none"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- LinearLayout di dalam sidebar -->
         <LinearLayout
             android:id="@+id/ll_order_menu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Konten dari Order Menu -->
             <TextView
                 android:id="@+id/order_title"
                 android:layout_width="wrap_content"
@@ -215,7 +246,6 @@
                 android:textColor="@color/black"
                 android:visibility="gone"/>
 
-            <!-- Daftar menu pesanan -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_order_menu"
                 android:layout_width="match_parent"
@@ -224,15 +254,12 @@
                 tools:listitem="@layout/view_item_order_menu"
                 />
 
-            <!-- Item pesanan dan informasi lainnya -->
-            <!-- Total Payment -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="bottom">
 
-                <!-- Garis Titik-Titik -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="2dp"
@@ -265,7 +292,6 @@
                         android:textStyle="bold"/>
                 </LinearLayout>
 
-                <!-- Garis Pembatas -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -273,7 +299,6 @@
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="8dp"/>
 
-                <!-- Payment Method Label -->
                 <TextView
                     android:id="@+id/tv_payment_method"
                     android:layout_width="wrap_content"
@@ -284,7 +309,6 @@
                     android:textStyle="bold"
                     android:layout_marginTop="8dp"/>
 
-                <!-- Payment Method Options -->
                 <RadioGroup
                     android:id="@+id/rg_payment_method"
                     android:layout_width="wrap_content"
@@ -292,7 +316,6 @@
                     android:orientation="horizontal"
                     android:layout_marginTop="8dp">
 
-                    <!-- Cash Option -->
                     <RadioButton
                         android:id="@+id/rb_cash"
                         android:layout_width="wrap_content"
@@ -302,7 +325,6 @@
                         android:textColor="#000"
                         android:checked="true"/>
 
-                    <!-- QRIS Option -->
                     <RadioButton
                         android:id="@+id/rb_qris"
                         android:layout_width="wrap_content"
@@ -313,14 +335,12 @@
                         android:layout_marginStart="16dp"/>
                 </RadioGroup>
 
-                <!-- Garis Pembatas -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/black"
                     android:layout_marginVertical="8dp"/>
 
-                <!-- Input Payment Label -->
                 <TextView
                     android:id="@+id/tv_input_payment"
                     android:layout_width="wrap_content"
@@ -331,7 +351,6 @@
                     android:textStyle="bold"
                     android:layout_marginTop="8dp"/>
 
-                <!-- Input Payment EditText -->
                 <EditText
                     android:id="@+id/et_input_payment"
                     android:layout_width="match_parent"
@@ -343,7 +362,6 @@
                     android:textColor="@color/black"
                     android:layout_marginTop="16dp"/>
 
-                <!-- Tombol Pay Now -->
                 <Button
                     android:id="@+id/btn_pay_now"
                     android:layout_width="match_parent"
@@ -354,26 +372,11 @@
                     android:background="@drawable/bg_btn_primary"
                     app:backgroundTint="@null"
                     android:textColor="@color/white"/>
-
             </LinearLayout>
-
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Tombol Panah untuk menyembunyikan/memunculkan Order Menu -->
-    <ImageView
-        android:id="@+id/arrow_toggle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/icon_arrow_right"
-        android:background="@drawable/bg_arrow_close_order_menu"
-        android:paddingVertical="16dp"
-        app:layout_constraintEnd_toStartOf="@+id/nested_scroll_view"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        />
-
+    <!-- ProgressBar di tengah layar -->
     <ProgressBar
         android:id="@+id/progress_bar"
         android:layout_width="wrap_content"
