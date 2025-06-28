@@ -2,7 +2,6 @@ package com.example.eatstedi.activity
 
 import android.content.Intent
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -18,6 +17,7 @@ import com.example.eatstedi.api.service.StockLog
 import com.example.eatstedi.api.service.StockLogResponse
 import com.example.eatstedi.api.service.UpdateStockResponse
 import com.example.eatstedi.databinding.ActivityManageStockMenuBinding
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -71,13 +71,53 @@ class ManageStockMenuActivity : AppCompatActivity() {
     private fun initializeData() {
         menuItemId = intent.getIntExtra("MENU_ITEM_ID", 0)
         currentStock = intent.getIntExtra("MENU_ITEM_STOCK", 0)
+        val menuName = intent.getStringExtra("MENU_ITEM_NAME") ?: "Nama Menu Tidak Ditemukan"
+
         binding.tvStock.text = currentStock.toString()
-        binding.tvNameMenu.text = intent.getStringExtra("MENU_ITEM_NAME") ?: ""
-        Glide.with(this)
-            .load(Uri.parse(intent.getStringExtra("MENU_ITEM_IMAGE_URL") ?: ""))
-            .placeholder(R.drawable.image_menu)
-            .error(R.drawable.ic_launcher_background)
-            .into(binding.ivImgMenu)
+        binding.etQuantity.setText(currentStock.toString())
+        binding.tvNameMenu.text = menuName
+
+        if (menuItemId != 0) {
+            loadMenuImage(menuItemId)
+        } else {
+            // Fallback jika ID menu tidak valid
+            binding.ivImgMenu.setImageResource(R.drawable.ic_launcher_background)
+        }
+    }
+
+    private fun loadMenuImage(menuId: Int) {
+        // Set placeholder awal
+        binding.ivImgMenu.setImageResource(R.drawable.image_menu)
+
+        val apiService = RetrofitClient.getInstance(this)
+        apiService.getMenuPhoto(menuId).enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (!isFinishing && response.isSuccessful && response.body() != null) {
+                    try {
+                        val imageBytes = response.body()!!.bytes()
+                        Glide.with(this@ManageStockMenuActivity)
+                            .load(imageBytes)
+                            .placeholder(R.drawable.image_menu)
+                            .error(R.drawable.ic_launcher_background)
+                            .centerCrop()
+                            .into(binding.ivImgMenu)
+                    } catch (e: Exception) {
+                        Log.e("ManageStockActivity", "Error reading image bytes", e)
+                        binding.ivImgMenu.setImageResource(R.drawable.ic_launcher_background)
+                    }
+                } else {
+                    Log.w("ManageStockActivity", "Failed to load image. Code: ${response.code()}")
+                    binding.ivImgMenu.setImageResource(R.drawable.ic_launcher_background)
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                if (!isFinishing) {
+                    Log.e("ManageStockActivity", "Network failure loading image", t)
+                    binding.ivImgMenu.setImageResource(R.drawable.ic_launcher_background)
+                }
+            }
+        })
     }
 
     private fun setupUI() {

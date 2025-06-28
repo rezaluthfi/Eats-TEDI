@@ -30,6 +30,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.example.eatstedi.R
+import com.example.eatstedi.activity.ManageStockMenuActivity
 import com.example.eatstedi.adapter.MenuAdapter
 import com.example.eatstedi.adapter.OrderAdapter
 import com.example.eatstedi.api.retrofit.RetrofitClient
@@ -119,7 +120,7 @@ class MenuFragment : Fragment() {
             selectedImageUri = uri
             Glide.with(this)
                 .load(uri)
-                .apply(RequestOptions.circleCropTransform())
+                .centerCrop()
                 .error(R.color.white)
                 .into(dialogBinding.imgMenu)
         } else {
@@ -224,13 +225,25 @@ class MenuFragment : Fragment() {
     }
 
     private fun setupMenuAdapter() {
-        // Menginisialisasi adapter dengan list kosong karena data akan dikirim melalui updateList
         menuAdapter = MenuAdapter(
-            mutableListOf(), // Kirim list kosong
+            mutableListOf(),
             userRole ?: "cashier",
             onItemClick = { menuItem -> addItemToOrder(menuItem) },
-            onEditMenu = { menuItem -> showEditMenuDialog(menuItem) },
-            onDeleteMenu = { menuItem -> showConfirmDeleteDialog(menuItem) }
+            onEditMenu = { menuItem ->
+                if (userRole?.lowercase() == "admin") {
+                    showEditMenuDialog(menuItem)
+                }
+            },
+            onDeleteMenu = { menuItem -> showConfirmDeleteDialog(menuItem) },
+            onSetStock = { menuItem ->
+                val intent = Intent(requireContext(), ManageStockMenuActivity::class.java).apply {
+                    putExtra("MENU_ITEM_ID", menuItem.id)
+                    putExtra("MENU_ITEM_STOCK", menuItem.stock)
+                    putExtra("MENU_ITEM_NAME", menuItem.menuName)
+                    putExtra("MENU_ITEM_IMAGE_URL", menuItem.imageUrl)
+                }
+                startActivityForResult(intent, REQUEST_CODE_MANAGE_STOCK)
+            }
         )
         binding.rvAllMenu.adapter = menuAdapter
         Log.d("MenuFragment", "setupMenuAdapter: MenuAdapter initialized with role=$userRole")
@@ -601,65 +614,71 @@ class MenuFragment : Fragment() {
 
     private fun showEditMenuDialog(menuItem: MenuItem) {
         dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
-        Log.d("MenuFragment", "showEditMenuDialog: MenuItem - id=${menuItem.id}, name=${menuItem.menuName}, price=${menuItem.price}, foodType=${menuItem.foodType}, idSupplier=${menuItem.idSupplier}, supplierName=${menuItem.supplierName}, imageUrl=${menuItem.imageUrl}")
+        Log.d("MenuFragment", "showEditMenuDialog for: ${menuItem.menuName}")
 
+        // Setup Spinner
         val supplierNames = supplierList.map { it.second }.toTypedArray()
         val supplierAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, supplierNames)
         supplierAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         dialogBinding.spinnerSupplierName.adapter = supplierAdapter
-
         val supplierIndex = supplierList.indexOfFirst { it.first == menuItem.idSupplier }
         if (supplierIndex != -1) {
             dialogBinding.spinnerSupplierName.setSelection(supplierIndex)
-        } else {
-            Log.w("MenuFragment", "Supplier ID ${menuItem.idSupplier} not found, setting to 'Pemasok Tidak Diketahui'")
-            dialogBinding.spinnerSupplierName.setSelection(0)
         }
         dialogBinding.spinnerSupplierName.isEnabled = false
-        dialogBinding.spinnerSupplierName.isClickable = false
 
+        // Setup data teks
         dialogBinding.etMenuName.setText(menuItem.menuName)
         dialogBinding.etMenuPrice.setText(menuItem.price.toString())
-
         setupCategorySelection(dialogBinding, menuItem.foodType)
 
-        Glide.with(this)
-            .load(menuItem.imageUrl)
-            .apply(RequestOptions()
-                .placeholder(R.drawable.image_menu)
-                .error(R.drawable.ic_launcher_background)
-                .circleCrop()
-                .diskCacheStrategy(DiskCacheStrategy.ALL))
-            .circleCrop()
-            .into(dialogBinding.imgMenu)
+        // Pertama, set placeholder
+        dialogBinding.imgMenu.setImageResource(R.drawable.ic_launcher_background)
+        // Kemudian, panggil API untuk memuat gambar asli
+        apiService.getMenuPhoto(menuItem.id).enqueue(object : Callback<okhttp3.ResponseBody> {
+            override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
+                if (response.isSuccessful && response.body() != null) {
+                    // Pastikan fragment dan view masih ada untuk menghindari crash
+                    if (isAdded && _binding != null) {
+                        val imageBytes = response.body()!!.bytes()
+                        Glide.with(requireContext())
+                            .load(imageBytes)
+                            .placeholder(R.drawable.ic_launcher_background)
+                            .error(R.drawable.ic_launcher_background)
+                            .centerCrop()
+                            .into(dialogBinding.imgMenu)
+                    }
+                }
+            }
+            override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
+                if (isAdded && _binding != null) {
+                    dialogBinding.imgMenu.setImageResource(R.drawable.ic_launcher_background)
+                    Log.e("MenuFragment", "Failed to load image for edit dialog", t)
+                }
+            }
+        })
 
         dialogBinding.btnCameraMenu.setOnClickListener { checkStoragePermission() }
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
 
-        dialogBinding.apply {
-            btnCancel.setOnClickListener { dialog.dismiss() }
-            btnSave.setOnClickListener {
-                if (userRole?.lowercase() == "cashier") {
-                    Toast.makeText(requireContext(), "Cashier tidak dapat mengedit informasi menu", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                    return@setOnClickListener
-                }
-                val menuName = etMenuName.text.toString().trim()
-                val menuPrice = etMenuPrice.text.toString().toIntOrNull() ?: 0
-                val foodType = getSelectedFoodType(dialogBinding)
+        // Setup listener tombol
+        dialogBinding.btnCancel.setOnClickListener { dialog.dismiss() }
+        dialogBinding.btnSave.setOnClickListener {
+            val menuName = dialogBinding.etMenuName.text.toString().trim()
+            val menuPrice = dialogBinding.etMenuPrice.text.toString().toIntOrNull() ?: 0
+            val foodType = getSelectedFoodType(dialogBinding)
 
-                if (menuName.isNotEmpty() && menuPrice > 0 && foodType.isNotEmpty()) {
-                    updateMenu(menuItem.id, menuName, menuPrice, foodType)
-                    dialog.dismiss()
-                } else {
-                    Toast.makeText(requireContext(), "Mohon isi nama, harga, dan tipe makanan valid", Toast.LENGTH_SHORT).show()
-                }
+            if (menuName.isNotEmpty() && menuPrice > 0 && foodType.isNotEmpty()) {
+                updateMenu(menuItem.id, menuName, menuPrice, foodType)
+                dialog.dismiss()
+            } else {
+                Toast.makeText(requireContext(), "Mohon isi semua data dengan benar", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Disable fields for Cashier
-        if (userRole?.lowercase() == "cashier") {
+        // Disable fields jika bukan admin
+        if (userRole?.lowercase() != "admin") {
             dialogBinding.etMenuName.isEnabled = false
             dialogBinding.etMenuPrice.isEnabled = false
             dialogBinding.btnCameraMenu.visibility = View.GONE
@@ -669,10 +688,9 @@ class MenuFragment : Fragment() {
             dialogBinding.btnSave.isEnabled = false
         }
 
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
         dialog.show()
-        dialogBinding.root.requestLayout()
-        dialogBinding.root.invalidate()
-        Log.d("MenuFragment", "showEditMenuDialog: Dialog shown with supplierIndex=$supplierIndex")
     }
 
     private fun setupCategorySelection(binding: ViewModalAddEditMenuBinding, foodType: String?) {
@@ -1094,6 +1112,8 @@ class MenuFragment : Fragment() {
             return
         }
 
+        Log.d("MenuFragment_Debug", "Item diklik: ID=${menuItem.id}, Nama=${menuItem.menuName}, URL Gambar=${menuItem.imageUrl}")
+
         Log.d("MenuFragment", "Adding menu item: ID=${menuItem.id}, Name=${menuItem.menuName}, Stock=${menuItem.stock}")
         val menu = originalMenuList.find { it.id == menuItem.id }
         if (menu == null) {
@@ -1323,7 +1343,7 @@ class MenuFragment : Fragment() {
         Log.d("MenuFragment", "showMenuDialog: Adding new menu")
         dialogBinding = ViewModalAddEditMenuBinding.inflate(layoutInflater)
 
-        dialogBinding.imgMenu.setImageResource(R.drawable.image_menu) // Set placeholder awal
+        dialogBinding.imgMenu.setImageResource(R.drawable.ic_launcher_background) // Set placeholder awal
 
         fetchSuppliersForDialog { suppliers ->
             Log.d("MenuFragment", "Suppliers for dialog: ${suppliers.map { "${it.first} -> ${it.second}" }}")
@@ -1395,19 +1415,26 @@ class MenuFragment : Fragment() {
                                         Log.d("MenuFragment", "New menu received: id=${newMenu.id}, stock=${newMenu.stock}")
 
                                         val mappedMenu = mapMenuItemsWithSuppliers(listOf(newMenu)).first()
-                                        originalMenuList.add(0, mappedMenu)
+
+                                        // Tambahkan item ke original list
+                                        originalMenuList.add(mappedMenu)
+
+                                        // Terapkan filter yang sedang aktif untuk memperbarui tampilan.
                                         applyCurrentFilter()
                                         menuAdapter.updateList(filteredMenuList)
                                         updateVisibility()
 
-                                        // ================== TRIK UTAMA DI SINI ==================
-                                        binding.rvAllMenu.postDelayed({
-                                            if (!isAdded) return@postDelayed
-                                            binding.rvAllMenu.scrollToPosition(0)
-                                            menuAdapter.notifyDataSetChanged()
-                                            Log.d("MenuFragment", "Forcing UI refresh after adding new menu.")
-                                        }, 100) // Jeda 100 milidetik
-                                        // ======================================================
+                                        // Temukan posisi item baru di list yang sudah difilter dan scroll ke sana.
+                                        val newIndexInFilteredList = filteredMenuList.indexOfFirst { it.id == newMenu.id }
+                                        if (newIndexInFilteredList != -1) {
+                                            // Gunakan post untuk memastikan RecyclerView sudah selesai mengupdate layout.
+                                            binding.rvAllMenu.post {
+                                                if (isAdded) {
+                                                    binding.rvAllMenu.smoothScrollToPosition(newIndexInFilteredList)
+                                                    Log.d("MenuFragment", "Scrolled to new item at filtered index: $newIndexInFilteredList")
+                                                }
+                                            }
+                                        }
 
                                         Toast.makeText(requireContext(), "Berhasil menambahkan menu baru", Toast.LENGTH_SHORT).show()
                                     } ?: run {
@@ -1432,6 +1459,8 @@ class MenuFragment : Fragment() {
                     }
                 }
             }
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
             dialog.show()
             dialogBinding.root.requestLayout()
             dialogBinding.root.invalidate()

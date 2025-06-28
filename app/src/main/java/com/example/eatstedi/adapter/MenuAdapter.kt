@@ -10,21 +10,24 @@ import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
 import com.example.eatstedi.R
 import com.example.eatstedi.activity.ManageStockMenuActivity
+import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.databinding.ViewItemMenuBinding
 import com.example.eatstedi.model.MenuItem
-import java.text.NumberFormat
-import java.util.Locale
+import okhttp3.ResponseBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MenuAdapter(
-    // Kita kembali menggunakan List biasa di constructor
     private var menuList: MutableList<MenuItem>,
     private val userRole: String,
     private val onItemClick: (MenuItem) -> Unit,
     private val onEditMenu: (MenuItem) -> Unit,
-    private val onDeleteMenu: (MenuItem) -> Unit
+    private val onDeleteMenu: (MenuItem) -> Unit,
+    // Callback for setting stock
+    private val onSetStock: (MenuItem) -> Unit
 ) : RecyclerView.Adapter<MenuAdapter.MenuViewHolder>() {
 
     inner class MenuViewHolder(val binding: ViewItemMenuBinding) : RecyclerView.ViewHolder(binding.root)
@@ -40,20 +43,45 @@ class MenuAdapter(
         val menuItem = menuList[position]
         with(holder.binding) {
             tvMenuName.text = menuItem.menuName
-            tvOwnerName.text = menuItem.supplierName ?: "Pemasok Tidak Diketahui"
+            tvOwnerName.text = menuItem.ownerName
             tvPrice.text = menuItem.formattedPrice
             tvStock.text = "Sisa: ${menuItem.stock}"
 
-            Glide.with(holder.itemView.context)
-                .load(menuItem.imageUrl)
-                .apply(
-                    RequestOptions()
-                        .placeholder(R.drawable.image_menu)
-                        .error(R.drawable.ic_launcher_background)
-                        .circleCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                )
-                .into(ivMenuImage)
+            ivMenuImage.setImageResource(R.drawable.image_menu)
+
+            val apiService = RetrofitClient.getInstance(holder.itemView.context)
+            apiService.getMenuPhoto(menuItem.id).enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                    if (holder.absoluteAdapterPosition == RecyclerView.NO_POSITION) return
+
+                    if (response.isSuccessful && response.body() != null) {
+                        try {
+                            val imageBytes = response.body()!!.bytes()
+
+                            Glide.with(holder.itemView.context)
+                                .load(imageBytes)
+                                .placeholder(R.drawable.image_menu)
+                                .error(R.drawable.ic_launcher_background)
+                                .centerCrop()
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(ivMenuImage)
+
+                        } catch (e: Exception) {
+                            Log.e("MenuAdapter", "Error reading image bytes for menu ID ${menuItem.id}", e)
+                            ivMenuImage.setImageResource(R.drawable.ic_launcher_background)
+                        }
+                    } else {
+                        Log.w("MenuAdapter", "Failed to load image for menu ID ${menuItem.id}. Code: ${response.code()}")
+                        ivMenuImage.setImageResource(R.drawable.ic_launcher_background)
+                    }
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    if (holder.absoluteAdapterPosition == RecyclerView.NO_POSITION) return
+                    Log.e("MenuAdapter", "Network failure loading image for menu ID ${menuItem.id}", t)
+                    ivMenuImage.setImageResource(R.drawable.ic_launcher_background)
+                }
+            })
 
             if (userRole.equals("cashier", ignoreCase = true)) {
                 root.isClickable = true
@@ -68,7 +96,6 @@ class MenuAdapter(
                 root.isClickable = false
             }
 
-            // Periksa stok dan sesuaikan tampilan
             if (menuItem.stock <= 0) {
                 root.alpha = 0.5f
                 tvStock.setTextColor(root.context.getColor(android.R.color.holo_red_dark))
@@ -86,11 +113,9 @@ class MenuAdapter(
         }
     }
 
-    // FUNGSI UPDATE YANG DISEDERHANAKAN
     fun updateList(newList: List<MenuItem>) {
         menuList.clear()
         menuList.addAll(newList)
-        // Gunakan notifyDataSetChanged() yang sederhana
         notifyDataSetChanged()
     }
 
@@ -127,14 +152,7 @@ class MenuAdapter(
                     true
                 }
                 R.id.action_set_stock_menu -> {
-                    val context = view.context
-                    val intent = Intent(context, ManageStockMenuActivity::class.java).apply {
-                        putExtra("MENU_ITEM_ID", menuItem.id)
-                        putExtra("MENU_ITEM_NAME", menuItem.menuName)
-                        putExtra("MENU_ITEM_IMAGE_URL", menuItem.imageUrl)
-                        putExtra("MENU_ITEM_STOCK", menuItem.stock)
-                    }
-                    context.startActivity(intent)
+                    onSetStock(menuItem)
                     true
                 }
                 else -> false

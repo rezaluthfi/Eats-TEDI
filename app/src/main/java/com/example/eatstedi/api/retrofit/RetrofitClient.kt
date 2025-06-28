@@ -12,7 +12,26 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    const val BASE_URL = "http://10.0.2.2:8000/api/"
+    // Opsi 1: Server Lokal (Emulator Android)
+    private const val SERVER_IP_ADDRESS = "10.0.2.2:8000"
+
+    // Opsi 2: Server VPS (VPS UGM yang digunakan)
+    // private const val SERVER_IP_ADDRESS = "10.33.35.16:80"
+
+    // Opsi 3: Server dengan Domain (Jika ada)
+    // private const val SERVER_IP_ADDRESS = "api.eatstedi.com"
+
+    /**
+     * URL dasar server, termasuk protokol (http/https).
+     * Akan digunakan untuk membangun URL gambar dan lainnya.
+     */
+    private const val SERVER_BASE_URL = "http://$SERVER_IP_ADDRESS/"
+
+    /**
+     * URL lengkap untuk API yang akan digunakan oleh Retrofit.
+     */
+    const val BASE_URL = SERVER_BASE_URL + "api/"
+
 
     @Volatile
     private var apiService: ApiService? = null
@@ -52,12 +71,10 @@ object RetrofitClient {
         val client = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            // Tambahkan timeout configuration
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .callTimeout(60, TimeUnit.SECONDS)
-            // Tambahkan retry on connection failure
             .retryOnConnectionFailure(true)
             .build()
 
@@ -72,7 +89,8 @@ object RetrofitClient {
     }
 
     private fun isExcludedEndpoint(path: String): Boolean {
-        val excludedPaths = listOf("/api/login", "/api/logout")
-        return excludedPaths.any { path.endsWith(it) || path == it }
+        val cleanPath = path.removePrefix("/api")
+        val excludedPaths = listOf("/login", "/logout")
+        return excludedPaths.any { cleanPath.endsWith(it) || cleanPath == it }
     }
 }

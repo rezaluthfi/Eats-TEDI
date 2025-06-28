@@ -1,6 +1,6 @@
-
 package com.example.eatstedi.model
 
+import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.google.gson.annotations.SerializedName
 import java.text.NumberFormat
 import java.util.Locale
@@ -42,8 +42,12 @@ data class MenuItem(
             else -> "Lainnya"
         }
 
+    /**
+     * URL lengkap untuk gambar menu.
+     * URL ini dibangun secara dinamis menggunakan konstanta terpusat dari RetrofitClient.
+     */
     val imageUrl: String
-        get() = "http://10.0.2.2:8000/api/get-menu-photo/$id"
+        get() = "${RetrofitClient.BASE_URL}get-menu-photo/$id"
 
     val ownerName: String
         get() = supplierName ?: "Pemasok Tidak Diketahui"
