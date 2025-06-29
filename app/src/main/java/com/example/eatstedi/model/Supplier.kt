@@ -5,6 +5,8 @@ data class Supplier(
     val name: String,
     val username: String,
     val no_telp: String,
+    val email: String,
+    val alamat: String,
     val income: Int,
     val status: String,
     val profile_picture: String?,

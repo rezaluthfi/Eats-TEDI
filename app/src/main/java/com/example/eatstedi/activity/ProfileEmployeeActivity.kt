@@ -1,14 +1,19 @@
 package com.example.eatstedi.activity
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -17,17 +22,19 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.signature.ObjectKey
 import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.GenericResponse
 import com.example.eatstedi.databinding.ActivityProfileEmployeeBinding
-// IMPORT BINDING UNTUK DIALOG KONFIRMASI HAPUS
 import com.example.eatstedi.databinding.ViewDialogConfirmDeleteEmployeeBinding
-import com.example.eatstedi.login.LoginActivity
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -35,212 +42,336 @@ import java.io.File
 
 class ProfileEmployeeActivity : AppCompatActivity() {
 
-    private val binding by lazy {
-        ActivityProfileEmployeeBinding.inflate(layoutInflater)
-    }
-    private var cashierId: Int = -1
+    private lateinit var binding: ActivityProfileEmployeeBinding
+    private var isEditing = false
+    private var cashierId: Int = 0
     private var selectedImageUri: Uri? = null
+    private var isAdmin = false
+    private var isViewingOwnProfile = false
 
-    // Launcher untuk memilih gambar dari galeri
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            selectedImageUri = it
-            // Hanya tampilkan pratinjau dan minta password jika pengguna adalah kasir sendiri
-            val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
-            val loggedInUserId = sharedPreferences.getInt("user_id", 0)
-            if (cashierId == loggedInUserId) {
-                Glide.with(this@ProfileEmployeeActivity)
-                    .load(it)
-                    .circleCrop()
-                    .into(binding.imgMenu)
-                showPasswordDialog()
-            } else {
-                Toast.makeText(this, "Hanya kasir sendiri yang dapat mengubah foto profil", Toast.LENGTH_SHORT).show()
+            if (isEditing) {
+                selectedImageUri = it
+                Glide.with(this).load(it).circleCrop().placeholder(R.drawable.img_avatar).into(binding.imgEmployee)
+                Toast.makeText(this, "Foto akan diubah saat menekan tombol Simpan", Toast.LENGTH_SHORT).show()
             }
-        } ?: run {
-            Toast.makeText(this, "Gambar tidak dipilih", Toast.LENGTH_SHORT).show()
-        }
+        } ?: Toast.makeText(this, "Gambar tidak dipilih", Toast.LENGTH_SHORT).show()
     }
 
-    // Launcher untuk meminta izin
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-        if (isGranted) {
-            openGallery()
-        } else {
-            Toast.makeText(this, "Izin akses galeri ditolak", Toast.LENGTH_SHORT).show()
-        }
+        if (isGranted) openGallery()
+        else Toast.makeText(this, "Izin akses galeri ditolak", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityProfileEmployeeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Terapkan padding untuk system bars
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        // Ambil dan set data cashier dari Intent
+        val sharedPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val loggedInUserId = sharedPrefs.getInt("user_id", -1)
+        isAdmin = sharedPrefs.getString("user_role", "")?.equals("admin", ignoreCase = true) == true
+
+        if (!retrieveEmployeeData(loggedInUserId)) return
+
+        setupUI()
+    }
+
+    private fun retrieveEmployeeData(loggedInUserId: Int): Boolean {
         cashierId = intent.getIntExtra("EMPLOYEE_ID", 0)
-        Log.d("ProfileEmployeeActivity", "Received EMPLOYEE_ID: $cashierId")
+        isViewingOwnProfile = (cashierId == loggedInUserId)
+
         if (cashierId == 0) {
             Toast.makeText(this, "ID karyawan tidak valid", Toast.LENGTH_SHORT).show()
             finish()
-            return
+            return false
         }
-        setCashierData()
-
-        // Nonaktifkan input field
-        disableInputFields()
-
-        // Periksa peran pengguna
-        val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
-        val userRole = sharedPreferences.getString("user_role", "cashier") ?: "cashier"
-        val isAdmin = userRole == "admin"
-
         with(binding) {
-            // Tombol kembali
-            ivArrowBack.setOnClickListener {
-                finish()
-            }
+            tvEmployeeName.text = intent.getStringExtra("EMPLOYEE_NAME")
+            etName.setText(intent.getStringExtra("EMPLOYEE_NAME"))
+            // PERBAIKAN 2: Gunakan setText dengan `filter = false` untuk AutoCompleteTextView
+            etStatus.setText(intent.getStringExtra("EMPLOYEE_STATUS"), false)
+            etUsername.setText(intent.getStringExtra("EMPLOYEE_USERNAME"))
+            etPhoneNumber.setText(intent.getStringExtra("EMPLOYEE_PHONE"))
+            etEmail.setText(intent.getStringExtra("EMPLOYEE_EMAIL"))
+            etAddress.setText(intent.getStringExtra("EMPLOYEE_ADDRESS"))
+            etPassword.text.clear()
+        }
+        return true
+    }
 
-            // Tombol jadwal
-            tvSchedule.setOnClickListener {
-                val name = intent.getStringExtra("EMPLOYEE_NAME") ?: "Cashier"
-                val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: "cashier"
-                val phone = intent.getStringExtra("EMPLOYEE_PHONE") ?: "N/A"
-                val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0)
-                val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: "N/A"
+    private fun setupUI() {
+        // PERBAIKAN 2: Pastikan adapter untuk status diset di sini.
+        val statusOptions = arrayOf("aktif", "tidak aktif")
+        val statusAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, statusOptions)
+        binding.etStatus.setAdapter(statusAdapter)
 
-                val scheduleIntent = if (isAdmin) {
-                    Intent(this@ProfileEmployeeActivity, AddScheduleEmployeeActivity::class.java)
-                } else {
-                    Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java)
-                }.apply {
-                    putExtra("EMPLOYEE_ID", cashierId)
-                    putExtra("EMPLOYEE_NAME", name)
-                    putExtra("EMPLOYEE_USERNAME", username)
-                    putExtra("EMPLOYEE_PHONE", phone)
-                    putExtra("EMPLOYEE_SALARY", salary)
-                    putExtra("EMPLOYEE_STATUS", status)
-                }
-                startActivity(scheduleIntent)
-            }
+        loadProfilePicture()
 
-            // Tombol hapus
-            if (!isAdmin) {
-                tvDelete.visibility = View.GONE // Sembunyikan tombol hapus jika bukan admin
-            } else {
-                tvDelete.setOnClickListener {
-                    // ===== BAGIAN YANG DIUBAH =====
-                    // Panggil dialog konfirmasi hapus
-                    showDeleteEmployeeConfirmationDialog()
-                    // ==============================
-                }
-            }
+        binding.ivArrowBack.setOnClickListener { finish() }
+        binding.btnCancel.setOnClickListener {
+            if (isEditing) toggleEditMode(forceOff = true)
+            else finish()
+        }
 
-            // Tombol cancel
-            btnCancel.setOnClickListener {
-                finish()
-            }
+        val canEdit = isAdmin || (!isAdmin && isViewingOwnProfile)
+        if (canEdit) {
+            binding.btnEdit.visibility = View.VISIBLE
+            binding.btnCameraEmployee.visibility = View.VISIBLE
+            binding.btnEdit.setOnClickListener { toggleEditMode() }
 
-            // Sembunyikan tombol edit karena belum ada endpoint update
-            btnEdit.visibility = View.GONE
-
-            // Tombol kamera untuk upload gambar profil
-            btnCameraMenu.setOnClickListener {
-                val loggedInUserId = sharedPreferences.getInt("user_id", 0)
-                if (cashierId == loggedInUserId) {
+            // PERBAIKAN 1: Logika pengecekan `isEditing` dipindahkan ke sini.
+            binding.btnCameraEmployee.setOnClickListener {
+                if (isEditing) {
                     checkStoragePermission()
                 } else {
-                    Toast.makeText(this@ProfileEmployeeActivity, "Hanya kasir sendiri yang dapat mengubah foto profil", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Aktifkan mode edit untuk mengubah foto", Toast.LENGTH_SHORT).show()
                 }
+            }
+        } else {
+            binding.btnEdit.visibility = View.GONE
+            binding.btnCameraEmployee.visibility = View.GONE
+        }
+
+        binding.tvDelete.visibility = if (isAdmin && !isViewingOwnProfile) View.VISIBLE else View.GONE
+        binding.tvDelete.setOnClickListener { showDeleteConfirmationDialog() }
+
+        binding.llPasswordField.visibility = if (!isAdmin && isViewingOwnProfile) View.VISIBLE else View.GONE
+
+        binding.tvSchedule.visibility = if (!isAdmin) View.VISIBLE else View.GONE
+        binding.tvSchedule.setOnClickListener {
+            val intent = Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java)
+            intent.putExtras(this@ProfileEmployeeActivity.intent.extras ?: Bundle())
+            startActivity(intent)
+        }
+
+        setFieldsEnabled(false)
+    }
+
+    private fun toggleEditMode(forceOff: Boolean = false) {
+        if (forceOff) {
+            isEditing = false
+            val sharedPrefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+            retrieveEmployeeData(sharedPrefs.getInt("user_id", -1))
+            loadProfilePicture()
+        } else {
+            isEditing = !isEditing
+        }
+
+        if (isEditing) {
+            setFieldsEnabled(true)
+            binding.btnEdit.text = "Simpan"
+            binding.btnCancel.text = "Batal Edit"
+        } else {
+            if (!forceOff) {
+                if (isAdmin) {
+                    saveEmployeeDataByAdmin()
+                } else {
+                    showPasswordConfirmationDialog()
+                }
+            } else {
+                setFieldsEnabled(false)
+                binding.btnEdit.text = "Edit"
+                binding.btnCancel.text = "Kembali"
             }
         }
     }
 
-    private fun setCashierData() {
-        // Ambil data dari Intent
-        val name = intent.getStringExtra("EMPLOYEE_NAME") ?: "Cashier"
-        val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: "cashier"
-        val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: "N/A"
-        val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0)
-        val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: "N/A"
-
+    private fun setFieldsEnabled(enabled: Boolean) {
         with(binding) {
-            tvEmployeeName.text = name
-            etUsername.setText(username)
-            etPhoneNumber.setText(noTelp)
-            etStatus.setText(status)
-            etSalary.setText(salary.toString())
+            etName.isEnabled = enabled
+            etStatus.isEnabled = enabled
+            etUsername.isEnabled = enabled
+            etPhoneNumber.isEnabled = enabled
+            etEmail.isEnabled = enabled
+            etAddress.isEnabled = enabled
+            etPassword.isEnabled = enabled && !isAdmin && isViewingOwnProfile
+        }
+    }
 
-            // Load profile picture menggunakan endpoint get-cashier-photo-profile
-            loadProfilePicture()
+    private fun saveEmployeeDataByAdmin() {
+        val name = binding.etName.text.toString().trim()
+        val status = binding.etStatus.text.toString().trim()
+        val username = binding.etUsername.text.toString().trim()
+        val phone = binding.etPhoneNumber.text.toString().trim()
+        val email = binding.etEmail.text.toString().trim()
+        val address = binding.etAddress.text.toString().trim()
+
+        if (name.isEmpty() || status.isEmpty() || username.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
+            Toast.makeText(this, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        // Log untuk debugging
-        Log.d("ProfileEmployeeActivity", "Displayed Name: $name, ID: $cashierId, Username: $username, Phone: $noTelp, Salary: $salary, Status: $status")
+        val nameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
+        val usernameBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
+        val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
+        val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
+        val emailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())
+        val addressBody = address.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        var imagePart: MultipartBody.Part? = null
+        selectedImageUri?.let { uri ->
+            try {
+                val file = File(cacheDir, "employee_profile_${System.currentTimeMillis()}.jpg")
+                contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
+                imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, file.asRequestBody("image/jpeg".toMediaTypeOrNull()))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        RetrofitClient.getInstance(this).updateCashierByAdmin(cashierId, nameBody, usernameBody, phoneBody, emailBody, addressBody, statusBody, imagePart)
+            .enqueue(getUpdateCallback())
+    }
+
+    private fun showPasswordConfirmationDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.view_dialog_password, null)
+        val titleTextView = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val etPasswordDialog = dialogView.findViewById<EditText>(R.id.et_password)
+        val btnConfirm = dialogView.findViewById<Button>(R.id.btn_confirm)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btn_cancel)
+
+        val newPassword = binding.etPassword.text.toString()
+        val isChangingPassword = newPassword.isNotEmpty()
+
+        titleTextView.text = if (isChangingPassword) "Ulangi Kata Sandi Baru" else "Konfirmasi Password Lama"
+        etPasswordDialog.hint = if (isChangingPassword) "Kata Sandi Baru" else "Password Saat Ini"
+
+        val dialog = AlertDialog.Builder(this).setView(dialogView).setCancelable(false).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnConfirm.setOnClickListener {
+            val passwordConfirmation = etPasswordDialog.text.toString().trim()
+            if (passwordConfirmation.isEmpty()) {
+                etPasswordDialog.error = "Password tidak boleh kosong"; return@setOnClickListener
+            }
+            if (isChangingPassword && newPassword != passwordConfirmation) {
+                etPasswordDialog.error = "Kata sandi baru tidak cocok"; return@setOnClickListener
+            }
+            dialog.dismiss()
+            saveEmployeeDataByCashier(passwordConfirmation)
+        }
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+    }
+
+    private fun saveEmployeeDataByCashier(passwordConfirmation: String) {
+        val name = binding.etName.text.toString().trim()
+        val status = binding.etStatus.text.toString().trim()
+        val username = binding.etUsername.text.toString().trim()
+        val phone = binding.etPhoneNumber.text.toString().trim()
+        val email = binding.etEmail.text.toString().trim()
+        val address = binding.etAddress.text.toString().trim()
+        val newPassword = binding.etPassword.text.toString()
+
+        if (name.isEmpty() || status.isEmpty() || username.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
+            Toast.makeText(this, "Semua field (selain password) harus diisi", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (newPassword.isNotEmpty() && newPassword.length < 8) {
+            Toast.makeText(this, "Password baru minimal 8 karakter", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val idBody = cashierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val nameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
+        val usernameBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
+        val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
+        val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
+        val emailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())
+        val addressBody = address.toRequestBody("text/plain".toMediaTypeOrNull())
+        val passConfirmBody = passwordConfirmation.toRequestBody("text/plain".toMediaTypeOrNull())
+        val newPassBody = if (newPassword.isNotEmpty()) newPassword.toRequestBody("text/plain".toMediaTypeOrNull()) else null
+
+        var imagePart: MultipartBody.Part? = null
+        selectedImageUri?.let { uri ->
+            try {
+                val file = File(cacheDir, "employee_profile_${System.currentTimeMillis()}.jpg")
+                contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { output -> input.copyTo(output) } }
+                imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, file.asRequestBody("image/jpeg".toMediaTypeOrNull()))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        RetrofitClient.getInstance(this).updateCashierProfile(idBody, nameBody, usernameBody, phoneBody, emailBody, addressBody, statusBody, passConfirmBody, newPassBody, imagePart)
+            .enqueue(getUpdateCallback())
+    }
+
+    private fun getUpdateCallback(): Callback<GenericResponse> {
+        return object : Callback<GenericResponse> {
+            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    Toast.makeText(this@ProfileEmployeeActivity, "Data berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                    setResult(Activity.RESULT_OK, Intent().putExtra("isDataUpdated", true))
+
+                    updateIntentWithNewData()
+
+                    isEditing = false
+                    setFieldsEnabled(false)
+                    binding.btnEdit.text = "Edit"
+                    binding.btnCancel.text = "Kembali"
+
+                    selectedImageUri = null
+                    loadProfilePicture()
+                } else {
+                    val errorMsg = response.body()?.message?.toString() ?: "Gagal memperbarui data"
+                    Toast.makeText(this@ProfileEmployeeActivity, "Gagal: $errorMsg", Toast.LENGTH_LONG).show()
+                }
+            }
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                Toast.makeText(this@ProfileEmployeeActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun updateIntentWithNewData() {
+        with(binding) {
+            intent.putExtra("EMPLOYEE_NAME", etName.text.toString())
+            intent.putExtra("EMPLOYEE_USERNAME", etUsername.text.toString())
+            intent.putExtra("EMPLOYEE_PHONE", etPhoneNumber.text.toString())
+            intent.putExtra("EMPLOYEE_EMAIL", etEmail.text.toString())
+            intent.putExtra("EMPLOYEE_ADDRESS", etAddress.text.toString())
+            intent.putExtra("EMPLOYEE_STATUS", etStatus.text.toString())
+            tvEmployeeName.text = etName.text.toString()
+        }
     }
 
     private fun loadProfilePicture() {
-        val apiService = RetrofitClient.getInstance(this)
-        apiService.getCashierPhotoProfile(cashierId).enqueue(object : Callback<okhttp3.ResponseBody> {
-            override fun onResponse(call: Call<okhttp3.ResponseBody>, response: Response<okhttp3.ResponseBody>) {
+        RetrofitClient.getInstance(this).getCashierPhotoProfile(cashierId).enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                 if (response.isSuccessful && response.body() != null) {
                     try {
                         val imageBytes = response.body()!!.bytes()
                         Glide.with(this@ProfileEmployeeActivity)
                             .load(imageBytes)
-                            .placeholder(R.drawable.img_avatar)
-                            .error(R.drawable.img_avatar)
-                            .circleCrop()
-                            .into(binding.imgMenu)
-                        Log.d("ProfileEmployeeActivity", "Profile picture loaded successfully")
+                            .placeholder(R.drawable.img_avatar).error(R.drawable.img_avatar)
+                            .signature(ObjectKey(System.currentTimeMillis().toString()))
+                            .skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE)
+                            .circleCrop().into(binding.imgEmployee)
                     } catch (e: Exception) {
-                        Log.e("ProfileEmployeeActivity", "Error converting ResponseBody to bytes: ${e.message}", e)
-                        binding.imgMenu.setImageResource(R.drawable.img_avatar)
+                        binding.imgEmployee.setImageResource(R.drawable.img_avatar)
                     }
                 } else {
-                    binding.imgMenu.setImageResource(R.drawable.img_avatar)
-                    Log.w("ProfileEmployeeActivity", "Failed to load profile picture: ${response.code()} - ${response.message()}")
+                    binding.imgEmployee.setImageResource(R.drawable.img_avatar)
                 }
             }
-
-            override fun onFailure(call: Call<okhttp3.ResponseBody>, t: Throwable) {
-                binding.imgMenu.setImageResource(R.drawable.img_avatar)
-                Log.e("ProfileEmployeeActivity", "Error loading profile picture: ${t.message}", t)
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                binding.imgEmployee.setImageResource(R.drawable.img_avatar)
             }
         })
     }
 
-    private fun disableInputFields() {
-        with(binding) {
-            etUsername.isEnabled = false
-            etUsername.isFocusable = false
-            etUsername.isFocusableInTouchMode = false
-
-            etPhoneNumber.isEnabled = false
-            etPhoneNumber.isFocusable = false
-            etPhoneNumber.isFocusableInTouchMode = false
-
-            etStatus.isEnabled = false
-            etStatus.isFocusable = false
-            etStatus.isFocusableInTouchMode = false
-
-            etSalary.isEnabled = false
-            etSalary.isFocusable = false
-            etSalary.isFocusableInTouchMode = false
-        }
-    }
-
     private fun checkStoragePermission() {
-        val permission = if (android.os.Build.VERSION.SDK_INT >= 33) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
         if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
             openGallery()
         } else {
@@ -252,186 +383,39 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         pickImageLauncher.launch("image/*")
     }
 
-    private fun showPasswordDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.view_dialog_password, null)
-        val builder = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
-
-        val alertDialog = builder.create()
-
-        val etPassword = dialogView.findViewById<EditText>(R.id.et_password)
-        val btnCancel = dialogView.findViewById<Button>(R.id.btn_cancel)
-        val btnConfirm = dialogView.findViewById<Button>(R.id.btn_confirm)
-
-        btnCancel.setOnClickListener {
-            selectedImageUri = null
-            binding.imgMenu.setImageResource(R.drawable.img_avatar)
-            alertDialog.dismiss()
-        }
-
-        btnConfirm.setOnClickListener {
-            val password = etPassword.text.toString().trim()
-            if (password.isEmpty()) {
-                etPassword.error = "Password tidak boleh kosong"
-            } else {
-                alertDialog.dismiss()
-                doUploadProfilePicture(password)
-            }
-        }
-
-        alertDialog.show()
-    }
-
-    private fun doUploadProfilePicture(password: String) {
-        if (selectedImageUri == null) {
-            Toast.makeText(this, "Gambar tidak dipilih", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val mimeType = contentResolver.getType(selectedImageUri!!)
-        if (mimeType !in listOf("image/jpeg", "image/png")) {
-            Toast.makeText(this, "Hanya file JPG atau PNG yang diperbolehkan", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val file = File(cacheDir, "profile_picture_${System.currentTimeMillis()}.jpg")
-        contentResolver.openInputStream(selectedImageUri!!)?.use { input ->
-            file.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        if (file.length() > 5 * 1024 * 1024) {
-            Toast.makeText(this, "Gambar terlalu besar (maks 5MB)", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-        val profilePicturePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
-
-        val name = intent.getStringExtra("EMPLOYEE_NAME") ?: return
-        val username = intent.getStringExtra("EMPLOYEE_USERNAME") ?: return
-        val noTelp = intent.getStringExtra("EMPLOYEE_PHONE") ?: return
-        val salary = intent.getIntExtra("EMPLOYEE_SALARY", 0).toString()
-        val status = intent.getStringExtra("EMPLOYEE_STATUS") ?: return
-
-        val idCashierRequestBody = cashierId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-        val nameRequestBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
-        val usernameRequestBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
-        val noTelpRequestBody = noTelp.toRequestBody("text/plain".toMediaTypeOrNull())
-        val salaryRequestBody = salary.toRequestBody("text/plain".toMediaTypeOrNull())
-        val statusRequestBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
-        val passwordRequestBody = password.toRequestBody("text/plain".toMediaTypeOrNull())
-
-        Log.d("ProfileEmployeeActivity", "Uploading: id_cashier=$cashierId, name=$name, username=$username, no_telp=$noTelp, salary=$salary, status=$status, password=****")
-
-        val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
-        if (token == null) {
-            Toast.makeText(this, "Sesi telah berakhir, silakan login kembali", Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-            return
-        }
-
-        val apiService = RetrofitClient.getInstance(this)
-        apiService.updateCashierProfile(
-            idCashier = idCashierRequestBody,
-            name = nameRequestBody,
-            username = usernameRequestBody,
-            noTelp = noTelpRequestBody,
-            salary = salaryRequestBody,
-            status = statusRequestBody,
-            password = passwordRequestBody,
-            profilePicture = profilePicturePart
-        ).enqueue(object : Callback<GenericResponse> {
-            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                if (response.isSuccessful && response.body()?.success == true) {
-                    Toast.makeText(this@ProfileEmployeeActivity, "Foto profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                    loadProfilePicture()
-                } else {
-                    val errorMessage = response.body()?.message?.toString() ?: response.errorBody()?.string() ?: "Unknown error"
-                    if (response.code() == 401 || errorMessage.contains("Unauthorized", true)) {
-                        Toast.makeText(this@ProfileEmployeeActivity, "Hanya kasir sendiri yang dapat mengubah foto profil", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal mengunggah foto: $errorMessage", Toast.LENGTH_LONG).show()
-                    }
-                    Log.e("ProfileEmployeeActivity", "Upload error: $errorMessage")
-                }
-            }
-
-            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                Toast.makeText(this@ProfileEmployeeActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
-                Log.e("ProfileEmployeeActivity", "Upload failure: ${t.message}", t)
-            }
-        })
-    }
-
-    // ===== FUNGSI BARU UNTUK DIALOG KONFIRMASI HAPUS =====
-    private fun showDeleteEmployeeConfirmationDialog() {
-        // Inflate layout dialog menggunakan View Binding
+    private fun showDeleteConfirmationDialog() {
         val dialogBinding = ViewDialogConfirmDeleteEmployeeBinding.inflate(layoutInflater)
-
-        // Buat AlertDialog
-        val builder = AlertDialog.Builder(this)
-            .setView(dialogBinding.root)
-
+        val builder = AlertDialog.Builder(this).setView(dialogBinding.root)
         val dialog = builder.create()
-
-        // Atur listener untuk tombol batal
-        dialogBinding.btnCancelDelete.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // Atur listener untuk tombol hapus
-        dialogBinding.btnConfirmDelete.setOnClickListener {
-            deleteCashier() // Panggil fungsi untuk menghapus kasir
-            dialog.dismiss()
-        }
-
-        // Buat background dialog transparan agar sudut membulat terlihat
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        // Tampilkan dialog
+        dialogBinding.btnCancelDelete.setOnClickListener { dialog.dismiss() }
+        dialogBinding.btnConfirmDelete.setOnClickListener {
+            deleteCashier()
+            dialog.dismiss()
+        }
         dialog.show()
     }
-    // =========================================================
 
     private fun deleteCashier() {
-        val sharedPreferences = getSharedPreferences("auth_prefs", MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
-
-        if (token != null && cashierId > 0) {
-            val apiService = RetrofitClient.getInstance(this)
-            apiService.deleteCashier(cashierId,"Bearer $token").enqueue(object : Callback<GenericResponse> {
-                override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                    if (response.isSuccessful) {
-                        val body = response.body()
-                        if (body?.success == true) {
-                            Toast.makeText(this@ProfileEmployeeActivity, "Karyawan berhasil dihapus", Toast.LENGTH_SHORT).show()
-                            // Kembali ke AllEmployeeActivity setelah penghapusan
-                            val intent = Intent(this@ProfileEmployeeActivity, AllEmployeeActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                            startActivity(intent)
-                            finish()
-                        } else {
-                            Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus karyawan: ${body?.message}", Toast.LENGTH_SHORT).show()
-                            Log.e("ProfileEmployeeActivity", "Delete error: ${body?.message}")
-                        }
-                    } else {
-                        Toast.makeText(this@ProfileEmployeeActivity, "Gagal menghapus karyawan (Error: ${response.code()})", Toast.LENGTH_SHORT).show()
-                        Log.e("ProfileEmployeeActivity", "Delete error: ${response.errorBody()?.string()}")
-                    }
-                }
-
-                override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                    Toast.makeText(this@ProfileEmployeeActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                    Log.e("ProfileEmployeeActivity", "Delete failure: ${t.message}", t)
-                }
-            })
-        } else {
-            Toast.makeText(this, "Tidak ada sesi aktif atau ID tidak valid", Toast.LENGTH_SHORT).show()
+        val token = getSharedPreferences("auth_prefs", MODE_PRIVATE).getString("auth_token", null)
+        if (token.isNullOrEmpty()) {
+            Toast.makeText(this, "Token tidak ditemukan, silakan login ulang", Toast.LENGTH_SHORT).show()
+            return
         }
+        RetrofitClient.getInstance(this).deleteCashier(cashierId, "Bearer $token").enqueue(object : Callback<GenericResponse> {
+            override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                if (response.isSuccessful && response.body()?.success == true) {
+                    Toast.makeText(this@ProfileEmployeeActivity, "Karyawan berhasil dihapus", Toast.LENGTH_SHORT).show()
+                    setResult(Activity.RESULT_OK)
+                    finish()
+                } else {
+                    val errorMsg = response.body()?.message?.toString() ?: "Gagal menghapus karyawan"
+                    Toast.makeText(this@ProfileEmployeeActivity, errorMsg, Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                Toast.makeText(this@ProfileEmployeeActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 }

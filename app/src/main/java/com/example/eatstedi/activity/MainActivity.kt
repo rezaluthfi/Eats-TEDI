@@ -1,5 +1,6 @@
 package com.example.eatstedi.activity
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -10,6 +11,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.drawerlayout.widget.DrawerLayout
@@ -34,6 +37,16 @@ import java.net.UnknownHostException
 class MainActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+
+    // Launcher untuk menangani hasil dari ProfileAdminActivity atau ProfileEmployeeActivity
+    private val profileUpdateLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // Jika profil diupdate, panggil lagi fetchUserProfile untuk muat ulang data
+                Log.d("MainActivity", "Profile updated. Refreshing user data.")
+                fetchUserProfile()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +73,7 @@ class MainActivity : AppCompatActivity() {
 
             navigationView.setItemTextColor(getColorStateList(R.color.selector_menu_item_text_color))
             val headerView = navigationView.getHeaderView(0)
+
             headerView.findViewById<LinearLayout>(R.id.nav_header).setOnClickListener {
                 val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                 val role = sharedPreferences.getString("user_role", null)
@@ -71,11 +85,13 @@ class MainActivity : AppCompatActivity() {
                         putExtra("EMPLOYEE_NAME", sharedPreferences.getString("user_name", ""))
                         putExtra("EMPLOYEE_USERNAME", sharedPreferences.getString("user_username", ""))
                         putExtra("EMPLOYEE_PHONE", sharedPreferences.getString("user_phone", ""))
-                        putExtra("EMPLOYEE_SALARY", sharedPreferences.getInt("user_salary", 0))
+                        putExtra("EMPLOYEE_EMAIL", sharedPreferences.getString("user_email", ""))
+                        putExtra("EMPLOYEE_ADDRESS", sharedPreferences.getString("user_address", ""))
                         putExtra("EMPLOYEE_STATUS", sharedPreferences.getString("user_status", ""))
                     }
                 }
-                startActivity(intent)
+                // Panggil activity menggunakan launcher
+                profileUpdateLauncher.launch(intent)
             }
 
             navigationView.setNavigationItemSelectedListener { menuItem ->
@@ -102,16 +118,12 @@ class MainActivity : AppCompatActivity() {
         val role = sharedPreferences.getString("user_role", null)
         val token = sharedPreferences.getString("auth_token", null)
 
-        Log.d("SESSION_VALIDATION", "Memvalidasi sesi dengan role: $role")
-
         if (token == null || role == null) {
-            Log.e("SESSION_VALIDATION", "Token atau Role tidak ditemukan, paksa logout.")
             forceLogout("Sesi tidak ditemukan. Silakan login.")
             return
         }
 
         val apiService = RetrofitClient.getInstance(this)
-
         val onProfileFailure: (String, Throwable?) -> Unit = { context, t ->
             Log.e("SESSION_VALIDATION", "Validasi gagal: $context", t)
             forceLogout("Tidak dapat memvalidasi sesi. Periksa koneksi dan login kembali.")
@@ -125,8 +137,8 @@ class MainActivity : AppCompatActivity() {
                         handleProfileResponse(response, "kasir",
                             onSuccess = {
                                 val cashierData = it.data
-                                saveUserData("cashier", cashierData.id, cashierData.name, cashierData.username, cashierData.no_telp, cashierData.salary, cashierData.status)
-                                setupUIForUser("cashier", cashierData.name, cashierData.id)
+                                saveUserData("cashier", cashierData.id, cashierData.name, cashierData.username, cashierData.no_telp, cashierData.email, cashierData.alamat, cashierData.status)
+                                setupUIForUser("cashier", cashierData.name, cashierData.id, cashierData.email)
                             },
                             onFailure = { onProfileFailure("Gagal mendapatkan profil kasir", null) }
                         )
@@ -141,8 +153,8 @@ class MainActivity : AppCompatActivity() {
                         handleProfileResponse(response, "admin",
                             onSuccess = {
                                 val adminData = it.data
-                                saveUserData("admin", adminData.id, adminData.name)
-                                setupUIForUser("admin", adminData.name, adminData.id)
+                                saveUserData("admin", adminData.id, adminData.name, username = adminData.username, email = adminData.email, phone = adminData.no_telp)
+                                setupUIForUser("admin", adminData.name, adminData.id, adminData.email)
                             },
                             onFailure = { onProfileFailure("Gagal mendapatkan profil admin", null) }
                         )
@@ -151,7 +163,6 @@ class MainActivity : AppCompatActivity() {
                 })
             }
             else -> {
-                Log.e("SESSION_VALIDATION", "Role tidak dikenali: $role")
                 forceLogout("Role pengguna tidak valid.")
             }
         }
@@ -159,53 +170,51 @@ class MainActivity : AppCompatActivity() {
 
     private fun <T> handleProfileResponse(response: Response<T>, roleContext: String, onSuccess: (T) -> Unit, onFailure: () -> Unit) {
         if (response.code() == 401) {
-            Log.e("SESSION_VALIDATION", "Token tidak valid di server (401) untuk $roleContext. Paksa logout.")
             forceLogout("Sesi Anda telah berakhir. Silakan login kembali.")
             return
         }
-
         val body = response.body()
         val isSuccess = when (body) {
             is CashierProfileResponse -> body.success
             is AdminProfileResponse -> body.success
             else -> false
         }
-
         if (response.isSuccessful && isSuccess && body != null) {
-            Log.d("SESSION_VALIDATION", "Profil $roleContext berhasil divalidasi.")
             onSuccess(body)
         } else {
-            Log.e("SESSION_VALIDATION", "Respons profil $roleContext tidak berhasil. Kode: ${response.code()}")
             onFailure()
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun setupUIForUser(role: String, name: String, userId: Int) {
-        updateNavHeader(name, userId, role)
+    private fun setupUIForUser(role: String, name: String, userId: Int, email: String?) {
+        updateNavHeader(name, email, userId, role)
         setupMenuVisibilityForRole(role)
         setupNavigationDrawer(null)
     }
 
-    private fun saveUserData(role: String, id: Int, name: String, username: String? = null, phone: String? = null, salary: Int? = null, status: String? = null) {
+    private fun saveUserData(role: String, id: Int, name: String, username: String? = null, phone: String? = null, email: String? = null, address: String? = null, status: String? = null) {
         getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).edit().apply {
             putString("user_role", role)
             putInt("user_id", id)
             putString("user_name", name)
+            putString("user_email", email)
+            putString("user_username", username)
+            putString("user_phone", phone)
+
             if (role == "cashier") {
-                putString("user_username", username)
-                putString("user_phone", phone)
-                putInt("user_salary", salary ?: 0)
+                putString("user_address", address)
                 putString("user_status", status)
             }
             apply()
         }
     }
 
-    private fun updateNavHeader(name: String, userId: Int, role: String) {
+    private fun updateNavHeader(name: String, email: String?, userId: Int, role: String) {
         val headerView = binding.navigationView.getHeaderView(0)
         (headerView.findViewById<TextView>(R.id.username)).text = name
-        (headerView.findViewById<TextView>(R.id.email)).text = if (role == "admin") "admin@kantin.com" else "cashier@kantin.com"
+        (headerView.findViewById<TextView>(R.id.email)).text = email ?: if (role == "admin") "admin@kantin.com" else "cashier@kantin.com"
+
         val profileImageView = headerView.findViewById<ImageView>(R.id.profile_image)
 
         if (role == "cashier") {
@@ -245,40 +254,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun forceLogout(message: String) {
-        // 1. Ambil token yang mungkin "nyangkut" dari SharedPreferences
         val sharedPreferences = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val stuckToken = sharedPreferences.getString("auth_token", null)
-
-        // 2. Bersihkan SharedPreferences di klien SEKARANG JUGA.
-        sharedPreferences.edit().clear().commit()
-        Log.d("SESSION_VALIDATION", "forceLogout: SharedPreferences cleared immediately.")
-
-        // 3. Jika ada token yang tersangkut, coba panggil API logout
+        sharedPreferences.edit().clear().apply()
         if (stuckToken != null) {
-            Log.d("SESSION_VALIDATION", "forceLogout: Attempting to clear stuck token on server.")
-            val apiService = RetrofitClient.getInstance(this)
-            apiService.logout("Bearer $stuckToken").enqueue(object : Callback<LogoutResponse> {
-                override fun onResponse(call: Call<LogoutResponse>, response: Response<LogoutResponse>) {
-                    Log.d("SESSION_VALIDATION", "Server-side logout call completed with code: ${response.code()}")
-                    // Tidak peduli hasilnya, tetap arahkan ke login
-                    navigateToLogin(message)
-                }
-
+            RetrofitClient.getInstance(this).logout("Bearer $stuckToken").enqueue(object : Callback<LogoutResponse> {
+                override fun onResponse(call: Call<LogoutResponse>, response: Response<LogoutResponse>) { navigateToLogin(message) }
                 override fun onFailure(call: Call<LogoutResponse>, t: Throwable) {
-                    // Jika panggilan logout GAGAL karena masalah koneksi,
-                    // beri pesan yang lebih spesifik kepada pengguna
-                    if (t is ConnectException || t is UnknownHostException) {
-                        Log.e("SESSION_VALIDATION", "Could not connect to server to clear token.", t)
-                        navigateToLogin("Tidak dapat terhubung ke server untuk logout. Sesi mungkin masih aktif di server.")
-                    } else {
-                        Log.e("SESSION_VALIDATION", "Server-side logout call failed with other error.", t)
-                        navigateToLogin(message)
-                    }
-                    // ======================================================
+                    val errorMsg = if (t is ConnectException || t is UnknownHostException) "Tidak dapat terhubung ke server." else message
+                    navigateToLogin(errorMsg)
                 }
             })
         } else {
-            // Jika tidak ada token, langsung ke halaman login.
             navigateToLogin(message)
         }
     }
@@ -296,7 +283,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleLogoutSuccess(message: String = "Logout berhasil") {
-        getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).edit().clear().commit()
+        getSharedPreferences("auth_prefs", Context.MODE_PRIVATE).edit().clear().apply()
         navigateToLogin(message)
     }
 }

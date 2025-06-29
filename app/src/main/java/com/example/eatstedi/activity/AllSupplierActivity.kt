@@ -29,8 +29,6 @@ import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.text.NumberFormat
-import java.util.Locale
 
 class AllSupplierActivity : AppCompatActivity() {
 
@@ -41,7 +39,8 @@ class AllSupplierActivity : AppCompatActivity() {
 
     private val profileActivityLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK && result.data?.getBooleanExtra("isDataUpdated", false) == true) {
+            if (result.resultCode == Activity.RESULT_OK) {
+                // Perbarui list jika ada penambahan atau perubahan data
                 Log.d("AllSupplierActivity", "Data updated, refreshing supplier list.")
                 fetchSuppliers()
             }
@@ -107,68 +106,54 @@ class AllSupplierActivity : AppCompatActivity() {
                 } else {
                     val errorMessage = response.body()?.message ?: "Gagal mengambil data pemasok"
                     Toast.makeText(this@AllSupplierActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                    addSupplierDataToTable(emptyList())
                 }
             }
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
                 Toast.makeText(this@AllSupplierActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+                addSupplierDataToTable(emptyList())
             }
         })
     }
 
     private fun searchSupplier(query: String) {
-
         binding.tvNoData.visibility = View.GONE
 
         val apiService = RetrofitClient.getInstance(this)
         apiService.searchSupplier(SearchSupplierRequest(query)).enqueue(object : Callback<SupplierResponse> {
             override fun onResponse(call: Call<SupplierResponse>, response: Response<SupplierResponse>) {
-                // Kondisi 1: Respons sukses (kode 2xx)
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body?.success == true) {
-                        // Sukses dan ada data
                         val searchResults = body.data ?: emptyList()
                         addSupplierDataToTable(searchResults)
-
-                        // Tampilkan pesan jika hasilnya kosong
                         if (searchResults.isEmpty()) {
                             Toast.makeText(this@AllSupplierActivity, "Tidak ada supplier yang cocok dengan '$query'", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        // Sukses tapi flag success=false dari backend
                         addSupplierDataToTable(emptyList())
                         val message = body?.message ?: "Supplier tidak ditemukan"
                         Toast.makeText(this@AllSupplierActivity, message, Toast.LENGTH_SHORT).show()
                     }
-                }
-                // Kondisi 2: Respons GAGAL (kode 4xx atau 5xx), tapi mungkin ada pesan di errorBody
-                else {
-                    addSupplierDataToTable(emptyList()) // Pastikan tabel kosong
-
-                    // ================== PERBAIKAN UTAMA DI SINI ==================
+                } else {
+                    addSupplierDataToTable(emptyList())
                     try {
-                        // Coba baca errorBody dan parse JSON-nya
                         val errorBodyString = response.errorBody()?.string()
                         if (errorBodyString != null) {
-                            // Asumsi error body memiliki struktur yang sama dengan SupplierResponse
                             val errorResponse = Gson().fromJson(errorBodyString, SupplierResponse::class.java)
                             val message = errorResponse.message ?: "Gagal mencari supplier"
                             Toast.makeText(this@AllSupplierActivity, message, Toast.LENGTH_SHORT).show()
                         } else {
-                            // Jika errorBody null, tampilkan pesan generik
                             Toast.makeText(this@AllSupplierActivity, "Terjadi kesalahan (Kode: ${response.code()})", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
-                        // Jika terjadi error saat parsing JSON
                         Toast.makeText(this@AllSupplierActivity, "Gagal memproses respons error", Toast.LENGTH_SHORT).show()
                         Log.e("AllSupplierActivity", "Error parsing error body", e)
                     }
-                    // =============================================================
                 }
             }
 
             override fun onFailure(call: Call<SupplierResponse>, t: Throwable) {
-
                 Toast.makeText(this@AllSupplierActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
@@ -186,14 +171,14 @@ class AllSupplierActivity : AppCompatActivity() {
             setPadding(8, 16, 8, 16)
             setBackgroundColor(ContextCompat.getColor(this@AllSupplierActivity, R.color.secondary))
         }
-        headerRow.addView(createTextView("Nama Supplier", isHeader = true))
+        headerRow.addView(createTextView("Nama Pemasok", isHeader = true))
         headerRow.addView(createTextView("Status", isHeader = true))
         headerRow.addView(createTextView("Nama Pengguna", isHeader = true))
+        headerRow.addView(createTextView("Email", isHeader = true))
         headerRow.addView(createTextView("No. Telepon", isHeader = true))
-        headerRow.addView(createTextView("Pemasukan", isHeader = true))
+        headerRow.addView(createTextView("Alamat", isHeader = true))
         binding.tableView.addView(headerRow)
 
-        val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
         supplierList.forEach { supplier ->
             val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
@@ -205,15 +190,19 @@ class AllSupplierActivity : AppCompatActivity() {
                         putExtra("SUPPLIER_STATUS", supplier.status)
                         putExtra("SUPPLIER_USERNAME", supplier.username)
                         putExtra("SUPPLIER_PHONE", supplier.no_telp)
+                        putExtra("SUPPLIER_EMAIL", supplier.email)
+                        putExtra("SUPPLIER_ADDRESS", supplier.alamat)
                     }
                     profileActivityLauncher.launch(intent)
                 }
             }
+
             row.addView(createTextView(supplier.name))
             row.addView(createTextView(supplier.status))
             row.addView(createTextView(supplier.username))
+            row.addView(createTextView(supplier.email))
             row.addView(createTextView(supplier.no_telp))
-            row.addView(createTextView("Rp ${numberFormat.format(supplier.income)}"))
+            row.addView(createTextView(supplier.alamat))
             binding.tableView.addView(row)
         }
     }

@@ -349,10 +349,11 @@ class RecapFragment : Fragment() {
         _binding?.etSearch?.addTextChangedListener { text ->
             val query = text.toString().trim()
             if (query.isNotEmpty()) {
+                // Jika ada teks, lakukan pencarian
                 searchTransactions(query)
-            } else if(!_binding?.etSearch!!.isFocused) {
-                // Jika query kosong dan tidak sedang difokus, reset
-                resetSearchView()
+            } else {
+                // Jika teks kosong (dihapus oleh user), panggil clearFocus
+                _binding?.etSearch?.clearFocus()
             }
         }
     }
@@ -390,7 +391,6 @@ class RecapFragment : Fragment() {
                         // Ini kasus kasir 2. Kita anggap sebagai "kasir tidak ditemukan", bukan error
                         Log.w("RecapFragment", "Search failed because cashier model was not found. Treating as 'not found'.")
                         filterAndDisplayTransactions(emptyList())
-                        showToast("Kasir dengan nama '$query' tidak ditemukan")
 
                     } else {
                         // Ini adalah error server yang sebenarnya

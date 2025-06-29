@@ -29,23 +29,17 @@ import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.text.NumberFormat
-import java.util.Locale
 
 class AllEmployeeActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityAllEmployeeBinding.inflate(layoutInflater) }
-    // Simpan daftar asli untuk dikembalikan saat pencarian kosong
     private var originalEmployeeList = mutableListOf<Employee>()
-    // Handler untuk menunda pencarian (debounce)
     private val searchHandler = Handler(Looper.getMainLooper())
     private var searchRunnable: Runnable? = null
 
-    // Launcher untuk menangani hasil kembali dari activity lain
     private val activityLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
-                // Jika ada data yang diupdate atau dihapus, muat ulang daftar
                 Log.d("AllEmployeeActivity", "Data potentially updated, refreshing employee list.")
                 fetchEmployees()
             }
@@ -54,13 +48,11 @@ class AllEmployeeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
         setupClickListeners()
         setupSearch()
         fetchEmployees()
@@ -86,7 +78,6 @@ class AllEmployeeActivity : AppCompatActivity() {
                     if (query.isNotEmpty()) {
                         searchEmployees(query)
                     } else {
-                        // Jika query kosong, tampilkan kembali daftar asli
                         addEmployeeDataToTable(originalEmployeeList)
                     }
                 }
@@ -96,8 +87,7 @@ class AllEmployeeActivity : AppCompatActivity() {
     }
 
     private fun fetchEmployees() {
-        val apiService = RetrofitClient.getInstance(this)
-        apiService.getCashiers().enqueue(object : Callback<CashierResponse> {
+        RetrofitClient.getInstance(this).getCashiers().enqueue(object : Callback<CashierResponse> {
             override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val employees = response.body()?.data ?: emptyList()
@@ -115,8 +105,7 @@ class AllEmployeeActivity : AppCompatActivity() {
     }
 
     private fun searchEmployees(query: String) {
-        val apiService = RetrofitClient.getInstance(this)
-        apiService.searchCashiers(SearchCashierRequest(query)).enqueue(object : Callback<CashierResponse> {
+        RetrofitClient.getInstance(this).searchCashiers(SearchCashierRequest(query)).enqueue(object : Callback<CashierResponse> {
             override fun onResponse(call: Call<CashierResponse>, response: Response<CashierResponse>) {
                 val body = response.body()
                 if (response.isSuccessful && body?.success == true) {
@@ -127,7 +116,6 @@ class AllEmployeeActivity : AppCompatActivity() {
                     }
                 } else {
                     addEmployeeDataToTable(emptyList())
-                    // Coba baca pesan error dari backend
                     try {
                         val errorBodyString = response.errorBody()?.string()
                         if (errorBodyString != null) {
@@ -160,13 +148,13 @@ class AllEmployeeActivity : AppCompatActivity() {
             setBackgroundColor(ContextCompat.getColor(this@AllEmployeeActivity, R.color.secondary))
         }
         headerRow.addView(createTextView("Nama Karyawan", true))
-        headerRow.addView(createTextView("Status", true))
         headerRow.addView(createTextView("Nama Pengguna", true))
+        headerRow.addView(createTextView("Status", true))
+        headerRow.addView(createTextView("Email", true))
         headerRow.addView(createTextView("No. Telepon", true))
-        headerRow.addView(createTextView("Gaji", true))
+        headerRow.addView(createTextView("Alamat", true))
         binding.tableView.addView(headerRow)
 
-        val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
         employeeList.forEach { employee ->
             val row = TableRow(this).apply {
                 setPadding(8, 16, 8, 16)
@@ -178,17 +166,18 @@ class AllEmployeeActivity : AppCompatActivity() {
                         putExtra("EMPLOYEE_STATUS", employee.status)
                         putExtra("EMPLOYEE_USERNAME", employee.username)
                         putExtra("EMPLOYEE_PHONE", employee.no_telp)
-                        putExtra("EMPLOYEE_SALARY", employee.salary)
+                        putExtra("EMPLOYEE_EMAIL", employee.email)
+                        putExtra("EMPLOYEE_ADDRESS", employee.alamat)
                     }
                     activityLauncher.launch(intent)
                 }
             }
             row.addView(createTextView(employee.name))
-            row.addView(createTextView(employee.status ?: "-"))
             row.addView(createTextView(employee.username ?: "-"))
+            row.addView(createTextView(employee.status ?: "-"))
+            row.addView(createTextView(employee.email ?: "-"))
             row.addView(createTextView(employee.no_telp ?: "-"))
-            val salaryFormatted = employee.salary?.let { "Rp${numberFormat.format(it)}" } ?: "-"
-            row.addView(createTextView(salaryFormatted))
+            row.addView(createTextView(employee.alamat ?: "-"))
             binding.tableView.addView(row)
         }
     }

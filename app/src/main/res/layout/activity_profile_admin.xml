@@ -14,8 +14,7 @@
         android:layout_margin="24dp"
         android:src="@drawable/icon_arrow_back"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <com.facebook.shimmer.ShimmerFrameLayout
         android:id="@+id/shimmer_view_container"
@@ -27,52 +26,45 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Layout Placeholder yang akan bersinar (shimmer) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:paddingStart="80dp"
-            android:paddingEnd="80dp"
-            android:paddingBottom="32dp">
-
-            <!-- Placeholder untuk Foto Profil -->
+            android:padding="32dp">
             <View
                 android:layout_width="150dp"
                 android:layout_height="150dp"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="40dp"
                 android:background="#E0E0E0" />
-
-            <!-- Placeholder untuk Nama -->
             <View
                 android:layout_width="250dp"
                 android:layout_height="40dp"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="8dp"
                 android:background="#E0E0E0" />
-
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="8dp"
                 android:background="#E0E0E0" />
-
-            <!-- Placeholder untuk field Nama -->
-            <View
-                android:layout_width="100dp"
-                android:layout_height="24dp"
-                android:layout_marginTop="32dp"
-                android:layout_gravity="start"
-                android:background="#E0E0E0" />
-
-            <View
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="8dp"
-                android:background="#E0E0E0" />
-
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:orientation="horizontal">
+                <View android:layout_width="0dp" android:layout_height="80dp" android:layout_weight="1" android:layout_marginEnd="8dp" android:background="#E0E0E0" />
+                <View android:layout_width="0dp" android:layout_height="80dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="#E0E0E0" />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+                <View android:layout_width="0dp" android:layout_height="80dp" android:layout_weight="1" android:layout_marginEnd="8dp" android:background="#E0E0E0" />
+                <View android:layout_width="0dp" android:layout_height="80dp" android:layout_weight="1" android:layout_marginStart="8dp" android:background="#E0E0E0" />
+            </LinearLayout>
         </LinearLayout>
-
     </com.facebook.shimmer.ShimmerFrameLayout>
 
     <ScrollView
@@ -91,107 +83,186 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:paddingStart="80dp"
-            android:paddingEnd="80dp"
-            android:paddingBottom="32dp">
+            android:padding="32dp">
 
-            <!-- Bagian Foto Profil dan Nama -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/cl_img_menu"
+                <ImageView
+                    android:id="@+id/img_admin"
                     android:layout_width="150dp"
                     android:layout_height="150dp"
-                    android:layout_marginTop="40dp">
-
-                    <ImageView
-                        android:id="@+id/img_menu"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/img_avatar"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" />
-
-                    <ImageView
-                        android:id="@+id/btn_camera_menu"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/icon_camera"
-                        android:visibility="gone"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                    android:src="@drawable/img_avatar"
+                    android:layout_marginTop="40dp"/>
 
                 <TextView
                     android:id="@+id/tv_admin_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     tools:text="Nama Admin"
                     android:textSize="40sp"
                     android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:textColor="@color/black"
-                    />
-
+                    android:textColor="@color/black" />
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/grey"
                     android:layout_marginTop="8dp" />
-
             </LinearLayout>
 
-            <!-- Bagian Field Input yang Ditampilkan -->
+            <!-- Baris 1: Nama & No. Telp -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:orientation="horizontal"
                 android:layout_marginTop="32dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Nama"
-                    android:textSize="24sp"
-                    android:fontFamily="@font/noto_sans_gujarati_bold"
-                    android:textColor="@color/black" />
+                    android:layout_weight="1"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nama"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+                    <EditText
+                        android:id="@+id/et_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Nama Admin"
+                        android:inputType="textPersonName"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"/>
+                </LinearLayout>
 
-                <EditText
-                    android:id="@+id/et_name"
-                    android:layout_width="match_parent"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textSize="16sp"
-                    android:hint="Nama Admin"
-                    android:enabled="false"
-                    android:background="@drawable/bg_input"
-                    android:fontFamily="@font/noto_sans_gujarati_regular"
-                    android:padding="16dp"
-                    android:textColor="@color/black" />
-
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No. Telepon"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+                    <EditText
+                        android:id="@+id/et_phone_number"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="No. Telepon"
+                        android:inputType="phone"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"/>
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Tombol Kembali -->
-            <Button
-                android:id="@+id/btn_cancel"
-                android:layout_width="155dp"
+            <!-- Baris 2: Email & Password Baru -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Kembali"
-                android:textSize="16sp"
-                android:textColor="@color/white"
-                android:layout_marginTop="56dp"
-                android:background="@drawable/bg_btn_secondary"
-                app:backgroundTint="@null" />
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+                    <EditText
+                        android:id="@+id/et_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"/>
+                </LinearLayout>
 
+                <LinearLayout
+                    android:id="@+id/ll_password_field"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kata Sandi"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+                    <EditText
+                        android:id="@+id/et_new_password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="••••••••"
+                        android:inputType="textPassword"
+                        android:textColor="@color/black"
+                        android:textColorHint="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="56dp">
+                <Button
+                    android:id="@+id/btn_cancel"
+                    android:layout_width="155dp"
+                    android:layout_height="wrap_content"
+                    android:text="Kembali"
+                    android:textSize="16sp"
+                    android:textColor="@color/white"
+                    android:background="@drawable/bg_btn_secondary"
+                    app:backgroundTint="@null" />
+                <Button
+                    android:id="@+id/btn_edit"
+                    android:layout_width="155dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:background="@drawable/bg_btn_secondary"
+                    android:text="Edit"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    app:backgroundTint="@null" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,6 +1,5 @@
 package com.example.eatstedi.activity
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.ArrayAdapter
@@ -11,7 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.bumptech.glide.Glide // UBAH: Import Glide
+import com.bumptech.glide.Glide
 import com.example.eatstedi.R
 import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.CreateSupplierResponse
@@ -32,15 +31,13 @@ class AddSupplierActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAddSupplierBinding
     private var selectedImageUri: Uri? = null
 
-    // Gunakan GetContent dan tampilkan gambar dengan Glide.circleCrop()
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             selectedImageUri = uri
-            // Tampilkan gambar pratinjau sebagai lingkaran menggunakan Glide
             Glide.with(this)
                 .load(uri)
                 .circleCrop()
-                .placeholder(R.drawable.img_avatar) // Gambar default saat loading
+                .placeholder(R.drawable.img_avatar)
                 .into(binding.imgSupplier)
         }
     }
@@ -69,7 +66,6 @@ class AddSupplierActivity : AppCompatActivity() {
             btnCancel.setOnClickListener { finish() }
 
             btnCameraSupplier.setOnClickListener {
-                // Panggil launcher dengan tipe "image/*"
                 pickImageLauncher.launch("image/*")
             }
 
@@ -78,22 +74,26 @@ class AddSupplierActivity : AppCompatActivity() {
                 val username = etUsername.text.toString().trim()
                 val phone = etPhoneNumber.text.toString().trim()
                 val status = etStatus.text.toString().trim()
+                val email = etEmail.text.toString().trim()      // BARU
+                val address = etAddress.text.toString().trim()  // BARU
 
-                if (name.isEmpty() || username.isEmpty() || phone.isEmpty() || status.isEmpty()) {
+                if (name.isEmpty() || username.isEmpty() || phone.isEmpty() || status.isEmpty() || email.isEmpty() || address.isEmpty()) {
                     Toast.makeText(this@AddSupplierActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
-                createSupplier(name, username, phone, status, selectedImageUri)
+                createSupplier(name, username, phone, email, address, status, selectedImageUri)
             }
         }
     }
 
-    private fun createSupplier(name: String, username: String, phone: String, status: String, imageUri: Uri?) {
+    private fun createSupplier(name: String, username: String, phone: String, email: String, address: String, status: String, imageUri: Uri?) {
         val nameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
         val usernameBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
         val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
         val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
+        val emailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())
+        val addressBody = address.toRequestBody("text/plain".toMediaTypeOrNull())
         var imagePart: MultipartBody.Part? = null
 
         imageUri?.let { uri ->
@@ -103,16 +103,16 @@ class AddSupplierActivity : AppCompatActivity() {
                 imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, requestFile)
             } else {
                 Toast.makeText(this, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
-                return // Hentikan proses jika file tidak bisa dibuat
+                return
             }
         }
 
         val apiService = RetrofitClient.getInstance(this)
-        apiService.createSupplier(nameBody, usernameBody, phoneBody, statusBody, imagePart).enqueue(object : Callback<CreateSupplierResponse> {
+        apiService.createSupplier(nameBody, usernameBody, phoneBody, emailBody, addressBody, statusBody, imagePart).enqueue(object : Callback<CreateSupplierResponse> {
             override fun onResponse(call: Call<CreateSupplierResponse>, response: Response<CreateSupplierResponse>) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     Toast.makeText(this@AddSupplierActivity, "Supplier berhasil ditambahkan", Toast.LENGTH_SHORT).show()
-                    setResult(RESULT_OK) // Beri tahu activity sebelumnya bahwa ada data baru
+                    setResult(RESULT_OK)
                     finish()
                 } else {
                     val errorMsg = response.body()?.message ?: "Gagal menambahkan supplier"

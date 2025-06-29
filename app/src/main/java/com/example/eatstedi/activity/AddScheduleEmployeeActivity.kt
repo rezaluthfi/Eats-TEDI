@@ -64,16 +64,13 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
             return
         }
 
-        // Inisialisasi adapter
         scheduleAdapter = ScheduleAdapter(schedules, true, 0) { position ->
             removeSchedule(position)
         }
 
-        // Set layout manager SEMENTARA untuk mencegah error
         binding.rvSchedule.layoutManager = GridLayoutManager(this, 2)
         binding.rvSchedule.adapter = scheduleAdapter
 
-        // Panggil fungsi untuk membuat grid dinamis
         setupDynamicGrid()
 
         with(binding) {
@@ -92,23 +89,13 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
     private fun setupDynamicGrid() {
         binding.rvSchedule.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
-                // Hapus listener agar tidak berjalan berulang kali
                 binding.rvSchedule.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
                 val recyclerViewWidth = binding.rvSchedule.width
-
-                // Lebar ideal per kolom dalam DP. Angka ini sedikit lebih besar dari
-                // lebar item untuk memberikan sedikit ruang
                 val idealColumnWidthDp = 360
                 val idealColumnWidthPx = (idealColumnWidthDp * resources.displayMetrics.density).toInt()
-
                 if (idealColumnWidthPx > 0 && recyclerViewWidth > 0) {
-                    // Hitung jumlah kolom yang muat, minimal 1
                     val spanCount = max(1, recyclerViewWidth / idealColumnWidthPx)
-
-                    // Terapkan LayoutManager baru dengan span count yang sudah dihitung
                     binding.rvSchedule.layoutManager = GridLayoutManager(this@AddScheduleEmployeeActivity, spanCount)
-
                     Log.d("AddScheduleActivity", "Dynamic grid setup. RVWidth: $recyclerViewWidth, SpanCount: $spanCount")
                 }
             }
@@ -215,31 +202,26 @@ class AddScheduleEmployeeActivity : AppCompatActivity() {
 
     private fun removeSchedule(position: Int) {
         if (position in schedules.indices) {
-            AlertDialog.Builder(this)
-                .setTitle("Konfirmasi Hapus")
-                .setMessage("Yakin ingin menghapus jadwal ${schedules[position].day} Shift ${schedules[position].id_shifts}?")
-                .setPositiveButton("Hapus") { _, _ ->
-                    val scheduleId = schedules[position].id
-                    showLoading(true)
-                    val apiService = RetrofitClient.getInstance(this)
-                    apiService.deleteSchedule(scheduleId).enqueue(object : Callback<GenericResponse> {
-                        override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
-                            showLoading(false)
-                            if (response.isSuccessful && response.body()?.success == true) {
-                                fetchSchedules()
-                                Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil dihapus!", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(this@AddScheduleEmployeeActivity, "Gagal menghapus jadwal: ${response.body()?.message}", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                        override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
-                            showLoading(false)
-                            Toast.makeText(this@AddScheduleEmployeeActivity, "Error jaringan: ${t.message}", Toast.LENGTH_LONG).show()
-                        }
-                    })
+            val scheduleId = schedules[position].id
+            showLoading(true)
+            val apiService = RetrofitClient.getInstance(this)
+            apiService.deleteSchedule(scheduleId).enqueue(object : Callback<GenericResponse> {
+                override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                    showLoading(false)
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        fetchSchedules() // Muat ulang jadwal setelah berhasil dihapus
+                        Toast.makeText(this@AddScheduleEmployeeActivity, "Jadwal berhasil dihapus!", Toast.LENGTH_LONG).show()
+                    } else {
+                        val errorMessage = response.body()?.message?.toString() ?: "Gagal menghapus jadwal"
+                        Toast.makeText(this@AddScheduleEmployeeActivity, errorMessage, Toast.LENGTH_LONG).show()
+                    }
                 }
-                .setNegativeButton("Batal", null)
-                .show()
+
+                override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                    showLoading(false)
+                    Toast.makeText(this@AddScheduleEmployeeActivity, "Error jaringan: ${t.message}", Toast.LENGTH_LONG).show()
+                }
+            })
         }
     }
 

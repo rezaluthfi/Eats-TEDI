@@ -38,7 +38,7 @@
                 android:gravity="center">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/cl_img_menu"
+                    android:id="@+id/cl_img_supplier"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal">
@@ -104,6 +104,7 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Baris 1: Nama & No. Telp -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -137,7 +138,6 @@
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         android:enabled="false" />
-
                 </LinearLayout>
 
                 <LinearLayout
@@ -167,11 +167,10 @@
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         android:enabled="false" />
-
                 </LinearLayout>
-
             </LinearLayout>
 
+            <!-- Baris 2: Nama Pengguna & Status -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -204,7 +203,6 @@
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         android:enabled="false" />
-
                 </LinearLayout>
 
                 <LinearLayout
@@ -233,9 +231,75 @@
                         android:background="@drawable/bg_input"
                         android:padding="16dp"
                         android:enabled="false" />
+                </LinearLayout>
+            </LinearLayout>
 
+            <!-- Baris 3: Email & Alamat -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+
+                    <EditText
+                        android:id="@+id/et_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false" />
                 </LinearLayout>
 
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:orientation="vertical"
+                    android:gravity="start">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Alamat"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+
+                    <EditText
+                        android:id="@+id/et_address"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Alamat"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"
+                        android:maxLines="1"
+                        android:inputType="text"
+                        android:ellipsize="end" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -244,7 +308,6 @@
                 android:orientation="horizontal"
                 android:gravity="center"
                 android:layout_marginTop="56dp">
-
                 <Button
                     android:id="@+id/btn_cancel"
                     android:layout_width="155dp"
@@ -254,7 +317,6 @@
                     android:textColor="@color/white"
                     android:background="@drawable/bg_btn_secondary"
                     app:backgroundTint="@null" />
-
                 <Button
                     android:id="@+id/btn_edit"
                     android:layout_width="155dp"
@@ -265,10 +327,7 @@
                     android:layout_marginStart="24dp"
                     android:background="@drawable/bg_btn_secondary"
                     app:backgroundTint="@null" />
-
             </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

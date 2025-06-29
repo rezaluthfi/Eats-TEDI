@@ -23,8 +23,9 @@ interface ApiService {
         @Part("name") name: RequestBody,
         @Part("username") username: RequestBody,
         @Part("no_telp") noTelp: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("alamat") alamat: RequestBody,
         @Part("password") password: RequestBody,
-        @Part("salary") salary: RequestBody,
         @Part("status") status: RequestBody,
         @Part profilePicture: MultipartBody.Part?
     ): Call<GenericResponse>
@@ -112,9 +113,12 @@ interface ApiService {
     @Multipart
     @POST("update-admin-profile")
     fun updateAdminProfile(
+        @Part("name") name: RequestBody,
         @Part("username") username: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
         @Part("password") password: RequestBody,
-        @Part profilePicture: MultipartBody.Part?
+        @Part("new_password") newPassword: RequestBody?
     ): Call<GenericResponse>
 
     @GET("get-cashier-profile")
@@ -130,9 +134,24 @@ interface ApiService {
         @Part("name") name: RequestBody,
         @Part("username") username: RequestBody,
         @Part("no_telp") noTelp: RequestBody,
-        @Part("salary") salary: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("alamat") alamat: RequestBody,
         @Part("status") status: RequestBody,
-        @Part("password") password: RequestBody,
+        @Part("password") passwordConfirmation: RequestBody,  // Password saat ini untuk validasi
+        @Part("new_password") newPassword: RequestBody?,      // Password baru (bisa null/kosong)
+        @Part profilePicture: MultipartBody.Part?
+    ): Call<GenericResponse>
+
+    @Multipart
+    @POST("update-cashier/{id}")
+    fun updateCashierByAdmin(
+        @Path("id") id: Int,
+        @Part("name") name: RequestBody,
+        @Part("username") username: RequestBody,
+        @Part("no_telp") noTelp: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("alamat") alamat: RequestBody,
+        @Part("status") status: RequestBody,
         @Part profilePicture: MultipartBody.Part?
     ): Call<GenericResponse>
 
@@ -172,6 +191,8 @@ interface ApiService {
         @Part("name") name: RequestBody,
         @Part("username") username: RequestBody,
         @Part("no_telp") noTelp: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("alamat") alamat: RequestBody,
         @Part("status") status: RequestBody,
         @Part profilePicture: MultipartBody.Part?
     ): Call<CreateSupplierResponse>
@@ -183,6 +204,8 @@ interface ApiService {
         @Part("name") name: RequestBody,
         @Part("username") username: RequestBody,
         @Part("no_telp") noTelp: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("alamat") alamat: RequestBody,
         @Part("status") status: RequestBody,
         @Part profilePicture: MultipartBody.Part?
     ): Call<UpdateSupplierResponse>
@@ -416,8 +439,11 @@ data class AdminProfileResponse(
 data class AdminProfileData(
     val id: Int,
     val name: String,
+    val username: String,
     val role: String,
-    val profile_picture: String,
+    val profile_picture: String?,
+    val email: String?,
+    val no_telp: String?,
     val created_at: String,
     val updated_at: String
 )
@@ -433,12 +459,25 @@ data class CashierProfileData(
     val name: String,
     val username: String,
     val no_telp: String,
-    val salary: Int,
+    val email: String,
+    val alamat: String,
     val status: String,
     val role: String,
     val profile_picture: String,
     val created_at: String,
     val updated_at: String
+)
+
+data class UpdatedCashierData(
+    val id: Int,
+    val name: String,
+    val username: String,
+    val no_telp: String,
+    val status: String,
+    val role: String,
+    val profile_picture: String?,
+    val email: String,
+    val alamat: String
 )
 
 data class DeleteCashierRequest(

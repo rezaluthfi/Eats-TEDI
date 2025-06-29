@@ -78,6 +78,7 @@
                         android:background="@drawable/bg_search"
                         android:drawableTop="@drawable/icon_search"
                         android:drawablePadding="8dp"
+                        android:maxLines="1"
                         android:padding="10dp" />
 
                     <ImageView

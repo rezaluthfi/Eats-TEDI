@@ -26,7 +26,6 @@ import com.example.eatstedi.api.retrofit.RetrofitClient
 import com.example.eatstedi.api.service.GenericResponse
 import com.example.eatstedi.api.service.UpdateSupplierResponse
 import com.example.eatstedi.databinding.ActivityProfileSupplierBinding
-// IMPORT BINDING UNTUK DIALOG KUSTOM ANDA
 import com.example.eatstedi.databinding.ViewDialogConfirmDeleteSupplierBinding
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -45,13 +44,10 @@ class ProfileSupplierActivity : AppCompatActivity() {
     private var supplierId: Int = 0
     private var selectedImageUri: Uri? = null
 
-    // Setelah gambar dipilih, langsung panggil fungsi upload
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             selectedImageUri = it
-            // Tampilkan pratinjau gambar yang dipilih
             Glide.with(this).load(it).circleCrop().placeholder(R.drawable.img_avatar).into(binding.imgSupplier)
-            // Langsung mulai proses upload
             uploadProfilePicture()
         } ?: Toast.makeText(this, "Gambar tidak dipilih", Toast.LENGTH_SHORT).show()
     }
@@ -91,6 +87,9 @@ class ProfileSupplierActivity : AppCompatActivity() {
             etStatus.setText(intent.getStringExtra("SUPPLIER_STATUS"))
             etUsername.setText(intent.getStringExtra("SUPPLIER_USERNAME"))
             etPhoneNumber.setText(intent.getStringExtra("SUPPLIER_PHONE"))
+            // BARU: Ambil data email dan alamat dari intent
+            etEmail.setText(intent.getStringExtra("SUPPLIER_EMAIL"))
+            etAddress.setText(intent.getStringExtra("SUPPLIER_ADDRESS"))
         }
         return true
     }
@@ -115,7 +114,6 @@ class ProfileSupplierActivity : AppCompatActivity() {
         if (isAdmin) {
             binding.btnEdit.visibility = View.VISIBLE
             binding.tvDelete.visibility = View.VISIBLE
-            // Tombol kamera tidak lagi bergantung pada 'isEditing'
             binding.btnCameraSupplier.setOnClickListener {
                 checkStoragePermission()
             }
@@ -145,7 +143,6 @@ class ProfileSupplierActivity : AppCompatActivity() {
             binding.btnCancel.text = "Batal Edit"
         } else {
             if (!forceOff) {
-                // Fungsi ini sekarang hanya menyimpan data teks
                 saveSupplierTextData()
             } else {
                 setEditTextEnabled(false)
@@ -161,14 +158,19 @@ class ProfileSupplierActivity : AppCompatActivity() {
             etStatus.isEnabled = enabled
             etUsername.isEnabled = enabled
             etPhoneNumber.isEnabled = enabled
+            etEmail.isEnabled = enabled
+            etAddress.isEnabled = enabled
 
             val clickListener = if (!enabled) View.OnClickListener {
                 Toast.makeText(this@ProfileSupplierActivity, "Aktifkan mode edit untuk mengubah data teks", Toast.LENGTH_SHORT).show()
             } else null
+
             etName.setOnClickListener(clickListener)
             etStatus.setOnClickListener(clickListener)
             etUsername.setOnClickListener(clickListener)
             etPhoneNumber.setOnClickListener(clickListener)
+            etEmail.setOnClickListener(clickListener)
+            etAddress.setOnClickListener(clickListener)
         }
     }
 
@@ -185,17 +187,12 @@ class ProfileSupplierActivity : AppCompatActivity() {
         pickImageLauncher.launch("image/*")
     }
 
-    /**
-     * Fungsi ini menangani upload foto profil secara terpisah.
-     * Ia akan mengirimkan data teks yang ada saat ini bersama dengan gambar baru.
-     */
     private fun uploadProfilePicture() {
         if (selectedImageUri == null) {
             Toast.makeText(this, "URI gambar tidak valid", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Buat file dari URI
         val file: File
         try {
             file = File(cacheDir, "supplier_profile_${System.currentTimeMillis()}.jpg")
@@ -204,53 +201,53 @@ class ProfileSupplierActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Gagal memproses gambar", Toast.LENGTH_SHORT).show()
-            loadProfilePicture() // Kembalikan ke gambar lama jika gagal
+            loadProfilePicture()
             return
         }
 
-        // Siapkan data untuk API call (termasuk data teks dari EditText)
         val nameBody = binding.etName.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val usernameBody = binding.etUsername.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val phoneBody = binding.etPhoneNumber.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val emailBody = binding.etEmail.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val addressBody = binding.etAddress.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val statusBody = binding.etStatus.text.toString().toRequestBody("text/plain".toMediaTypeOrNull())
         val imagePart = MultipartBody.Part.createFormData("profile_picture", file.name, file.asRequestBody("image/jpeg".toMediaTypeOrNull()))
 
         val apiService = RetrofitClient.getInstance(this)
-        apiService.updateSupplier(supplierId, nameBody, usernameBody, phoneBody, statusBody, imagePart)
+        // DIUBAH: Panggil API dengan parameter baru
+        apiService.updateSupplier(supplierId, nameBody, usernameBody, phoneBody, emailBody, addressBody, statusBody, imagePart)
             .enqueue(object : Callback<UpdateSupplierResponse> {
                 override fun onResponse(call: Call<UpdateSupplierResponse>, response: Response<UpdateSupplierResponse>) {
                     if (response.isSuccessful && response.body()?.success == true) {
                         Toast.makeText(this@ProfileSupplierActivity, "Foto profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                        loadProfilePicture() // Muat ulang gambar dari server untuk cache-busting
-                        selectedImageUri = null // Reset URI setelah berhasil
+                        loadProfilePicture()
+                        selectedImageUri = null
                         setResult(Activity.RESULT_OK, Intent().putExtra("isDataUpdated", true))
                     } else {
                         val errorMsg = response.body()?.message ?: "Gagal memperbarui foto profil"
                         Toast.makeText(this@ProfileSupplierActivity, errorMsg, Toast.LENGTH_SHORT).show()
-                        loadProfilePicture() // Kembalikan ke gambar lama jika gagal
+                        loadProfilePicture()
                     }
                 }
 
                 override fun onFailure(call: Call<UpdateSupplierResponse>, t: Throwable) {
                     Toast.makeText(this@ProfileSupplierActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
-                    loadProfilePicture() // Kembalikan ke gambar lama jika gagal
+                    loadProfilePicture()
                 }
             })
     }
 
 
-    /**
-     * Fungsi ini hanya menyimpan data teks saat tombol 'Simpan' ditekan.
-     * Gambar tidak dikirimkan di sini (Multipart part akan null).
-     */
     private fun saveSupplierTextData() {
         with(binding) {
             val name = etName.text.toString().trim()
             val status = etStatus.text.toString().trim()
             val username = etUsername.text.toString().trim()
             val phone = etPhoneNumber.text.toString().trim()
+            val email = etEmail.text.toString().trim()      // BARU
+            val address = etAddress.text.toString().trim()  // BARU
 
-            if (name.isEmpty() || status.isEmpty() || username.isEmpty() || phone.isEmpty()) {
+            if (name.isEmpty() || status.isEmpty() || username.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
                 Toast.makeText(this@ProfileSupplierActivity, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
                 return
             }
@@ -259,17 +256,18 @@ class ProfileSupplierActivity : AppCompatActivity() {
             val usernameBody = username.toRequestBody("text/plain".toMediaTypeOrNull())
             val phoneBody = phone.toRequestBody("text/plain".toMediaTypeOrNull())
             val statusBody = status.toRequestBody("text/plain".toMediaTypeOrNull())
+            val emailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())        // BARU
+            val addressBody = address.toRequestBody("text/plain".toMediaTypeOrNull())    // BARU
 
-            // Gambar tidak dikirim saat hanya menyimpan data teks, jadi 'imagePart' adalah null
             val imagePart: MultipartBody.Part? = null
 
             val apiService = RetrofitClient.getInstance(this@ProfileSupplierActivity)
-            apiService.updateSupplier(supplierId, nameBody, usernameBody, phoneBody, statusBody, imagePart)
+            apiService.updateSupplier(supplierId, nameBody, usernameBody, phoneBody, emailBody, addressBody, statusBody, imagePart)
                 .enqueue(object : Callback<UpdateSupplierResponse> {
                     override fun onResponse(call: Call<UpdateSupplierResponse>, response: Response<UpdateSupplierResponse>) {
                         if (response.isSuccessful && response.body()?.success == true) {
                             Toast.makeText(this@ProfileSupplierActivity, "Data supplier berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                            tvSupplierName.text = name // Update nama di header
+                            tvSupplierName.text = name
                             isEditing = false
                             setEditTextEnabled(false)
                             btnEdit.text = "Edit"
@@ -278,12 +276,12 @@ class ProfileSupplierActivity : AppCompatActivity() {
                         } else {
                             val errorMsg = response.body()?.message ?: "Gagal memperbarui data"
                             Toast.makeText(this@ProfileSupplierActivity, errorMsg, Toast.LENGTH_SHORT).show()
-                            toggleEditMode(forceOff = true) // Batalkan perubahan jika gagal
+                            toggleEditMode(forceOff = true)
                         }
                     }
                     override fun onFailure(call: Call<UpdateSupplierResponse>, t: Throwable) {
                         Toast.makeText(this@ProfileSupplierActivity, "Error koneksi: ${t.message}", Toast.LENGTH_SHORT).show()
-                        toggleEditMode(forceOff = true) // Batalkan perubahan jika gagal
+                        toggleEditMode(forceOff = true)
                     }
                 })
         }
@@ -303,7 +301,6 @@ class ProfileSupplierActivity : AppCompatActivity() {
                             .load(imageBytes)
                             .placeholder(R.drawable.img_avatar)
                             .error(R.drawable.img_avatar)
-                            // Kunci unik untuk memaksa Glide memuat ulang gambar dari server, bukan dari cache
                             .signature(ObjectKey(System.currentTimeMillis().toString()))
                             .skipMemoryCache(true)
                             .diskCacheStrategy(DiskCacheStrategy.NONE)
@@ -322,13 +319,9 @@ class ProfileSupplierActivity : AppCompatActivity() {
         })
     }
 
-    // ================== BAGIAN YANG DIUBAH DENGAN VIEW BINDING ==================
     private fun showDeleteConfirmationDialog() {
         val dialogBinding = ViewDialogConfirmDeleteSupplierBinding.inflate(layoutInflater)
-
-        val builder = AlertDialog.Builder(this)
-            .setView(dialogBinding.root)
-
+        val builder = AlertDialog.Builder(this).setView(dialogBinding.root)
         val dialog = builder.create()
 
         dialogBinding.btnCancelDelete.setOnClickListener {
@@ -339,9 +332,7 @@ class ProfileSupplierActivity : AppCompatActivity() {
             deleteSupplier()
             dialog.dismiss()
         }
-
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
         dialog.show()
     }
 
