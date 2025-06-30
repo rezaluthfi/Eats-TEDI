@@ -117,19 +117,33 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Baris 1: Nama & No. Telp -->
-            <LinearLayout
+            <!-- ================================================================ -->
+            <!-- PERUBAHAN DIMULAI DI SINI: Menggunakan ConstraintLayout untuk form -->
+            <!-- ================================================================ -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/form_constraint_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginTop="32dp">
+
+                <!-- Guideline untuk membagi layout menjadi dua kolom -->
+                <androidx.constraintlayout.widget.Guideline
+                    android:id="@+id/guideline_vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintGuide_percent="0.5"/>
+
+                <!-- Field Nama -->
                 <LinearLayout
+                    android:id="@+id/ll_name_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/guideline_vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -138,7 +152,6 @@
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
                         android:textColor="@color/black" />
-
                     <EditText
                         android:id="@+id/et_name"
                         android:layout_width="match_parent"
@@ -152,13 +165,16 @@
                         android:enabled="false"/>
                 </LinearLayout>
 
+                <!-- Field No. Telepon -->
                 <LinearLayout
+                    android:id="@+id/ll_phone_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toTopOf="@id/ll_name_field"
+                    app:layout_constraintStart_toEndOf="@id/guideline_vertical"
+                    app:layout_constraintEnd_toEndOf="parent">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -167,7 +183,6 @@
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
                         android:textColor="@color/black" />
-
                     <EditText
                         android:id="@+id/et_phone_number"
                         android:layout_width="match_parent"
@@ -180,21 +195,18 @@
                         android:padding="16dp"
                         android:enabled="false"/>
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Baris 2: Nama Pengguna & Status -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp">
+                <!-- Field Nama Pengguna -->
                 <LinearLayout
+                    android:id="@+id/ll_username_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_marginTop="16dp"
                     android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toBottomOf="@id/ll_name_field"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/guideline_vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -203,7 +215,6 @@
                         android:textSize="24sp"
                         android:fontFamily="@font/noto_sans_gujarati_bold"
                         android:textColor="@color/black" />
-
                     <EditText
                         android:id="@+id/et_username"
                         android:layout_width="match_parent"
@@ -217,14 +228,16 @@
                         android:enabled="false"/>
                 </LinearLayout>
 
+                <!-- Field Status (Akan disembunyikan jika perlu) -->
                 <LinearLayout
                     android:id="@+id/ll_status_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toTopOf="@id/ll_username_field"
+                    app:layout_constraintStart_toEndOf="@id/guideline_vertical"
+                    app:layout_constraintEnd_toEndOf="parent">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -243,22 +256,18 @@
                         android:padding="16dp"
                         android:enabled="false"/>
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Baris 3: Email & Alamat/Password -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp">
-
+                <!-- Field Email -->
                 <LinearLayout
+                    android:id="@+id/ll_email_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_marginTop="16dp"
                     android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toBottomOf="@id/ll_username_field"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/guideline_vertical">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -279,55 +288,50 @@
                         android:enabled="false"/>
                 </LinearLayout>
 
+                <!-- Field Alamat (Akan dipindah posisinya jika perlu) -->
                 <LinearLayout
+                    android:id="@+id/ll_address_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="16dp"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:id="@+id/ll_address_field"
+                    android:orientation="vertical"
+                    app:layout_constraintTop_toTopOf="@id/ll_email_field"
+                    app:layout_constraintStart_toEndOf="@id/guideline_vertical"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Alamat"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/noto_sans_gujarati_bold"
+                        android:textColor="@color/black" />
+                    <EditText
+                        android:id="@+id/et_address"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="start">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Alamat"
-                            android:textSize="24sp"
-                            android:fontFamily="@font/noto_sans_gujarati_bold"
-                            android:textColor="@color/black" />
-                        <EditText
-                            android:id="@+id/et_address"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:hint="Alamat"
-                            android:textColor="@color/black"
-                            android:background="@drawable/bg_input"
-                            android:padding="16dp"
-                            android:enabled="false"
-                            android:maxLines="1"
-                            android:inputType="text"
-                            android:ellipsize="end" />
-                    </LinearLayout>
+                        android:layout_marginTop="8dp"
+                        android:hint="Alamat"
+                        android:textColor="@color/black"
+                        android:background="@drawable/bg_input"
+                        android:padding="16dp"
+                        android:enabled="false"
+                        android:maxLines="1"
+                        android:inputType="text"
+                        android:ellipsize="end" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/ll_password_field"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp">
+
+                <!-- Field Kata Sandi (Akan dipindah posisinya jika perlu) -->
                 <LinearLayout
+                    android:id="@+id/ll_password_field"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginEnd="16dp"
                     android:orientation="vertical"
-                    android:gravity="start">
+                    app:layout_constraintTop_toBottomOf="@id/ll_email_field"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/guideline_vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -350,12 +354,11 @@
                         android:padding="16dp" />
                 </LinearLayout>
 
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="16dp"/>
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+            <!-- ================================================================ -->
+            <!-- AKHIR DARI PERUBAHAN -->
+            <!-- ================================================================ -->
+
 
             <LinearLayout
                 android:layout_width="match_parent"

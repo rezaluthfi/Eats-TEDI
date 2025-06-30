@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -96,7 +97,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
         with(binding) {
             tvEmployeeName.text = intent.getStringExtra("EMPLOYEE_NAME")
             etName.setText(intent.getStringExtra("EMPLOYEE_NAME"))
-            // PERBAIKAN 2: Gunakan setText dengan `filter = false` untuk AutoCompleteTextView
             etStatus.setText(intent.getStringExtra("EMPLOYEE_STATUS"), false)
             etUsername.setText(intent.getStringExtra("EMPLOYEE_USERNAME"))
             etPhoneNumber.setText(intent.getStringExtra("EMPLOYEE_PHONE"))
@@ -108,7 +108,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        // PERBAIKAN 2: Pastikan adapter untuk status diset di sini.
         val statusOptions = arrayOf("aktif", "tidak aktif")
         val statusAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, statusOptions)
         binding.etStatus.setAdapter(statusAdapter)
@@ -127,7 +126,6 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             binding.btnCameraEmployee.visibility = View.VISIBLE
             binding.btnEdit.setOnClickListener { toggleEditMode() }
 
-            // PERBAIKAN 1: Logika pengecekan `isEditing` dipindahkan ke sini.
             binding.btnCameraEmployee.setOnClickListener {
                 if (isEditing) {
                     checkStoragePermission()
@@ -150,6 +148,38 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             val intent = Intent(this@ProfileEmployeeActivity, ScheduleEmployeeActivity::class.java)
             intent.putExtras(this@ProfileEmployeeActivity.intent.extras ?: Bundle())
             startActivity(intent)
+        }
+
+        if (!isAdmin && isViewingOwnProfile) {
+            // 1. Sembunyikan field status
+            binding.llStatusField.visibility = View.GONE
+
+            // 2. Ubah susunan layout menggunakan ConstraintSet
+            // PERBAIKAN: Gunakan ID langsung dari binding, ini menyelesaikan ambiguity
+            val constraintLayout = binding.formConstraintLayout
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(constraintLayout)
+
+            // Pindahkan Alamat ke sebelah Nama Pengguna
+            constraintSet.connect(R.id.ll_address_field, ConstraintSet.TOP, R.id.ll_username_field, ConstraintSet.TOP, 0)
+            constraintSet.connect(R.id.ll_address_field, ConstraintSet.START, R.id.guideline_vertical, ConstraintSet.END, 16)
+            constraintSet.connect(R.id.ll_address_field, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, 0)
+
+            // Pindahkan Kata Sandi ke sebelah Email
+            constraintSet.connect(R.id.ll_password_field, ConstraintSet.TOP, R.id.ll_email_field, ConstraintSet.TOP, 0)
+            constraintSet.connect(R.id.ll_password_field, ConstraintSet.START, R.id.guideline_vertical, ConstraintSet.END, 16)
+            constraintSet.connect(R.id.ll_password_field, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END, 0)
+            constraintSet.constrainWidth(R.id.ll_password_field, ConstraintSet.MATCH_CONSTRAINT)
+
+            // Pindahkan Email agar berada di bawah Nama Pengguna
+            constraintSet.connect(R.id.ll_email_field, ConstraintSet.TOP, R.id.ll_username_field, ConstraintSet.BOTTOM, 16)
+
+            // Terapkan perubahan
+            constraintSet.applyTo(constraintLayout)
+
+        } else if (isAdmin) {
+            // Jika admin yang melihat, sembunyikan field password
+            binding.llPasswordField.visibility = View.GONE
         }
 
         setFieldsEnabled(false)
@@ -187,7 +217,8 @@ class ProfileEmployeeActivity : AppCompatActivity() {
     private fun setFieldsEnabled(enabled: Boolean) {
         with(binding) {
             etName.isEnabled = enabled
-            etStatus.isEnabled = enabled
+            // Untuk kasir, status tidak bisa diubah oleh dirinya sendiri
+            etStatus.isEnabled = enabled && isAdmin
             etUsername.isEnabled = enabled
             etPhoneNumber.isEnabled = enabled
             etEmail.isEnabled = enabled
@@ -195,6 +226,9 @@ class ProfileEmployeeActivity : AppCompatActivity() {
             etPassword.isEnabled = enabled && !isAdmin && isViewingOwnProfile
         }
     }
+
+    // ... Sisa kode lainnya tidak perlu diubah ...
+    // ... (saveEmployeeDataByAdmin, showPasswordConfirmationDialog, etc.) ...
 
     private fun saveEmployeeDataByAdmin() {
         val name = binding.etName.text.toString().trim()

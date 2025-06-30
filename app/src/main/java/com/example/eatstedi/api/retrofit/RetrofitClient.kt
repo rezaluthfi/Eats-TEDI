@@ -13,10 +13,10 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // Opsi 1: Server Lokal (Emulator Android)
-    private const val SERVER_IP_ADDRESS = "10.0.2.2:8000"
+    // private const val SERVER_IP_ADDRESS = "10.0.2.2:8000"
 
     // Opsi 2: Server VPS (VPS UGM yang digunakan)
-    // private const val SERVER_IP_ADDRESS = "10.33.35.16:80"
+     private const val SERVER_IP_ADDRESS = "10.33.35.16:80"
 
     // Opsi 3: Server dengan Domain (Jika ada)
     // private const val SERVER_IP_ADDRESS = "api.eatstedi.com"
